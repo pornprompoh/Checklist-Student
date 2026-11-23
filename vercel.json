@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "build/web",
+  "installCommand": "if [ ! -d \"$HOME/flutter/.git\" ]; then rm -rf \"$HOME/flutter\" && git clone https://github.com/flutter/flutter.git -b stable --depth 1 \"$HOME/flutter\"; fi && \"$HOME/flutter/bin/flutter\" config --enable-web && \"$HOME/flutter/bin/flutter\" pub get",
+  "buildCommand": "\"$HOME/flutter/bin/flutter\" build web --release --dart-define=SUPABASE_URL=\"$SUPABASE_URL\" --dart-define=SUPABASE_ANON_KEY=\"$SUPABASE_ANON_KEY\"",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
+    }
+  ]
+}
