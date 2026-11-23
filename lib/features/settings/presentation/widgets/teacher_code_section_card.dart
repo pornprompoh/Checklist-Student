@@ -1,0 +1,255 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/constants/app_routes.dart';
+import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/skeleton_box.dart';
+import '../../domain/services/teacher_code_validator_service.dart';
+import '../providers/settings_providers.dart';
+
+/// Card for viewing/copying the Student Portal link, changing `teacher_code`
+/// with confirmation, and listing archived codes from `teacher_code_history`.
+class TeacherCodeSectionCard extends ConsumerStatefulWidget {
+  const TeacherCodeSectionCard({
+    super.key,
+    required this.currentCode,
+    required this.isSaving,
+    required this.onChangeCode,
+  });
+
+  final String currentCode;
+  final bool isSaving;
+  final Future<bool> Function(String newCode) onChangeCode;
+
+  @override
+  ConsumerState<TeacherCodeSectionCard> createState() =>
+      _TeacherCodeSectionCardState();
+}
+
+class _TeacherCodeSectionCardState
+    extends ConsumerState<TeacherCodeSectionCard> {
+  late final TextEditingController _codeController;
+  String? _validationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController = TextEditingController(text: widget.currentCode)
+      ..addListener(_validateLive);
+  }
+
+  @override
+  void didUpdateWidget(covariant TeacherCodeSectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentCode != widget.currentCode) {
+      _codeController.text = widget.currentCode;
+      _validationError = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _codeController
+      ..removeListener(_validateLive)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _validateLive() {
+    final nextError = TeacherCodeValidatorService.validate(
+      _codeController.text,
+    );
+    if (nextError != _validationError) {
+      setState(() => _validationError = nextError);
+    }
+  }
+
+  String _portalUrl(String code) {
+    final path = AppRoutes.studentPortalPath(code, openExternalBrowser: true);
+    return kIsWeb ? '${Uri.base.origin}$path' : path;
+  }
+
+  Future<void> _copyLink() async {
+    await Clipboard.setData(ClipboardData(text: _portalUrl(widget.currentCode)));
+    if (!mounted) return;
+    AppFeedbackBanner.showSnackBar(
+      context,
+      type: AppFeedbackType.success,
+      message: 'คัดลอกลิงก์ Student Portal เรียบร้อยแล้ว',
+    );
+  }
+
+  Future<void> _confirmAndChangeCode() async {
+    final normalized = TeacherCodeValidatorService.normalize(
+      _codeController.text,
+    );
+    final error = TeacherCodeValidatorService.validate(normalized);
+    if (error != null) {
+      setState(() => _validationError = error);
+      return;
+    }
+    if (normalized == widget.currentCode) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ยืนยันการเปลี่ยนรหัสครู'),
+        content: Text(
+          'ต้องการเปลี่ยนรหัสครูจาก "${widget.currentCode}" เป็น "$normalized" หรือไม่?\n\n'
+          'รหัสเก่าจะถูกบันทึกไว้ในประวัติเพื่อให้ลิงก์เดิมในโน้ตกลุ่ม LINE Redirect มายังรหัสใหม่โดยอัตโนมัติ '
+          'แต่แนะนำให้อัปเดตลิงก์ในโน้ตกลุ่มให้เป็นลิงก์ใหม่ด้วย',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('ยืนยันเปลี่ยนรหัส'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await widget.onChangeCode(normalized);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final historyAsync = ref.watch(teacherCodeHistoryProvider);
+    final normalizedInput = TeacherCodeValidatorService.normalize(
+      _codeController.text,
+    );
+    final canSubmit =
+        !widget.isSaving &&
+        _validationError == null &&
+        normalizedInput != widget.currentCode &&
+        normalizedInput.isNotEmpty;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'รหัสครูและลิงก์ Student Portal',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'แชร์ลิงก์นี้ให้นักเรียนตรวจสอบเวลาเรียน คะแนน และเกรด (รองรับเปิดนอกเบราว์เซอร์ LINE)',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      _portalUrl(widget.currentCode),
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: _copyLink,
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text('คัดลอกลิงก์'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _codeController,
+              decoration: InputDecoration(
+                labelText: 'รหัสครูสั้น (Teacher Code)',
+                helperText: 'ใช้ตัวอักษร a-z, ตัวเลข 0-9 และ - ความยาว 3–30 ตัว',
+                errorText: _validationError,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: canSubmit ? _confirmAndChangeCode : null,
+                icon: const Icon(Icons.link_rounded, size: 18),
+                label: const Text('เปลี่ยนรหัสครู'),
+              ),
+            ),
+            const Divider(height: 28),
+            Text(
+              'ประวัติรหัสครูเก่า (Redirect อัตโนมัติ)',
+              style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            historyAsync.when(
+              loading: () => const Column(
+                children: [
+                  SkeletonBox.line(height: 16),
+                  SizedBox(height: 8),
+                  SkeletonBox.line(width: 220, height: 14),
+                ],
+              ),
+              error: (error, stackTrace) => AppFeedbackBanner(
+                type: AppFeedbackType.error,
+                message: ThaiErrorMapper.map(error),
+                onRetry: () => ref.invalidate(teacherCodeHistoryProvider),
+              ),
+              data: (entries) {
+                if (entries.isEmpty) {
+                  return Text(
+                    'ยังไม่มีประวัติการเปลี่ยนรหัสครู',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final entry in entries)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.history_rounded,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        title: Text(entry.oldCode),
+                        subtitle: Text(
+                          'เปลี่ยนเมื่อ ${ThaiDateFormatter.formatShortDate(entry.changedAt.toLocal())}',
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
