@@ -9,6 +9,8 @@ import '../network/connectivity_provider.dart';
 import '../theme/app_color_scheme.dart';
 import '../theme/theme_mode_provider.dart';
 import 'app_feedback_banner.dart';
+import 'unsaved_changes_guard.dart';
+import 'unsaved_changes_provider.dart';
 
 class _NavItem {
   const _NavItem({
@@ -99,9 +101,32 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     return AppShellScaffold._primaryItems[_selectedPrimaryIndex].label;
   }
 
-  void _navigate(String route) {
-    if (widget.currentPath != route) {
+  Future<void> _navigate(String route) async {
+    if (widget.currentPath == route) {
+      return;
+    }
+    if (ref.read(unsavedChangesStateProvider)) {
+      final shouldDiscard = await UnsavedChangesGuard.confirmDiscard(context);
+      if (!shouldDiscard || !mounted) {
+        return;
+      }
+      ref.read(unsavedChangesStateProvider.notifier).clearAll();
+    }
+    if (mounted) {
       context.go(route);
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    if (ref.read(unsavedChangesStateProvider)) {
+      final shouldDiscard = await UnsavedChangesGuard.confirmDiscard(context);
+      if (!shouldDiscard || !mounted) {
+        return;
+      }
+      ref.read(unsavedChangesStateProvider.notifier).clearAll();
+    }
+    if (mounted) {
+      await ref.read(signInControllerProvider.notifier).signOut();
     }
   }
 
@@ -140,6 +165,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                   () => _isSidebarCollapsed = !_isSidebarCollapsed,
                 ),
                 onSelectRoute: _navigate,
+                onSignOut: _handleSignOut,
               ),
               const VerticalDivider(width: 1),
               Expanded(child: bodyWithBanner),
@@ -167,9 +193,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
           ),
           IconButton(
             tooltip: 'ออกจากระบบ',
-            onPressed: isSigningOut
-                ? null
-                : () => ref.read(signInControllerProvider.notifier).signOut(),
+            onPressed: isSigningOut ? null : _handleSignOut,
             icon: const Icon(Icons.logout_rounded),
           ),
         ],
@@ -199,6 +223,7 @@ class _DesktopSidebar extends ConsumerWidget {
     required this.isOnline,
     required this.onToggleCollapse,
     required this.onSelectRoute,
+    required this.onSignOut,
   });
 
   final bool collapsed;
@@ -206,6 +231,7 @@ class _DesktopSidebar extends ConsumerWidget {
   final bool isOnline;
   final VoidCallback onToggleCollapse;
   final ValueChanged<String> onSelectRoute;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -374,11 +400,7 @@ class _DesktopSidebar extends ConsumerWidget {
                     if (!collapsed)
                       Flexible(
                         child: TextButton.icon(
-                          onPressed: isSigningOut
-                              ? null
-                              : () => ref
-                                    .read(signInControllerProvider.notifier)
-                                    .signOut(),
+                          onPressed: isSigningOut ? null : onSignOut,
                           icon: const Icon(Icons.logout_rounded, size: 18),
                           label: const Text(
                             'ออกจากระบบ',
@@ -392,11 +414,7 @@ class _DesktopSidebar extends ConsumerWidget {
                 if (collapsed)
                   IconButton(
                     tooltip: 'ออกจากระบบ',
-                    onPressed: isSigningOut
-                        ? null
-                        : () => ref
-                              .read(signInControllerProvider.notifier)
-                              .signOut(),
+                    onPressed: isSigningOut ? null : onSignOut,
                     icon: const Icon(Icons.logout_rounded),
                   ),
               ],

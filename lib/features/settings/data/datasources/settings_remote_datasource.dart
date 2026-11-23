@@ -40,7 +40,14 @@ class SettingsRemoteDataSource {
           })
           .eq('id', teacherId)
           .select(_teacherColumns)
-          .single();
+          .maybeSingle();
+
+      if (data == null) {
+        throw const ValidationException(
+          'ไม่พบข้อมูลโปรไฟล์ครูในฐานข้อมูล หรือไม่มีสิทธิ์แก้ไข กรุณาตรวจสอบสิทธิ์ฐานข้อมูลแล้วลองใหม่',
+          code: 'TEACHER_PROFILE_NOT_UPDATED',
+        );
+      }
 
       return TeacherProfileDto.fromJson(data);
     } catch (error) {
@@ -61,7 +68,14 @@ class SettingsRemoteDataSource {
           })
           .eq('id', teacherId)
           .select(_teacherColumns)
-          .single();
+          .maybeSingle();
+
+      if (data == null) {
+        throw const ValidationException(
+          'ไม่สามารถเปลี่ยนรหัสครูได้ เนื่องจากไม่พบข้อมูลบัญชีครูหรือไม่มีสิทธิ์แก้ไข',
+          code: 'TEACHER_CODE_NOT_UPDATED',
+        );
+      }
 
       return TeacherProfileDto.fromJson(data);
     } on PostgrestException catch (error) {

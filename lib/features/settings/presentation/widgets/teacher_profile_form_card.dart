@@ -31,6 +31,7 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
   late final TextEditingController _absentPctCtrl;
   late final TextEditingController _missingWorkCtrl;
   bool _isDirty = false;
+  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
     _departmentCtrl = TextEditingController();
     _absentPctCtrl = TextEditingController();
     _missingWorkCtrl = TextEditingController();
-    _syncFromProfile(widget.profile, notifyDirty: false);
+    _syncFromProfile(widget.profile, fromDidUpdateWidget: false);
     for (final ctrl in _controllers) {
       ctrl.addListener(_evaluateDirty);
     }
@@ -57,10 +58,19 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
   @override
   void didUpdateWidget(covariant TeacherProfileFormCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.profile.updatedAt != widget.profile.updatedAt ||
-        oldWidget.profile.id != widget.profile.id) {
-      _syncFromProfile(widget.profile, notifyDirty: true);
+    if (_hasServerProfileChanged(oldWidget.profile, widget.profile)) {
+      _syncFromProfile(widget.profile, fromDidUpdateWidget: true);
     }
+  }
+
+  bool _hasServerProfileChanged(TeacherProfile a, TeacherProfile b) {
+    return a.id != b.id ||
+        a.updatedAt != b.updatedAt ||
+        a.displayName != b.displayName ||
+        a.schoolName != b.schoolName ||
+        a.department != b.department ||
+        a.defaultAbsentThresholdPct != b.defaultAbsentThresholdPct ||
+        a.defaultMissingWorkThreshold != b.defaultMissingWorkThreshold;
   }
 
   @override
@@ -73,16 +83,37 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
     super.dispose();
   }
 
-  void _syncFromProfile(TeacherProfile profile, {required bool notifyDirty}) {
+  void _syncFromProfile(
+    TeacherProfile profile, {
+    required bool fromDidUpdateWidget,
+  }) {
+    _isSyncing = true;
     _displayNameCtrl.text = profile.displayName;
     _schoolNameCtrl.text = profile.schoolName;
     _departmentCtrl.text = profile.department;
     _absentPctCtrl.text = _formatPercent(profile.defaultAbsentThresholdPct);
     _missingWorkCtrl.text = profile.defaultMissingWorkThreshold.toString();
-    _setDirty(false, notify: notifyDirty);
+    _isSyncing = false;
+
+    if (fromDidUpdateWidget) {
+      if (_isDirty) {
+        _isDirty = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            widget.onDirtyChanged(false);
+          }
+        });
+      }
+      return;
+    }
+
+    _setDirty(false, notify: true);
   }
 
   void _evaluateDirty() {
+    if (_isSyncing) {
+      return;
+    }
     final p = widget.profile;
     final dirty =
         _displayNameCtrl.text.trim() != p.displayName.trim() ||
@@ -235,8 +266,10 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
                   OutlinedButton(
                     onPressed: (!_isDirty || widget.isSaving)
                         ? null
-                        : () =>
-                              _syncFromProfile(widget.profile, notifyDirty: true),
+                        : () => _syncFromProfile(
+                            widget.profile,
+                            fromDidUpdateWidget: false,
+                          ),
                     child: const Text('คืนค่าเดิม'),
                   ),
                   FilledButton.icon(

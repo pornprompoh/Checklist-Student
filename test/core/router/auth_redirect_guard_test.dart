@@ -5,30 +5,35 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('evaluateAuthRedirect', () {
     test('always allows Student Portal routes regardless of auth state', () {
-      expect(
-        evaluateAuthRedirect(
-          matchedPath: '/student/t-8492',
-          isLoading: false,
-          isAuthenticated: false,
-        ),
-        isNull,
-      );
-      expect(
-        evaluateAuthRedirect(
-          matchedPath: '/student/t-8492',
-          isLoading: false,
-          isAuthenticated: true,
-        ),
-        isNull,
-      );
-      expect(
-        evaluateAuthRedirect(
-          matchedPath: '/student/t-8492',
-          isLoading: true,
-          isAuthenticated: false,
-        ),
-        isNull,
-      );
+      for (final path in <String>[
+        '/student/t-8492',
+        '/student/t-8492?openExternalBrowser=1',
+      ]) {
+        expect(
+          evaluateAuthRedirect(
+            matchedPath: path,
+            isLoading: false,
+            isAuthenticated: false,
+          ),
+          isNull,
+        );
+        expect(
+          evaluateAuthRedirect(
+            matchedPath: path,
+            isLoading: false,
+            isAuthenticated: true,
+          ),
+          isNull,
+        );
+        expect(
+          evaluateAuthRedirect(
+            matchedPath: path,
+            isLoading: true,
+            isAuthenticated: false,
+          ),
+          isNull,
+        );
+      }
     });
 
     test('does not redirect while auth state is loading', () {

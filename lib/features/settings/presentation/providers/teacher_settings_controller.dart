@@ -24,10 +24,10 @@ class TeacherSettingsController extends AsyncNotifier<void> {
 
     state = const AsyncLoading<void>();
     try {
-      await ref
+      final updatedProfile = await ref
           .read(settingsRepositoryProvider)
           .updateTeacherProfile(teacherId: userId, update: update);
-      await ref.read(authStateProvider.notifier).refreshProfile();
+      ref.read(authStateProvider.notifier).updateCachedProfile(updatedProfile);
       if (!ref.mounted) {
         return true;
       }
@@ -67,13 +67,13 @@ class TeacherSettingsController extends AsyncNotifier<void> {
     final normalizedCode = TeacherCodeValidatorService.normalize(rawCode);
     state = const AsyncLoading<void>();
     try {
-      await ref
+      final updatedProfile = await ref
           .read(settingsRepositoryProvider)
           .updateTeacherCode(
             teacherId: userId,
             newTeacherCode: normalizedCode,
           );
-      await ref.read(authStateProvider.notifier).refreshProfile();
+      ref.read(authStateProvider.notifier).updateCachedProfile(updatedProfile);
       ref.invalidate(teacherCodeHistoryProvider);
       if (!ref.mounted) {
         return true;

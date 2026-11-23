@@ -29,7 +29,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   });
 
   final router = GoRouter(
-    initialLocation: '/',
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);

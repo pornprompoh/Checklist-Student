@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'unsaved_changes_provider.dart';
 
 /// Guards forms (such as settings or grading plan editors) against accidental
 /// navigation away when unsaved edits exist.
 ///
-/// Uses [PopScope] with `onPopInvokedWithResult` for zero-warning compatibility.
-class UnsavedChangesGuard extends StatelessWidget {
+/// Combines [PopScope] (for system/browser back navigation) with
+/// [unsavedChangesStateProvider] (so [AppShellScaffold] sidebar/bottom-bar tab
+/// switches and sign-out actions prompt the user as well).
+class UnsavedChangesGuard extends ConsumerStatefulWidget {
   const UnsavedChangesGuard({
     super.key,
     required this.hasUnsavedChanges,
@@ -63,23 +68,63 @@ class UnsavedChangesGuard extends StatelessWidget {
   }
 
   @override
+  ConsumerState<UnsavedChangesGuard> createState() =>
+      _UnsavedChangesGuardState();
+}
+
+class _UnsavedChangesGuardState extends ConsumerState<UnsavedChangesGuard> {
+  final Object _ownerToken = Object();
+  late final UnsavedChangesNotifier _notifier;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifier = ref.read(unsavedChangesStateProvider.notifier);
+    _scheduleSync(widget.hasUnsavedChanges);
+  }
+
+  @override
+  void didUpdateWidget(covariant UnsavedChangesGuard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.hasUnsavedChanges != widget.hasUnsavedChanges) {
+      _scheduleSync(widget.hasUnsavedChanges);
+    }
+  }
+
+  @override
+  void dispose() {
+    Future<void>.microtask(() => _notifier.setDirty(_ownerToken, false));
+    super.dispose();
+  }
+
+  void _scheduleSync(bool isDirty) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _notifier.setDirty(_ownerToken, isDirty);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !hasUnsavedChanges,
+      canPop: !widget.hasUnsavedChanges,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
           return;
         }
-        final shouldDiscard = await confirmDiscard(
+        final shouldDiscard = await UnsavedChangesGuard.confirmDiscard(
           context,
-          title: title,
-          message: message,
+          title: widget.title,
+          message: widget.message,
         );
         if (shouldDiscard && context.mounted) {
+          _notifier.setDirty(_ownerToken, false);
           Navigator.of(context).pop(result);
         }
       },
-      child: child,
+      child: widget.child,
     );
   }
 }

@@ -19,11 +19,13 @@ class TeacherCodeSectionCard extends ConsumerStatefulWidget {
     required this.currentCode,
     required this.isSaving,
     required this.onChangeCode,
+    this.onDirtyChanged,
   });
 
   final String currentCode;
   final bool isSaving;
   final Future<bool> Function(String newCode) onChangeCode;
+  final ValueChanged<bool>? onDirtyChanged;
 
   @override
   ConsumerState<TeacherCodeSectionCard> createState() =>
@@ -34,43 +36,74 @@ class _TeacherCodeSectionCardState
     extends ConsumerState<TeacherCodeSectionCard> {
   late final TextEditingController _codeController;
   String? _validationError;
+  bool _isDirty = false;
+  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     _codeController = TextEditingController(text: widget.currentCode)
-      ..addListener(_validateLive);
+      ..addListener(_handleCodeChanged);
   }
 
   @override
   void didUpdateWidget(covariant TeacherCodeSectionCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentCode != widget.currentCode) {
+      _isSyncing = true;
       _codeController.text = widget.currentCode;
+      _isSyncing = false;
       _validationError = null;
+      if (_isDirty) {
+        _isDirty = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            widget.onDirtyChanged?.call(false);
+          }
+        });
+      }
     }
   }
 
   @override
   void dispose() {
     _codeController
-      ..removeListener(_validateLive)
+      ..removeListener(_handleCodeChanged)
       ..dispose();
     super.dispose();
   }
 
-  void _validateLive() {
+  void _handleCodeChanged() {
+    if (_isSyncing) {
+      return;
+    }
+    final normalized = TeacherCodeValidatorService.normalize(
+      _codeController.text,
+    );
     final nextError = TeacherCodeValidatorService.validate(
       _codeController.text,
     );
-    if (nextError != _validationError) {
-      setState(() => _validationError = nextError);
+    final nextDirty = normalized != widget.currentCode;
+
+    // Always rebuild so button enabled state reacts immediately even when
+    // validation remains null (e.g., switching from one valid code to another).
+    setState(() {
+      _validationError = nextError;
+    });
+
+    if (nextDirty != _isDirty) {
+      _isDirty = nextDirty;
+      widget.onDirtyChanged?.call(nextDirty);
     }
   }
 
   String _portalUrl(String code) {
     final path = AppRoutes.studentPortalPath(code, openExternalBrowser: true);
-    return kIsWeb ? '${Uri.base.origin}$path' : path;
+    if (!kIsWeb) {
+      return path;
+    }
+    final origin = Uri.base.origin.replaceFirst(RegExp(r'/$'), '');
+    return '$origin$path';
   }
 
   Future<void> _copyLink() async {
@@ -117,7 +150,11 @@ class _TeacherCodeSectionCardState
     );
 
     if (confirmed == true && mounted) {
-      await widget.onChangeCode(normalized);
+      final changed = await widget.onChangeCode(normalized);
+      if (changed && mounted && _isDirty) {
+        setState(() => _isDirty = false);
+        widget.onDirtyChanged?.call(false);
+      }
     }
   }
 
@@ -195,8 +232,16 @@ class _TeacherCodeSectionCardState
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
                 onPressed: canSubmit ? _confirmAndChangeCode : null,
-                icon: const Icon(Icons.link_rounded, size: 18),
-                label: const Text('เปลี่ยนรหัสครู'),
+                icon: widget.isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.link_rounded, size: 18),
+                label: Text(
+                  widget.isSaving ? 'กำลังเปลี่ยนรหัส...' : 'เปลี่ยนรหัสครู',
+                ),
               ),
             ),
             const Divider(height: 28),

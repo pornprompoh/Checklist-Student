@@ -7,9 +7,12 @@ String? evaluateAuthRedirect({
   required bool isLoading,
   required bool isAuthenticated,
 }) {
-  // Always permit Student Portal routes regardless of teacher auth state,
-  // allowing teachers to preview their own student portal link as well.
-  if (matchedPath == '/student' || matchedPath.startsWith('/student/')) {
+  // Normalize in case a raw URI with query parameters is passed in.
+  final path = Uri.tryParse(matchedPath)?.path ?? matchedPath;
+
+  // Always permit Student Portal routes regardless of teacher auth or loading
+  // state, allowing teachers to preview their own student portal link as well.
+  if (path == '/student' || path.startsWith('/student/')) {
     return null;
   }
 
@@ -18,17 +21,17 @@ String? evaluateAuthRedirect({
     return null;
   }
 
-  if (matchedPath == '/' || matchedPath == AppRoutes.teacherRoot) {
+  if (path == '/' || path == AppRoutes.teacherRoot) {
     return isAuthenticated
         ? AppRoutes.teacherDashboard
         : AppRoutes.teacherLogin;
   }
 
-  if (matchedPath == AppRoutes.teacherLogin) {
+  if (path == AppRoutes.teacherLogin) {
     return isAuthenticated ? AppRoutes.teacherDashboard : null;
   }
 
-  if (matchedPath.startsWith('${AppRoutes.teacherRoot}/')) {
+  if (path.startsWith('${AppRoutes.teacherRoot}/')) {
     return isAuthenticated ? null : AppRoutes.teacherLogin;
   }
 

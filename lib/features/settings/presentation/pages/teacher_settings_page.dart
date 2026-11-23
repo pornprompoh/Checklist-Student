@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
@@ -12,7 +13,7 @@ import '../widgets/teacher_profile_form_card.dart';
 
 /// Teacher profile, short-code, and appearance settings page (`/teacher/settings`).
 ///
-/// Wrapped in [UnsavedChangesGuard] to protect unsaved profile edits.
+/// Wrapped in [UnsavedChangesGuard] to protect unsaved profile and teacher-code edits.
 class TeacherSettingsPage extends ConsumerStatefulWidget {
   const TeacherSettingsPage({super.key});
 
@@ -23,6 +24,10 @@ class TeacherSettingsPage extends ConsumerStatefulWidget {
 
 class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
   bool _hasUnsavedProfileChanges = false;
+  bool _hasUnsavedCodeChanges = false;
+
+  bool get _hasAnyUnsavedChanges =>
+      _hasUnsavedProfileChanges || _hasUnsavedCodeChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +47,7 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
     });
 
     return UnsavedChangesGuard(
-      hasUnsavedChanges: _hasUnsavedProfileChanges,
+      hasUnsavedChanges: _hasAnyUnsavedChanges,
       child: Align(
         alignment: Alignment.topCenter,
         child: SingleChildScrollView(
@@ -75,8 +80,23 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                if (authState.isLoading || profile == null) ...[
+                if (controllerState.hasError) ...[
+                  AppFeedbackBanner(
+                    type: AppFeedbackType.error,
+                    message: ThaiErrorMapper.map(controllerState.error!),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (authState.isLoading) ...[
                   const _SettingsSkeletonView(),
+                ] else if (profile == null) ...[
+                  AppFeedbackBanner(
+                    type: AppFeedbackType.warning,
+                    message:
+                        'ไม่พบข้อมูลโปรไฟล์ครูในตาราง teachers กรุณาตรวจสอบ Trigger สร้างบัญชีครูหรือสิทธิ์ฐานข้อมูลแล้วกดลองใหม่',
+                    onRetry: () =>
+                        ref.read(authStateProvider.notifier).refreshProfile(),
+                  ),
                 ] else ...[
                   TeacherProfileFormCard(
                     profile: profile,
@@ -104,6 +124,11 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
                   TeacherCodeSectionCard(
                     currentCode: profile.teacherCode,
                     isSaving: controllerState.isLoading,
+                    onDirtyChanged: (dirty) {
+                      if (_hasUnsavedCodeChanges != dirty) {
+                        setState(() => _hasUnsavedCodeChanges = dirty);
+                      }
+                    },
                     onChangeCode: (newCode) async {
                       final ok = await ref
                           .read(teacherSettingsControllerProvider.notifier)

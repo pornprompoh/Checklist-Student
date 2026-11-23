@@ -31,6 +31,20 @@ class AuthStateNotifier extends Notifier<AuthSessionState> {
     return AuthSessionState.loading(userId: initialUserId);
   }
 
+  /// Updates the cached [TeacherProfile] immediately after a successful DB
+  /// write so UI reflects saved values without waiting for an extra round-trip.
+  void updateCachedProfile(TeacherProfile profile) {
+    if (!ref.mounted) {
+      return;
+    }
+    final currentUserId = state.userId ?? profile.id;
+    state = AuthSessionState.authenticated(
+      userId: currentUserId,
+      profile: profile,
+      featureFlags: state.featureFlags,
+    );
+  }
+
   /// Refreshes the active teacher's profile and feature flags from the server.
   Future<void> refreshProfile() async {
     final userId = state.userId ?? ref.read(authRepositoryProvider).currentUserId;
