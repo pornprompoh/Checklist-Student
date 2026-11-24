@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../domain/entities/dashboard_class_item.dart';
-import '../../domain/entities/today_attendance_summary.dart';
+import 'dashboard_attendance_badge.dart';
 
 /// Classroom card rendered on the Teacher Dashboard with quick pin toggle,
 /// today-schedule badges, 4-state attendance summary, and 1-tap attendance CTA.
@@ -70,13 +69,13 @@ class DashboardClassCard extends StatelessWidget {
                             ),
                           ),
                           if (teachesToday)
-                            _TagPill(
+                            DashboardTagPill(
                               label: 'มีสอนวันนี้',
                               background: colorScheme.primaryContainer,
                               foreground: colorScheme.onPrimaryContainer,
                             ),
                           if (item.isPinned)
-                            _TagPill(
+                            DashboardTagPill(
                               label: 'ปักหมุด',
                               background: colorScheme.secondaryContainer,
                               foreground: colorScheme.onSecondaryContainer,
@@ -134,9 +133,8 @@ class DashboardClassCard extends StatelessWidget {
             ),
             const Divider(height: 22),
             if (summary != null)
-              _CheckedTodaySection(
+              DashboardCheckedAttendanceSection(
                 summary: summary,
-                semantic: semantic,
                 onOpenAttendance: onOpenAttendance,
               )
             else
@@ -202,129 +200,6 @@ class DashboardClassCard extends StatelessWidget {
   }
 }
 
-class _CheckedTodaySection extends StatelessWidget {
-  const _CheckedTodaySection({
-    required this.summary,
-    required this.semantic,
-    required this.onOpenAttendance,
-  });
-
-  final TodayAttendanceSummary summary;
-  final AppSemanticColors semantic;
-  final VoidCallback onOpenAttendance;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: semantic.successContainer,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    summary.isLocked
-                        ? Icons.lock_outline_rounded
-                        : Icons.check_circle_outline_rounded,
-                    size: 15,
-                    color: semantic.success,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'เช็คแล้ววันนี้',
-                    style: textTheme.labelMedium?.copyWith(
-                      color: semantic.success,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            _TagPill(
-              label:
-                  '${AttendanceStatus.present.thaiLabel} ${summary.presentCount}',
-              background: semantic.presentContainer,
-              foreground: semantic.present,
-            ),
-            _TagPill(
-              label: '${AttendanceStatus.late.thaiLabel} ${summary.lateCount}',
-              background: semantic.lateContainer,
-              foreground: semantic.late,
-            ),
-            _TagPill(
-              label:
-                  '${AttendanceStatus.leave.thaiLabel} ${summary.leaveCount}',
-              background: semantic.leaveContainer,
-              foreground: semantic.leave,
-            ),
-            _TagPill(
-              label:
-                  '${AttendanceStatus.absent.thaiLabel} ${summary.absentCount}',
-              background: semantic.absentContainer,
-              foreground: semantic.absent,
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: onOpenAttendance,
-          icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-          label: const Text('ดู / แก้ไขเช็คชื่อ'),
-        ),
-      ],
-    );
-  }
-}
-
-class _TagPill extends StatelessWidget {
-  const _TagPill({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _MetaText extends StatelessWidget {
   const _MetaText({required this.icon, required this.label});
 
@@ -339,11 +214,14 @@ class _MetaText extends StatelessWidget {
       children: [
         Icon(icon, size: 15, color: colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
       ],
     );

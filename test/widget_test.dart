@@ -1,6 +1,9 @@
 import 'package:checklist_student/app.dart';
 import 'package:checklist_student/core/network/connectivity_provider.dart';
 import 'package:checklist_student/core/theme/theme_mode_provider.dart';
+import 'package:checklist_student/features/academic_structure/domain/entities/academic_year.dart';
+import 'package:checklist_student/features/academic_structure/domain/entities/term.dart';
+import 'package:checklist_student/features/academic_structure/presentation/providers/academic_structure_providers.dart';
 import 'package:checklist_student/features/auth/domain/entities/auth_state.dart';
 import 'package:checklist_student/features/auth/domain/entities/teacher_feature_flags.dart';
 import 'package:checklist_student/features/auth/domain/entities/teacher_profile.dart';
@@ -95,14 +98,17 @@ void main() {
             authStateProvider.overrideWith(
               () => _FakeAuthStateNotifier(_buildAuthenticatedState()),
             ),
+            academicYearsProvider.overrideWith(
+              (ref) async => const <AcademicYear>[],
+            ),
+            allTermsProvider.overrideWith((ref) async => const <Term>[]),
           ],
           child: const ChecklistStudentApp(),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('หน้าหลักครูผู้สอน (Dashboard)'), findsOneWidget);
-      expect(find.text('ชื่อผู้สอน: ครูสมชาย'), findsOneWidget);
+      expect(find.text('สวัสดี, ครูสมชาย'), findsOneWidget);
       expect(find.text('สถานะซิงค์'), findsOneWidget);
 
       await tester.tap(find.text('ตั้งค่า'));
@@ -130,6 +136,10 @@ void main() {
             authStateProvider.overrideWith(
               () => _FakeAuthStateNotifier(_buildAuthenticatedState()),
             ),
+            academicYearsProvider.overrideWith(
+              (ref) async => const <AcademicYear>[],
+            ),
+            allTermsProvider.overrideWith((ref) async => const <Term>[]),
           ],
           child: const ChecklistStudentApp(),
         ),

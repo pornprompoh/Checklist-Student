@@ -8,6 +8,7 @@ abstract final class AppRoutes {
   static const String teacherAcademicStructure = '/teacher/academic-structure';
   static const String teacherHomeroomRoster = '/teacher/homeroom-roster';
   static const String teacherAttendance = '/teacher/attendance';
+  static const String teacherAttendanceRules = '/teacher/attendance/rules';
   static const String teacherGrading = '/teacher/grading';
   static const String teacherAuditLog = '/teacher/audit-log';
   static const String teacherExportReports = '/teacher/export-reports';
@@ -16,6 +17,18 @@ abstract final class AppRoutes {
 
   // Student Portal route
   static const String studentPortalPattern = '/student/:teacherCode';
+
+  /// Builds the Teacher Attendance route pre-selecting [subjectClassId].
+  static String teacherAttendanceForClass(String subjectClassId) {
+    final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
+    return '$teacherAttendance?classId=$encodedId';
+  }
+
+  /// Builds the Teacher Attendance Rules route for [subjectClassId].
+  static String teacherAttendanceRulesForClass(String subjectClassId) {
+    final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
+    return '$teacherAttendanceRules?classId=$encodedId';
+  }
 
   /// Builds a concrete Student Portal route path for [teacherCode].
   ///

@@ -78,11 +78,14 @@ class DashboardHeaderBar extends StatelessWidget {
                                 color: colorScheme.primary,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                todayThaiLabel,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Text(
+                                  todayThaiLabel,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
@@ -166,7 +169,7 @@ class DashboardHeaderBar extends StatelessWidget {
     final yearBe = yearById[term.academicYearId]?.yearBe;
     final yearPart = yearBe != null ? 'ปีการศึกษา $yearBe ' : '';
     final activeTag = term.id == activeTermId ? ' (ปัจจุบัน)' : '';
-    return '${yearPart}เทอม ${term.termLabel}$activeTag · '
+    return '$yearPartเทอม ${term.termLabel}$activeTag · '
         '${ThaiDateFormatter.formatDateRange(term.startDate, term.endDate)}';
   }
 }

@@ -1,6 +1,9 @@
 import 'package:checklist_student/app.dart';
 import 'package:checklist_student/core/network/connectivity_provider.dart';
 import 'package:checklist_student/core/router/app_router.dart';
+import 'package:checklist_student/features/academic_structure/domain/entities/academic_year.dart';
+import 'package:checklist_student/features/academic_structure/domain/entities/term.dart';
+import 'package:checklist_student/features/academic_structure/presentation/providers/academic_structure_providers.dart';
 import 'package:checklist_student/features/auth/domain/entities/auth_state.dart';
 import 'package:checklist_student/features/auth/domain/entities/teacher_feature_flags.dart';
 import 'package:checklist_student/features/auth/domain/entities/teacher_profile.dart';
@@ -201,6 +204,10 @@ void main() {
               () => _MutableFakeAuthStateNotifier(_authenticatedState(profile)),
             ),
             settingsRepositoryProvider.overrideWithValue(fakeRepo),
+            academicYearsProvider.overrideWith(
+              (ref) async => const <AcademicYear>[],
+            ),
+            allTermsProvider.overrideWith((ref) async => const <Term>[]),
           ],
           child: const ChecklistStudentApp(),
         ),
@@ -233,7 +240,7 @@ void main() {
       await tester.tap(find.text('ออกโดยไม่บันทึก'));
       await tester.pumpAndSettle();
 
-      expect(find.text('หน้าหลักครูผู้สอน (Dashboard)'), findsOneWidget);
+      expect(find.text('สวัสดี, ครูสมชาย'), findsOneWidget);
     },
   );
 

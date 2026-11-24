@@ -13,6 +13,7 @@ import '../../domain/entities/dashboard_overview.dart';
 import '../providers/dashboard_controller.dart';
 import '../providers/dashboard_providers.dart';
 import '../widgets/dashboard_class_card.dart';
+import '../widgets/dashboard_filter_bar.dart';
 import '../widgets/dashboard_header_bar.dart';
 import '../widgets/dashboard_skeleton_view.dart';
 import '../widgets/dashboard_summary_metrics.dart';
@@ -97,7 +98,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                       ref.read(dashboardControllerProvider.notifier).refresh(),
                 )
               else if (selectedTerm == null)
-                _EmptyDashboardCard(
+                DashboardEmptyStateCard(
                   icon: Icons.school_outlined,
                   title: 'ยังไม่มีภาคเรียนในระบบ',
                   subtitle:
@@ -116,7 +117,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                   ),
                   data: (overview) {
                     if (overview == null || overview.classes.isEmpty) {
-                      return _EmptyDashboardCard(
+                      return DashboardEmptyStateCard(
                         icon: Icons.class_outlined,
                         title: 'ยังไม่มีห้องเรียนในเทอม ${selectedTerm.termLabel}',
                         subtitle:
@@ -161,69 +162,23 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
       children: [
         DashboardSummaryMetrics(overview: overview),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 10,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                ChoiceChip(
-                  label: Text('ทั้งหมด (${overview.totalClassesCount})'),
-                  selected: filterState.mode == DashboardFilterMode.all,
-                  onSelected: (_) => ref
-                      .read(dashboardFilterProvider.notifier)
-                      .setMode(DashboardFilterMode.all),
-                ),
-                ChoiceChip(
-                  label: Text('มีสอนวันนี้ (${overview.todayClassesCount})'),
-                  selected: filterState.mode == DashboardFilterMode.today,
-                  onSelected: (_) => ref
-                      .read(dashboardFilterProvider.notifier)
-                      .setMode(DashboardFilterMode.today),
-                ),
-                ChoiceChip(
-                  label: const Text('ปักหมุด'),
-                  selected: filterState.mode == DashboardFilterMode.pinned,
-                  onSelected: (_) => ref
-                      .read(dashboardFilterProvider.notifier)
-                      .setMode(DashboardFilterMode.pinned),
-                ),
-              ],
-            ),
-            SizedBox(
-              width: 260,
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) =>
-                    ref.read(dashboardFilterProvider.notifier).setQuery(value),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: 'ค้นหารหัสวิชา ชื่อวิชา หรือห้อง...',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                  suffixIcon: filterState.query.isNotEmpty
-                      ? IconButton(
-                          tooltip: 'ล้างคำค้นหา',
-                          icon: const Icon(Icons.close_rounded, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            ref
-                                .read(dashboardFilterProvider.notifier)
-                                .setQuery('');
-                          },
-                        )
-                      : null,
-                ),
-              ),
-            ),
-          ],
+        DashboardFilterBar(
+          totalClassesCount: overview.totalClassesCount,
+          todayClassesCount: overview.todayClassesCount,
+          filterState: filterState,
+          searchController: _searchController,
+          onModeChanged: (mode) =>
+              ref.read(dashboardFilterProvider.notifier).setMode(mode),
+          onQueryChanged: (query) =>
+              ref.read(dashboardFilterProvider.notifier).setQuery(query),
+          onClearQuery: () {
+            _searchController.clear();
+            ref.read(dashboardFilterProvider.notifier).setQuery('');
+          },
         ),
         const SizedBox(height: 14),
         if (filteredClasses.isEmpty)
-          _EmptyDashboardCard(
+          DashboardEmptyStateCard(
             icon: Icons.filter_list_off_rounded,
             title: 'ไม่พบห้องเรียนตามตัวกรองที่เลือก',
             subtitle: 'ลองเปลี่ยนตัวกรองเป็น "ทั้งหมด" หรือล้างคำค้นหา',
@@ -275,57 +230,6 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
             },
           ),
       ],
-    );
-  }
-}
-
-class _EmptyDashboardCard extends StatelessWidget {
-  const _EmptyDashboardCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          children: [
-            Icon(icon, size: 42, color: colorScheme.primary),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.tonal(onPressed: onAction, child: Text(actionLabel)),
-          ],
-        ),
-      ),
     );
   }
 }
