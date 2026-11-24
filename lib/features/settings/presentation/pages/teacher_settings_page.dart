@@ -8,6 +8,7 @@ import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../providers/teacher_settings_controller.dart';
 import '../widgets/appearance_settings_card.dart';
+import '../widgets/storage_cleanup_section_card.dart';
 import '../widgets/teacher_code_section_card.dart';
 import '../widgets/teacher_profile_form_card.dart';
 
@@ -145,6 +146,8 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
                     },
                   ),
                 ],
+                const SizedBox(height: 16),
+                StorageCleanupSectionCard(canUseAi: authState.canUseAi),
                 const SizedBox(height: 16),
                 AppearanceSettingsCard(canUseAi: authState.canUseAi),
               ],

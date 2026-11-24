@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+
 import '../entities/class_enrollment.dart';
 import '../entities/homeroom.dart';
 import '../entities/homeroom_student.dart';
+import '../entities/roster_import_result.dart';
+import '../entities/roster_import_row_preview.dart';
 import '../entities/student_lifecycle_status.dart';
+import '../entities/uploaded_import_file.dart';
 import '../services/roster_renumber_service.dart';
 
 /// Abstract repository contract for term-level homeroom master rosters,
@@ -53,6 +58,21 @@ abstract interface class HomeroomRosterRepository {
   Future<int> renumberHomeroomStudents({
     required List<RenumberAssignment> assignments,
     required bool syncLinkedClasses,
+  });
+  Future<RosterImportResult> importHomeroomStudents({
+    required String teacherId,
+    required String homeroomId,
+    required List<RosterImportRowPreview> rows,
+    required bool syncOverwrittenToLinkedClasses,
+  });
+  Future<UploadedImportFileResult> uploadAndParseRosterWithAi({
+    required String teacherId,
+    required String academicYearId,
+    required String homeroomId,
+    required String originalFilename,
+    required Uint8List compressedBytes,
+    required String mimeType,
+    required String fileExtension,
   });
 
   // Linking & Subject-Class Enrollments

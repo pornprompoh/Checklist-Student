@@ -1,5 +1,6 @@
 import '../../../../core/errors/app_exception.dart';
 import '../../../auth/domain/entities/teacher_profile.dart';
+import '../../domain/entities/import_file_record.dart';
 import '../../domain/entities/teacher_code_history_entry.dart';
 import '../../domain/entities/teacher_profile_update.dart';
 import '../../domain/repositories/settings_repository.dart';
@@ -55,6 +56,36 @@ class SettingsRepositoryImpl implements SettingsRepository {
     }
     final dtos = await remote.fetchTeacherCodeHistory(teacherId);
     return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<List<ImportFileRecord>> fetchActiveImportFiles(
+    String teacherId,
+  ) async {
+    final remote = _remoteDataSource;
+    if (remote == null) {
+      return const <ImportFileRecord>[];
+    }
+    final dtos = await remote.fetchActiveImportFiles(teacherId);
+    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  }
+
+  @override
+  Future<String> createImportFileSignedUrl(String storagePath) async {
+    final remote = _requireRemote();
+    return remote.createImportFileSignedUrl(storagePath);
+  }
+
+  @override
+  Future<int> cleanupImportFilesByAcademicYear({
+    required String teacherId,
+    required String academicYearId,
+  }) async {
+    final remote = _requireRemote();
+    return remote.cleanupImportFilesByAcademicYear(
+      teacherId: teacherId,
+      academicYearId: academicYearId,
+    );
   }
 
   SettingsRemoteDataSource _requireRemote() {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/env_config.dart';
+import '../../data/datasources/ai_roster_remote_datasource.dart';
 import '../../data/datasources/class_enrollment_remote_datasource.dart';
 import '../../data/datasources/homeroom_roster_remote_datasource.dart';
 import '../../data/repositories/homeroom_roster_repository_impl.dart';
@@ -20,6 +21,9 @@ final homeroomRosterRepositoryProvider = Provider<HomeroomRosterRepository>((
         : null,
     enrollmentRemote: isConfigured
         ? ref.watch(classEnrollmentRemoteDataSourceProvider)
+        : null,
+    aiRosterRemote: isConfigured
+        ? ref.watch(aiRosterRemoteDataSourceProvider)
         : null,
   );
 });

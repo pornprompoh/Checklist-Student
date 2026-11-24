@@ -1,10 +1,16 @@
+import 'dart:typed_data';
+
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/class_enrollment.dart';
 import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
+import '../../domain/entities/roster_import_result.dart';
+import '../../domain/entities/roster_import_row_preview.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
+import '../../domain/entities/uploaded_import_file.dart';
 import '../../domain/repositories/homeroom_roster_repository.dart';
 import '../../domain/services/roster_renumber_service.dart';
+import '../datasources/ai_roster_remote_datasource.dart';
 import '../datasources/class_enrollment_remote_datasource.dart';
 import '../datasources/homeroom_roster_local_datasource.dart';
 import '../datasources/homeroom_roster_remote_datasource.dart';
@@ -15,11 +21,13 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
   const HomeroomRosterRepositoryImpl({
     required this._homeroomRemote,
     required this._enrollmentRemote,
+    this._aiRosterRemote,
     this._localDataSource,
   });
 
   final HomeroomRosterRemoteDataSource? _homeroomRemote;
   final ClassEnrollmentRemoteDataSource? _enrollmentRemote;
+  final AiRosterRemoteDataSource? _aiRosterRemote;
   // Reserved for Phase 6 Drift local caching (active term only).
   // ignore: unused_field
   final HomeroomRosterLocalDataSource? _localDataSource;
@@ -137,6 +145,49 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
     return _requireHomeroomRemote().renumberHomeroomStudents(
       assignments: assignments,
       syncLinkedClasses: syncLinkedClasses,
+    );
+  }
+
+  @override
+  Future<RosterImportResult> importHomeroomStudents({
+    required String teacherId,
+    required String homeroomId,
+    required List<RosterImportRowPreview> rows,
+    required bool syncOverwrittenToLinkedClasses,
+  }) {
+    return _requireHomeroomRemote().importHomeroomStudents(
+      teacherId: teacherId,
+      homeroomId: homeroomId,
+      rows: rows,
+      syncOverwrittenToLinkedClasses: syncOverwrittenToLinkedClasses,
+    );
+  }
+
+  @override
+  Future<UploadedImportFileResult> uploadAndParseRosterWithAi({
+    required String teacherId,
+    required String academicYearId,
+    required String homeroomId,
+    required String originalFilename,
+    required Uint8List compressedBytes,
+    required String mimeType,
+    required String fileExtension,
+  }) {
+    final aiRemote = _aiRosterRemote;
+    if (aiRemote == null) {
+      throw const ValidationException(
+        'ยังไม่ได้ตั้งค่าการเชื่อมต่อ Supabase กรุณาตรวจสอบ Environment ก่อนดำเนินการ',
+        code: 'SUPABASE_NOT_CONFIGURED',
+      );
+    }
+    return aiRemote.uploadAndParseRosterWithAi(
+      teacherId: teacherId,
+      academicYearId: academicYearId,
+      homeroomId: homeroomId,
+      originalFilename: originalFilename,
+      compressedBytes: compressedBytes,
+      mimeType: mimeType,
+      fileExtension: fileExtension,
     );
   }
 

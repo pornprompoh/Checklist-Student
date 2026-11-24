@@ -9,16 +9,19 @@ import '../../../academic_structure/domain/entities/subject.dart';
 import '../../../academic_structure/domain/entities/subject_class.dart';
 import '../../../academic_structure/domain/entities/term.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/services/roster_renumber_service.dart';
 import '../providers/homeroom_roster_controller.dart';
 import '../providers/homeroom_roster_providers.dart';
+import 'ai_roster_import_dialog.dart';
 import 'homeroom_form_dialog.dart';
 import 'homeroom_list_panel.dart';
 import 'link_homeroom_classes_dialog.dart';
 import 'renumber_confirm_dialog.dart';
+import 'roster_import_dialog.dart';
 import 'roster_student_list_view.dart';
 import 'student_form_dialog.dart';
 
@@ -215,6 +218,9 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final studentsAsync = ref.watch(homeroomStudentsProvider(homeroom.id));
+    final canUseAi = ref.watch(
+      authStateProvider.select((state) => state.canUseAi),
+    );
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
@@ -239,6 +245,29 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (canUseAi)
+                      FilledButton.tonalIcon(
+                        onPressed: isBusy
+                            ? null
+                            : () => _importWithAi(
+                                context,
+                                ref,
+                                studentsAsync.asData?.value ?? const [],
+                              ),
+                        icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                        label: const Text('นำเข้าด้วย AI (รูป/PDF)'),
+                      ),
+                    FilledButton.tonalIcon(
+                      onPressed: isBusy
+                          ? null
+                          : () => _importSpreadsheet(
+                              context,
+                              ref,
+                              studentsAsync.asData?.value ?? const [],
+                            ),
+                      icon: const Icon(Icons.upload_file_outlined, size: 18),
+                      label: const Text('นำเข้า Excel/CSV'),
+                    ),
                     FilledButton.tonalIcon(
                       onPressed: isBusy ? null : () => _linkClasses(context, ref),
                       icon: const Icon(Icons.link_rounded, size: 18),
@@ -309,6 +338,53 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _importWithAi(
+    BuildContext context,
+    WidgetRef ref,
+    List<HomeroomStudent> existing,
+  ) async {
+    final result = await AiRosterImportDialog.show(
+      context,
+      academicYearId: term.academicYearId,
+      homeroomId: homeroom.id,
+      homeroomName: homeroom.name,
+      existingStudents: existing,
+      linkedClassIds: _linkedClassIds,
+    );
+    if (result == null || !context.mounted) return;
+    AppFeedbackBanner.showSnackBar(
+      context,
+      type: AppFeedbackType.success,
+      message:
+          'นำเข้าด้วย AI สำเร็จ: เพิ่มใหม่ ${result.insertedCount} คน'
+          '${result.updatedCount > 0 ? ' · อัปเดตทับ ${result.updatedCount} คน' : ''}'
+          '${result.skippedCount > 0 ? ' · ข้าม ${result.skippedCount} แถว' : ''}',
+    );
+  }
+
+  Future<void> _importSpreadsheet(
+    BuildContext context,
+    WidgetRef ref,
+    List<HomeroomStudent> existing,
+  ) async {
+    final result = await RosterImportDialog.show(
+      context,
+      homeroomId: homeroom.id,
+      homeroomName: homeroom.name,
+      existingStudents: existing,
+      linkedClassIds: _linkedClassIds,
+    );
+    if (result == null || !context.mounted) return;
+    AppFeedbackBanner.showSnackBar(
+      context,
+      type: AppFeedbackType.success,
+      message:
+          'นำเข้าสำเร็จ: เพิ่มใหม่ ${result.insertedCount} คน'
+          '${result.updatedCount > 0 ? ' · อัปเดตทับ ${result.updatedCount} คน' : ''}'
+          '${result.skippedCount > 0 ? ' · ข้าม ${result.skippedCount} แถว' : ''}',
     );
   }
 

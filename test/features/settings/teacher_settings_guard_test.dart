@@ -5,6 +5,7 @@ import 'package:checklist_student/features/auth/domain/entities/auth_state.dart'
 import 'package:checklist_student/features/auth/domain/entities/teacher_feature_flags.dart';
 import 'package:checklist_student/features/auth/domain/entities/teacher_profile.dart';
 import 'package:checklist_student/features/auth/presentation/providers/auth_state_provider.dart';
+import 'package:checklist_student/features/settings/domain/entities/import_file_record.dart';
 import 'package:checklist_student/features/settings/domain/entities/teacher_code_history_entry.dart';
 import 'package:checklist_student/features/settings/domain/entities/teacher_profile_update.dart';
 import 'package:checklist_student/features/settings/domain/repositories/settings_repository.dart';
@@ -75,6 +76,26 @@ class _FakeSettingsRepository implements SettingsRepository {
     String teacherId,
   ) async {
     return List<TeacherCodeHistoryEntry>.unmodifiable(_history);
+  }
+
+  @override
+  Future<List<ImportFileRecord>> fetchActiveImportFiles(
+    String teacherId,
+  ) async {
+    return const <ImportFileRecord>[];
+  }
+
+  @override
+  Future<String> createImportFileSignedUrl(String storagePath) async {
+    return 'https://example.local/$storagePath';
+  }
+
+  @override
+  Future<int> cleanupImportFilesByAcademicYear({
+    required String teacherId,
+    required String academicYearId,
+  }) async {
+    return 0;
   }
 }
 
