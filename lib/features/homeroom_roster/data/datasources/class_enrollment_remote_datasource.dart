@@ -7,7 +7,10 @@ import '../../../../core/utils/thai_date_formatter.dart';
 import '../../domain/entities/class_enrollment.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/services/roster_renumber_service.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
 import '../models/class_enrollment_dto.dart';
+import '../models/homeroom_dto.dart';
+import 'homeroom_enrollment_auto_sync.dart';
 import 'homeroom_roster_remote_datasource.dart';
 
 /// Remote data source managing `public.class_enrollments` and homeroom-to-class
@@ -24,6 +27,38 @@ class ClassEnrollmentRemoteDataSource {
       'first_name, last_name, status, enrolled_at, transferred_out_at, '
       'special_grade_override, was_r_resolved, was_ms_resolved, '
       'resolved_grade_at, version, created_at, updated_at';
+
+  /// Ensures `public.homerooms` exists for each [UnlinkedRoomGroup], links all
+  /// matching `subject_classes.homeroom_id` rows, and copies active students.
+  Future<HomeroomDto?> syncUnlinkedRoomGroups({
+    required String teacherId,
+    required String termId,
+    required List<UnlinkedRoomGroup> groups,
+    required DateTime enrolledAt,
+  }) async {
+    try {
+      HomeroomDto? firstSynced;
+      for (final group in groups) {
+        final homeroomDto = await HomeroomEnrollmentAutoSync.ensureHomeroom(
+          client: _client,
+          teacherId: teacherId,
+          termId: termId,
+          name: group.roomName,
+        );
+        firstSynced ??= homeroomDto;
+
+        await linkHomeroomToSubjectClasses(
+          teacherId: teacherId,
+          homeroomId: homeroomDto.id,
+          subjectClassIds: group.subjectClassIds,
+          enrolledAt: enrolledAt,
+        );
+      }
+      return firstSynced;
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
 
   Future<int> linkHomeroomToSubjectClasses({
     required String teacherId,

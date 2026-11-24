@@ -10,6 +10,7 @@ import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/entities/uploaded_import_file.dart';
 import '../../domain/repositories/homeroom_roster_repository.dart';
 import '../../domain/services/roster_renumber_service.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
 import '../datasources/ai_roster_remote_datasource.dart';
 import '../datasources/class_enrollment_remote_datasource.dart';
 import '../datasources/homeroom_roster_local_datasource.dart';
@@ -86,6 +87,8 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
     required String prefix,
     required String firstName,
     required String lastName,
+    bool autoEnrollLinkedClasses = false,
+    DateTime? enrolledAt,
   }) async {
     final dto = await _requireHomeroomRemote().addHomeroomStudent(
       teacherId: teacherId,
@@ -95,6 +98,8 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
       prefix: prefix,
       firstName: firstName,
       lastName: lastName,
+      autoEnrollLinkedClasses: autoEnrollLinkedClasses,
+      enrolledAt: enrolledAt,
     );
     return dto.toEntity();
   }
@@ -154,12 +159,16 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
     required String homeroomId,
     required List<RosterImportRowPreview> rows,
     required bool syncOverwrittenToLinkedClasses,
+    bool autoEnrollNewToLinkedClasses = false,
+    DateTime? enrolledAt,
   }) {
     return _requireHomeroomRemote().importHomeroomStudents(
       teacherId: teacherId,
       homeroomId: homeroomId,
       rows: rows,
       syncOverwrittenToLinkedClasses: syncOverwrittenToLinkedClasses,
+      autoEnrollNewToLinkedClasses: autoEnrollNewToLinkedClasses,
+      enrolledAt: enrolledAt,
     );
   }
 
@@ -189,6 +198,22 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
       mimeType: mimeType,
       fileExtension: fileExtension,
     );
+  }
+
+  @override
+  Future<Homeroom?> syncUnlinkedRoomGroups({
+    required String teacherId,
+    required String termId,
+    required List<UnlinkedRoomGroup> groups,
+    required DateTime enrolledAt,
+  }) async {
+    final dto = await _requireEnrollmentRemote().syncUnlinkedRoomGroups(
+      teacherId: teacherId,
+      termId: termId,
+      groups: groups,
+      enrolledAt: enrolledAt,
+    );
+    return dto?.toEntity();
   }
 
   @override

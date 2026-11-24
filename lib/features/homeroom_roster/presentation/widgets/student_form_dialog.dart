@@ -12,6 +12,7 @@ class StudentFormResult {
     required this.lastName,
     required this.enrolledAt,
     required this.alsoAddToHomeroom,
+    this.syncToLinkedClasses = false,
   });
 
   final int studentNumber;
@@ -21,6 +22,7 @@ class StudentFormResult {
   final String lastName;
   final DateTime enrolledAt;
   final bool alsoAddToHomeroom;
+  final bool syncToLinkedClasses;
 }
 
 /// Dialog for adding or editing a student in either a master homeroom or
@@ -37,6 +39,8 @@ class StudentFormDialog extends StatefulWidget {
     this.initialEnrolledAt,
     this.showEnrolledAt = false,
     this.showAddToHomeroomOption = false,
+    this.showSyncToLinkedClassesOption = false,
+    this.linkedClassCount = 0,
   });
 
   final String title;
@@ -48,6 +52,8 @@ class StudentFormDialog extends StatefulWidget {
   final DateTime? initialEnrolledAt;
   final bool showEnrolledAt;
   final bool showAddToHomeroomOption;
+  final bool showSyncToLinkedClassesOption;
+  final int linkedClassCount;
 
   static Future<StudentFormResult?> show(
     BuildContext context, {
@@ -60,6 +66,8 @@ class StudentFormDialog extends StatefulWidget {
     DateTime? initialEnrolledAt,
     bool showEnrolledAt = false,
     bool showAddToHomeroomOption = false,
+    bool showSyncToLinkedClassesOption = false,
+    int linkedClassCount = 0,
   }) {
     return showDialog<StudentFormResult>(
       context: context,
@@ -73,6 +81,8 @@ class StudentFormDialog extends StatefulWidget {
         initialEnrolledAt: initialEnrolledAt,
         showEnrolledAt: showEnrolledAt,
         showAddToHomeroomOption: showAddToHomeroomOption,
+        showSyncToLinkedClassesOption: showSyncToLinkedClassesOption,
+        linkedClassCount: linkedClassCount,
       ),
     );
   }
@@ -97,6 +107,7 @@ class _StudentFormDialogState extends State<StudentFormDialog> {
   late final TextEditingController _lastCtrl;
   late DateTime _enrolledAt;
   bool _alsoAddToHomeroom = true;
+  bool _syncToLinkedClasses = true;
 
   @override
   void initState() {
@@ -150,6 +161,8 @@ class _StudentFormDialogState extends State<StudentFormDialog> {
         enrolledAt: _enrolledAt,
         alsoAddToHomeroom:
             widget.showAddToHomeroomOption && _alsoAddToHomeroom,
+        syncToLinkedClasses:
+            widget.showSyncToLinkedClassesOption && _syncToLinkedClasses,
       ),
     );
   }
@@ -257,6 +270,20 @@ class _StudentFormDialogState extends State<StudentFormDialog> {
                   onChanged: (v) =>
                       setState(() => _alsoAddToHomeroom = v ?? false),
                   title: const Text('เพิ่มนักเรียนคนนี้เข้าคลังห้องเรียนกลางด้วย'),
+                ),
+              ],
+              if (widget.showSyncToLinkedClassesOption) ...[
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _syncToLinkedClasses,
+                  onChanged: (v) =>
+                      setState(() => _syncToLinkedClasses = v ?? false),
+                  title: Text(
+                    widget.linkedClassCount > 0
+                        ? 'เพิ่มนักเรียนใหม่เข้าทุกรายวิชาที่ผูกกับห้องนี้อัตโนมัติ (${widget.linkedClassCount} วิชา)'
+                        : 'เพิ่มนักเรียนใหม่เข้าทุกรายวิชาที่ผูกกับห้องนี้อัตโนมัติ',
+                  ),
                 ),
               ],
             ],

@@ -9,6 +9,7 @@ import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/services/roster_renumber_service.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
 import 'homeroom_roster_providers.dart';
 
 /// Controller orchestrating all homeroom master roster and class enrollment
@@ -91,6 +92,35 @@ class HomeroomRosterController extends AsyncNotifier<void> {
     return ok ?? false;
   }
 
+  Future<Homeroom?> syncUnlinkedRoomGroups({
+    required String termId,
+    required List<UnlinkedRoomGroup> groups,
+    required DateTime enrolledAt,
+  }) {
+    return _run<Homeroom?>(() async {
+      final teacherId = _requireTeacherId();
+      final firstSynced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .syncUnlinkedRoomGroups(
+            teacherId: teacherId,
+            termId: termId,
+            groups: groups,
+            enrolledAt: enrolledAt,
+          );
+      ref.invalidate(homeroomsByTermProvider(termId));
+      ref.invalidate(subjectClassesByTermProvider(termId));
+      for (final group in groups) {
+        for (final classId in group.subjectClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
+      if (firstSynced != null) {
+        ref.read(selectedHomeroomIdProvider.notifier).select(firstSynced.id);
+      }
+      return firstSynced;
+    });
+  }
+
   Future<HomeroomStudent?> addHomeroomStudent({
     required String homeroomId,
     required String studentCode,
@@ -98,6 +128,9 @@ class HomeroomRosterController extends AsyncNotifier<void> {
     required String prefix,
     required String firstName,
     required String lastName,
+    bool autoEnrollLinkedClasses = false,
+    DateTime? enrolledAt,
+    List<String> linkedClassIds = const <String>[],
   }) {
     return _run(() async {
       final teacherId = _requireTeacherId();
@@ -111,8 +144,15 @@ class HomeroomRosterController extends AsyncNotifier<void> {
             prefix: prefix,
             firstName: firstName,
             lastName: lastName,
+            autoEnrollLinkedClasses: autoEnrollLinkedClasses,
+            enrolledAt: enrolledAt,
           );
       ref.invalidate(homeroomStudentsProvider(homeroomId));
+      if (autoEnrollLinkedClasses) {
+        for (final classId in linkedClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
       return created;
     });
   }

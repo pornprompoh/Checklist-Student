@@ -56,8 +56,11 @@ abstract interface class AcademicStructureRepository {
   Future<SubjectClass> createSubjectClass({
     required String teacherId,
     required String subjectId,
+    String? termId,
     String? homeroomId,
     required String roomName,
+    bool autoLinkHomeroom = false,
+    DateTime? defaultEnrolledAt,
     List<int> teachingDays = const <int>[],
     bool isPinned = false,
     double? absentThresholdPct,

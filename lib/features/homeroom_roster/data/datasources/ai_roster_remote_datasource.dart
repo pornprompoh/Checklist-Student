@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -33,12 +32,14 @@ class AiRosterRemoteDataSource {
         compressedBytes.length > ImagePdfCompressor.maxFileSizeBytes) {
       throw const ValidationException(
         'ขนาดไฟล์เกิน 500 KB ไม่สามารถอัปโหลดได้',
-        code: 'FILE_SIZE_EXCEEDED',
+        code: 'FILE_TOO_LARGE',
       );
     }
 
     final fileUuid = _uuid.v4();
     final storagePath = '$teacherId/$academicYearId/$fileUuid.$fileExtension';
+    var uploadedToStorage = false;
+    String? insertedFileId;
 
     try {
       await _client.storage.from('import-sources').uploadBinary(
@@ -46,6 +47,7 @@ class AiRosterRemoteDataSource {
         compressedBytes,
         fileOptions: FileOptions(contentType: mimeType),
       );
+      uploadedToStorage = true;
 
       final fileRow = await _client
           .from('import_files')
@@ -60,6 +62,7 @@ class AiRosterRemoteDataSource {
           })
           .select('id')
           .single();
+      insertedFileId = fileRow['id'] as String;
 
       final response = await _client.functions.invoke(
         'parse-roster-ai',
@@ -84,7 +87,7 @@ class AiRosterRemoteDataSource {
           .toList(growable: false);
 
       return UploadedImportFileResult(
-        importFileId: fileRow['id'] as String,
+        importFileId: insertedFileId,
         storagePath: storagePath,
         originalFilename: originalFilename,
         mimeType: mimeType,
@@ -92,17 +95,50 @@ class AiRosterRemoteDataSource {
         students: students,
       );
     } on FunctionException catch (error) {
-      final details = error.details;
-      if (details is Map && details['error'] is String) {
-        throw AppException(
-          details['error'] as String,
-          code: '${error.status}',
-          cause: error,
+      if (kDebugMode) {
+        debugPrint(
+          '[AiRosterRemoteDataSource] parse-roster-ai failed '
+          '(status=${error.status}, reason=${error.reasonPhrase}, '
+          'details=${error.details})',
         );
       }
+      await _cleanupOrphanedUpload(
+        uploadedToStorage: uploadedToStorage,
+        storagePath: storagePath,
+        importFileId: insertedFileId,
+      );
       throw ThaiErrorMapper.toAppException(error);
     } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[AiRosterRemoteDataSource] Unexpected error: $error');
+      }
+      await _cleanupOrphanedUpload(
+        uploadedToStorage: uploadedToStorage,
+        storagePath: storagePath,
+        importFileId: insertedFileId,
+      );
       throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  /// Removes uploaded source file & DB metadata when Edge Function invocation
+  /// fails so retries stay clean and Free-Tier storage is not wasted.
+  Future<void> _cleanupOrphanedUpload({
+    required bool uploadedToStorage,
+    required String storagePath,
+    required String? importFileId,
+  }) async {
+    if (uploadedToStorage) {
+      try {
+        await _client.storage.from('import-sources').remove(<String>[
+          storagePath,
+        ]);
+      } catch (_) {}
+    }
+    if (importFileId != null) {
+      try {
+        await _client.from('import_files').delete().eq('id', importFileId);
+      } catch (_) {}
     }
   }
 }

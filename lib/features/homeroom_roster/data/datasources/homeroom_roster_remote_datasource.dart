@@ -10,6 +10,7 @@ import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/services/roster_renumber_service.dart';
 import '../models/homeroom_dto.dart';
 import '../models/homeroom_student_dto.dart';
+import 'homeroom_enrollment_auto_sync.dart';
 
 /// Remote data source managing `public.homerooms`, `public.student_identities`,
 /// `public.homeroom_students`, and RPC `public.sync_homeroom_student_update`.
@@ -168,6 +169,8 @@ class HomeroomRosterRemoteDataSource {
     required String prefix,
     required String firstName,
     required String lastName,
+    bool autoEnrollLinkedClasses = false,
+    DateTime? enrolledAt,
   }) async {
     try {
       final identityId = await ensureStudentIdentityId(
@@ -188,7 +191,17 @@ class HomeroomRosterRemoteDataSource {
           })
           .select(_homeroomStudentColumns)
           .single();
-      return HomeroomStudentDto.fromJson(data);
+      final created = HomeroomStudentDto.fromJson(data);
+      if (autoEnrollLinkedClasses) {
+        await HomeroomEnrollmentAutoSync.enrollNewStudentsToLinkedClasses(
+          client: _client,
+          teacherId: teacherId,
+          homeroomId: homeroomId,
+          students: <HomeroomStudentDto>[created],
+          enrolledAt: enrolledAt ?? DateTime.now(),
+        );
+      }
+      return created;
     } catch (error) {
       throw ThaiErrorMapper.toAppException(error);
     }
@@ -304,6 +317,8 @@ class HomeroomRosterRemoteDataSource {
     required String homeroomId,
     required List<RosterImportRowPreview> rows,
     required bool syncOverwrittenToLinkedClasses,
+    bool autoEnrollNewToLinkedClasses = false,
+    DateTime? enrolledAt,
   }) async {
     try {
       final newRows = rows
@@ -353,6 +368,8 @@ class HomeroomRosterRemoteDataSource {
       }
 
       // 2. Batch-insert new students into homeroom_students.
+      var autoEnrolledClassesCount = 0;
+      var autoEnrolledStudentsCount = 0;
       if (newRows.isNotEmpty) {
         final insertPayload = <Map<String, dynamic>>[];
         for (final row in newRows) {
@@ -375,7 +392,25 @@ class HomeroomRosterRemoteDataSource {
             'status': StudentLifecycleStatus.active.dbValue,
           });
         }
-        await _client.from('homeroom_students').insert(insertPayload);
+        final insertedRows = await _client
+            .from('homeroom_students')
+            .insert(insertPayload)
+            .select(_homeroomStudentColumns);
+        if (autoEnrollNewToLinkedClasses && insertedRows.isNotEmpty) {
+          final insertedDtos = insertedRows
+              .map(HomeroomStudentDto.fromJson)
+              .toList(growable: false);
+          final syncSummary =
+              await HomeroomEnrollmentAutoSync.enrollNewStudentsToLinkedClasses(
+                client: _client,
+                teacherId: teacherId,
+                homeroomId: homeroomId,
+                students: insertedDtos,
+                enrolledAt: enrolledAt ?? DateTime.now(),
+              );
+          autoEnrolledClassesCount = syncSummary.linkedClassCount;
+          autoEnrolledStudentsCount = syncSummary.insertedEnrollmentsCount;
+        }
       }
 
       // 3. Update existing rows explicitly marked as overwrite.
@@ -407,6 +442,8 @@ class HomeroomRosterRemoteDataSource {
         updatedCount: overwriteRows.length,
         skippedCount: skippedCount,
         syncedEnrollmentsCount: syncedEnrollmentsCount,
+        autoEnrolledClassesCount: autoEnrolledClassesCount,
+        autoEnrolledStudentsCount: autoEnrolledStudentsCount,
       );
     } catch (error) {
       throw ThaiErrorMapper.toAppException(error);

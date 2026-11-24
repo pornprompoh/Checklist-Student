@@ -28,12 +28,14 @@ class RosterImportDialog extends ConsumerStatefulWidget {
     required this.homeroomName,
     required this.existingStudents,
     required this.linkedClassIds,
+    this.defaultEnrolledAt,
   });
 
   final String homeroomId;
   final String homeroomName;
   final List<HomeroomStudent> existingStudents;
   final List<String> linkedClassIds;
+  final DateTime? defaultEnrolledAt;
 
   static Future<RosterImportResult?> show(
     BuildContext context, {
@@ -41,6 +43,7 @@ class RosterImportDialog extends ConsumerStatefulWidget {
     required String homeroomName,
     required List<HomeroomStudent> existingStudents,
     required List<String> linkedClassIds,
+    DateTime? defaultEnrolledAt,
   }) {
     return showDialog<RosterImportResult>(
       context: context,
@@ -50,6 +53,7 @@ class RosterImportDialog extends ConsumerStatefulWidget {
         homeroomName: homeroomName,
         existingStudents: existingStudents,
         linkedClassIds: linkedClassIds,
+        defaultEnrolledAt: defaultEnrolledAt,
       ),
     );
   }
@@ -65,6 +69,7 @@ class _RosterImportDialogState extends ConsumerState<RosterImportDialog> {
   RosterColumnMapping? _mapping;
   List<RosterImportRowPreview> _previewRows = const <RosterImportRowPreview>[];
   bool _syncOverwritten = true;
+  bool _autoEnrollNew = true;
   String? _localError;
 
   void _downloadExcelTemplate() {
@@ -164,6 +169,9 @@ class _RosterImportDialogState extends ConsumerState<RosterImportDialog> {
           rows: _previewRows,
           syncOverwrittenToLinkedClasses:
               widget.linkedClassIds.isNotEmpty && _syncOverwritten,
+          autoEnrollNewToLinkedClasses:
+              widget.linkedClassIds.isNotEmpty && _autoEnrollNew,
+          enrolledAt: widget.defaultEnrolledAt,
           linkedClassIds: widget.linkedClassIds,
         );
     if (result != null && mounted) {
@@ -256,6 +264,9 @@ class _RosterImportDialogState extends ConsumerState<RosterImportDialog> {
                 syncOverwrittenToLinkedClasses: _syncOverwritten,
                 onToggleSyncOverwritten: (v) =>
                     setState(() => _syncOverwritten = v),
+                autoEnrollNewToLinkedClasses: _autoEnrollNew,
+                onToggleAutoEnrollNew: (v) =>
+                    setState(() => _autoEnrollNew = v),
                 onApplyAllDuplicateAction: (action) {
                   setState(() {
                     _previewRows = [

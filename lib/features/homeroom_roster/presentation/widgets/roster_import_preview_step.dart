@@ -12,6 +12,8 @@ class RosterImportPreviewStep extends StatelessWidget {
     required this.hasLinkedClasses,
     required this.syncOverwrittenToLinkedClasses,
     required this.onToggleSyncOverwritten,
+    this.autoEnrollNewToLinkedClasses = true,
+    this.onToggleAutoEnrollNew,
     required this.onApplyAllDuplicateAction,
     required this.onRowDuplicateActionChanged,
   });
@@ -20,6 +22,8 @@ class RosterImportPreviewStep extends StatelessWidget {
   final bool hasLinkedClasses;
   final bool syncOverwrittenToLinkedClasses;
   final ValueChanged<bool> onToggleSyncOverwritten;
+  final bool autoEnrollNewToLinkedClasses;
+  final ValueChanged<bool>? onToggleAutoEnrollNew;
   final ValueChanged<DuplicateResolutionAction> onApplyAllDuplicateAction;
   final void Function(int index, DuplicateResolutionAction action)
   onRowDuplicateActionChanged;
@@ -95,6 +99,17 @@ class RosterImportPreviewStep extends StatelessWidget {
                 child: const Text('อัปเดตทับรหัสซ้ำทั้งหมด'),
               ),
             ],
+          ),
+        ],
+        if (hasLinkedClasses && newCount > 0 && onToggleAutoEnrollNew != null) ...[
+          const SizedBox(height: 6),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: autoEnrollNewToLinkedClasses,
+            onChanged: (v) => onToggleAutoEnrollNew!(v ?? false),
+            title: const Text(
+              'เพิ่มนักเรียนใหม่เข้าทุกรายวิชาที่ผูกกับห้องนี้อัตโนมัติ',
+            ),
           ),
         ],
         if (hasLinkedClasses && overwriteCount > 0) ...[

@@ -400,6 +400,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+[functions.parse-roster-ai]
+# Verified explicitly inside the function via supabase.auth.getUser(token)
+# plus teacher_feature_flags.can_use_ai check so both HS256 and ES256 JWTs work reliably.
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

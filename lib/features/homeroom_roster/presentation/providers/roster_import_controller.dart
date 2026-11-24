@@ -18,6 +18,8 @@ class RosterImportController extends AsyncNotifier<void> {
     required List<RosterImportRowPreview> rows,
     required bool syncOverwrittenToLinkedClasses,
     required List<String> linkedClassIds,
+    bool autoEnrollNewToLinkedClasses = false,
+    DateTime? enrolledAt,
   }) async {
     final teacherId = ref.read(authStateProvider).userId;
     if (teacherId == null) {
@@ -37,9 +39,11 @@ class RosterImportController extends AsyncNotifier<void> {
             homeroomId: homeroomId,
             rows: rows,
             syncOverwrittenToLinkedClasses: syncOverwrittenToLinkedClasses,
+            autoEnrollNewToLinkedClasses: autoEnrollNewToLinkedClasses,
+            enrolledAt: enrolledAt,
           );
       ref.invalidate(homeroomStudentsProvider(homeroomId));
-      if (syncOverwrittenToLinkedClasses) {
+      if (syncOverwrittenToLinkedClasses || autoEnrollNewToLinkedClasses) {
         for (final classId in linkedClassIds) {
           ref.invalidate(classEnrollmentsProvider(classId));
         }

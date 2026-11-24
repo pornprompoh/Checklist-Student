@@ -79,6 +79,53 @@ void main() {
       expect(timeout.message, contains('อินเทอร์เน็ต'));
     });
 
+    test('maps parse-roster-ai FunctionException error_codes clearly', () {
+      final missingKey = ThaiErrorMapper.toAppException(
+        const supabase.FunctionException(
+          status: 500,
+          details: <String, dynamic>{
+            'error_code': 'MISSING_GEMINI_API_KEY',
+            'message': 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY บนเซิร์ฟเวอร์',
+          },
+        ),
+      );
+      expect(missingKey.code, 'MISSING_GEMINI_API_KEY');
+      expect(missingKey.message, contains('GEMINI_API_KEY'));
+
+      final quota = ThaiErrorMapper.toAppException(
+        const supabase.FunctionException(
+          status: 429,
+          details: '{"error_code":"GEMINI_QUOTA_EXCEEDED","message":"โควตาเต็ม"}',
+        ),
+      );
+      expect(quota.code, 'GEMINI_QUOTA_EXCEEDED');
+      expect(quota.message, contains('โควตา'));
+
+      final disabled = ThaiErrorMapper.toAppException(
+        const supabase.FunctionException(
+          status: 403,
+          details: <String, dynamic>{'error_code': 'AI_FEATURE_DISABLED'},
+        ),
+      );
+      expect(disabled, isA<PermissionDeniedException>());
+      expect(disabled.code, 'AI_FEATURE_DISABLED');
+
+      final invalidAi = ThaiErrorMapper.toAppException(
+        const supabase.FunctionException(
+          status: 502,
+          details: <String, dynamic>{'error_code': 'INVALID_AI_RESPONSE'},
+        ),
+      );
+      expect(invalidAi.code, 'INVALID_AI_RESPONSE');
+      expect(invalidAi.message, contains('โครงสร้างรายชื่อ'));
+
+      final notDeployed = ThaiErrorMapper.toAppException(
+        const supabase.FunctionException(status: 404),
+      );
+      expect(notDeployed.code, 'FUNCTION_NOT_FOUND');
+      expect(notDeployed.message, contains('parse-roster-ai'));
+    });
+
     test('returns safe Thai fallback for unexpected errors', () {
       final mapped = ThaiErrorMapper.map(Exception('Raw internal crash 0xFF'));
       expect(mapped, 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');

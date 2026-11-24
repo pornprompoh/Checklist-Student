@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../homeroom_roster/presentation/providers/homeroom_roster_providers.dart';
 import '../../domain/entities/academic_year.dart';
 import '../../domain/entities/delete_impact_summary.dart';
 import '../../domain/entities/subject.dart';
@@ -194,6 +195,8 @@ class AcademicStructureController extends AsyncNotifier<void> {
     required String roomName,
     required List<int> teachingDays,
     required bool isPinned,
+    bool autoLinkHomeroom = true,
+    DateTime? defaultEnrolledAt,
   }) {
     return _run(() async {
       final teacherId = _requireTeacherId();
@@ -203,13 +206,20 @@ class AcademicStructureController extends AsyncNotifier<void> {
           .createSubjectClass(
             teacherId: teacherId,
             subjectId: subjectId,
+            termId: termId,
             roomName: roomName,
+            autoLinkHomeroom: autoLinkHomeroom,
+            defaultEnrolledAt: defaultEnrolledAt,
             teachingDays: teachingDays,
             isPinned: isPinned,
             absentThresholdPct: profile?.defaultAbsentThresholdPct,
             missingWorkThreshold: profile?.defaultMissingWorkThreshold,
           );
       ref.invalidate(subjectClassesByTermProvider(termId));
+      if (autoLinkHomeroom) {
+        ref.invalidate(homeroomsByTermProvider(termId));
+        ref.invalidate(classEnrollmentsProvider(created.id));
+      }
       return created;
     });
   }

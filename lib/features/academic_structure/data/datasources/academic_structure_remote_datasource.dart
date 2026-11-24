@@ -10,6 +10,7 @@ import '../models/delete_impact_summary_dto.dart';
 import '../models/subject_class_dto.dart';
 import '../models/subject_dto.dart';
 import '../models/term_dto.dart';
+import 'academic_structure_homeroom_linker.dart';
 
 /// Remote data source communicating with the 4-level academic hierarchy tables
 /// and structural RPCs in Supabase.
@@ -258,18 +259,32 @@ class AcademicStructureRemoteDataSource {
   Future<SubjectClassDto> createSubjectClass({
     required String teacherId,
     required String subjectId,
+    String? termId,
     String? homeroomId,
     required String roomName,
+    bool autoLinkHomeroom = false,
+    DateTime? defaultEnrolledAt,
     List<int> teachingDays = const <int>[],
     bool isPinned = false,
     double? absentThresholdPct,
     int? missingWorkThreshold,
   }) async {
     try {
+      var resolvedHomeroomId = homeroomId;
+      if (autoLinkHomeroom && resolvedHomeroomId == null && termId != null) {
+        resolvedHomeroomId =
+            await AcademicStructureHomeroomLinker.ensureHomeroomId(
+              client: _client,
+              teacherId: teacherId,
+              termId: termId,
+              roomName: roomName,
+            );
+      }
+
       final payload = <String, dynamic>{
         'teacher_id': teacherId,
         'subject_id': subjectId,
-        'homeroom_id': homeroomId,
+        'homeroom_id': resolvedHomeroomId,
         'room_name': roomName.trim(),
         'teaching_days': teachingDays,
         'is_pinned': isPinned,
@@ -281,7 +296,19 @@ class AcademicStructureRemoteDataSource {
           .insert(payload)
           .select(_subjectClassColumns)
           .single();
-      return SubjectClassDto.fromJson(data);
+      final createdDto = SubjectClassDto.fromJson(data);
+
+      if (autoLinkHomeroom && resolvedHomeroomId != null) {
+        await AcademicStructureHomeroomLinker.copyActiveHomeroomStudentsToClass(
+          client: _client,
+          teacherId: teacherId,
+          homeroomId: resolvedHomeroomId,
+          subjectClassId: createdDto.id,
+          enrolledAt: defaultEnrolledAt ?? DateTime.now(),
+        );
+      }
+
+      return createdDto;
     } catch (error) {
       throw ThaiErrorMapper.toAppException(error);
     }

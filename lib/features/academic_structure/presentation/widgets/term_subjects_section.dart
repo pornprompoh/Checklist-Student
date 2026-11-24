@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/skeleton_box.dart';
+import '../../../homeroom_roster/domain/entities/homeroom.dart';
+import '../../../homeroom_roster/presentation/providers/homeroom_roster_providers.dart';
 import '../../domain/entities/delete_impact_summary.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/subject_class.dart';
@@ -31,6 +33,7 @@ class TermSubjectsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subjectsAsync = ref.watch(subjectsByTermProvider(term.id));
     final classesAsync = ref.watch(subjectClassesByTermProvider(term.id));
+    final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
 
     if (subjectsAsync.isLoading || classesAsync.isLoading) {
       return const Card(
@@ -63,6 +66,12 @@ class TermSubjectsSection extends ConsumerWidget {
 
     final subjects = subjectsAsync.asData?.value ?? const <Subject>[];
     final classes = classesAsync.asData?.value ?? const <SubjectClass>[];
+    final homerooms = homeroomsAsync.asData?.value ?? const <Homeroom>[];
+    final suggestedRoomNames = <String>{
+      for (final h in homerooms) h.name.trim(),
+      for (final c in classes) c.roomName.trim(),
+    }.where((name) => name.isNotEmpty).toList()
+      ..sort();
     final classesBySubject = <String, List<SubjectClass>>{};
     for (final c in classes) {
       classesBySubject.putIfAbsent(c.subjectId, () => <SubjectClass>[]).add(c);
@@ -107,7 +116,8 @@ class TermSubjectsSection extends ConsumerWidget {
               isBusy: isBusy,
               onEditSubject: () => _editSubject(context, ref, subject),
               onDeleteSubject: () => _deleteSubject(context, ref, subject),
-              onAddClass: () => _addClass(context, ref, subject),
+              onAddClass: () =>
+                  _addClass(context, ref, subject, suggestedRoomNames),
               onTogglePinClass: (sc) => ref
                   .read(academicStructureControllerProvider.notifier)
                   .togglePinSubjectClass(termId: term.id, subjectClass: sc),
@@ -189,10 +199,12 @@ class TermSubjectsSection extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Subject subject,
+    List<String> suggestedRoomNames,
   ) async {
     final result = await SubjectClassFormDialog.show(
       context,
       subjectLabel: '${subject.subjectCode} ${subject.subjectName}',
+      suggestedRoomNames: suggestedRoomNames,
     );
     if (result == null || !context.mounted) return;
     final created = await ref
@@ -203,12 +215,16 @@ class TermSubjectsSection extends ConsumerWidget {
           roomName: result.roomName,
           teachingDays: result.teachingDays,
           isPinned: result.isPinned,
+          autoLinkHomeroom: result.autoLinkHomeroom,
+          defaultEnrolledAt: term.startDate,
         );
     if (created != null && context.mounted) {
       AppFeedbackBanner.showSnackBar(
         context,
         type: AppFeedbackType.success,
-        message: 'เพิ่มห้องเรียน ${created.roomName} เรียบร้อยแล้ว',
+        message: result.autoLinkHomeroom
+            ? 'เพิ่มห้องเรียน ${created.roomName} และผูกคลังรายชื่อกลางเรียบร้อยแล้ว'
+            : 'เพิ่มห้องเรียน ${created.roomName} เรียบร้อยแล้ว',
       );
     }
   }

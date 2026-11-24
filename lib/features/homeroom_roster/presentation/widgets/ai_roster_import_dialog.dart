@@ -25,6 +25,7 @@ class AiRosterImportDialog extends ConsumerStatefulWidget {
     required this.homeroomName,
     required this.existingStudents,
     required this.linkedClassIds,
+    this.defaultEnrolledAt,
   });
 
   final String academicYearId;
@@ -32,6 +33,7 @@ class AiRosterImportDialog extends ConsumerStatefulWidget {
   final String homeroomName;
   final List<HomeroomStudent> existingStudents;
   final List<String> linkedClassIds;
+  final DateTime? defaultEnrolledAt;
 
   static Future<RosterImportResult?> show(
     BuildContext context, {
@@ -40,6 +42,7 @@ class AiRosterImportDialog extends ConsumerStatefulWidget {
     required String homeroomName,
     required List<HomeroomStudent> existingStudents,
     required List<String> linkedClassIds,
+    DateTime? defaultEnrolledAt,
   }) {
     return showDialog<RosterImportResult>(
       context: context,
@@ -50,6 +53,7 @@ class AiRosterImportDialog extends ConsumerStatefulWidget {
         homeroomName: homeroomName,
         existingStudents: existingStudents,
         linkedClassIds: linkedClassIds,
+        defaultEnrolledAt: defaultEnrolledAt,
       ),
     );
   }
@@ -65,6 +69,7 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
   CompressedImportFile? _compressedFile;
   List<RosterImportRowPreview> _previewRows = const <RosterImportRowPreview>[];
   bool _syncOverwritten = true;
+  bool _autoEnrollNew = true;
   String? _localError;
 
   int get _actionableCount => _previewRows
@@ -115,6 +120,9 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
                   AppFeedbackBanner(
                     type: AppFeedbackType.error,
                     message: errorMessage,
+                    onRetry: (!isBusy && _step == 0 && _compressedFile != null)
+                        ? _analyzeWithAi
+                        : null,
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -244,6 +252,8 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
           hasLinkedClasses: widget.linkedClassIds.isNotEmpty,
           syncOverwrittenToLinkedClasses: _syncOverwritten,
           onToggleSyncOverwritten: (v) => setState(() => _syncOverwritten = v),
+          autoEnrollNewToLinkedClasses: _autoEnrollNew,
+          onToggleAutoEnrollNew: (v) => setState(() => _autoEnrollNew = v),
           onApplyAllDuplicateAction: _applyAllDuplicateAction,
           onRowDuplicateActionChanged: _setRowDuplicateAction,
         ),
@@ -373,7 +383,11 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
         .commitImport(
           homeroomId: widget.homeroomId,
           rows: _previewRows,
-          syncOverwrittenToLinkedClasses: _syncOverwritten,
+          syncOverwrittenToLinkedClasses:
+              widget.linkedClassIds.isNotEmpty && _syncOverwritten,
+          autoEnrollNewToLinkedClasses:
+              widget.linkedClassIds.isNotEmpty && _autoEnrollNew,
+          enrolledAt: widget.defaultEnrolledAt,
           linkedClassIds: widget.linkedClassIds,
         );
     if (result != null && mounted) {

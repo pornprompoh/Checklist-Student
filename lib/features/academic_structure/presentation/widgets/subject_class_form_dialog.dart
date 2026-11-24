@@ -9,35 +9,41 @@ class SubjectClassFormResult {
     required this.roomName,
     required this.teachingDays,
     required this.isPinned,
+    this.autoLinkHomeroom = true,
   });
 
   final String roomName;
   final List<int> teachingDays;
   final bool isPinned;
+  final bool autoLinkHomeroom;
 }
 
 /// Dialog for creating or editing a [SubjectClass] (`room_name`,
-/// `teaching_days` `1..7`, and `is_pinned`).
+/// `teaching_days` `1..7`, `is_pinned`, and auto-linking to term `homerooms`).
 class SubjectClassFormDialog extends StatefulWidget {
   const SubjectClassFormDialog({
     super.key,
     required this.subjectLabel,
     this.existingClass,
+    this.suggestedRoomNames = const <String>[],
   });
 
   final String subjectLabel;
   final SubjectClass? existingClass;
+  final List<String> suggestedRoomNames;
 
   static Future<SubjectClassFormResult?> show(
     BuildContext context, {
     required String subjectLabel,
     SubjectClass? existingClass,
+    List<String> suggestedRoomNames = const <String>[],
   }) {
     return showDialog<SubjectClassFormResult>(
       context: context,
       builder: (dialogContext) => SubjectClassFormDialog(
         subjectLabel: subjectLabel,
         existingClass: existingClass,
+        suggestedRoomNames: suggestedRoomNames,
       ),
     );
   }
@@ -51,6 +57,7 @@ class _SubjectClassFormDialogState extends State<SubjectClassFormDialog> {
   late final TextEditingController _roomCtrl;
   late final Set<int> _selectedDays;
   late bool _isPinned;
+  bool _autoLinkHomeroom = true;
 
   @override
   void initState() {
@@ -85,6 +92,7 @@ class _SubjectClassFormDialogState extends State<SubjectClassFormDialog> {
         roomName: _roomCtrl.text.trim(),
         teachingDays: List<int>.unmodifiable(sortedDays),
         isPinned: _isPinned,
+        autoLinkHomeroom: widget.existingClass == null && _autoLinkHomeroom,
       ),
     );
   }
@@ -99,7 +107,7 @@ class _SubjectClassFormDialogState extends State<SubjectClassFormDialog> {
       scrollable: true,
       title: Text(isEditing ? 'แก้ไขห้องเรียน' : 'เพิ่มห้องเรียน'),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: const BoxConstraints(maxWidth: 440),
         child: Form(
           key: _formKey,
           child: Column(
@@ -113,9 +121,32 @@ class _SubjectClassFormDialogState extends State<SubjectClassFormDialog> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (!isEditing && widget.suggestedRoomNames.isNotEmpty) ...[
+                Text(
+                  'เลือกจากห้องที่มีอยู่แล้วในเทอมนี้ (หรือพิมพ์ใหม่ด้านล่าง)',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final name in widget.suggestedRoomNames)
+                      ChoiceChip(
+                        label: Text(name),
+                        selected: _roomCtrl.text.trim() == name,
+                        onSelected: (_) => setState(() => _roomCtrl.text = name),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
               TextFormField(
                 controller: _roomCtrl,
                 autofocus: !isEditing,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                   labelText: 'ชื่อห้องเรียน',
                   hintText: 'เช่น ม.4/1',
@@ -124,7 +155,23 @@ class _SubjectClassFormDialogState extends State<SubjectClassFormDialog> {
                     ? 'กรุณากรอกชื่อห้องเรียน'
                     : null,
               ),
-              const SizedBox(height: 16),
+              if (!isEditing) ...[
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _autoLinkHomeroom,
+                  onChanged: (value) =>
+                      setState(() => _autoLinkHomeroom = value ?? false),
+                  title: const Text('ผูก/สร้างคลังรายชื่อกลางห้องนี้ให้อัตโนมัติ'),
+                  subtitle: Text(
+                    'ไม่ต้องไปสร้างห้องซ้ำในหน้าคลังรายชื่อ และดึงนักเรียนที่มีอยู่แล้วเข้าวิชานี้ทันที',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
               Text(
                 'วันที่มีสอน (ใช้จัดลำดับการ์ดบนหน้าหลัก)',
                 style: textTheme.labelLarge,

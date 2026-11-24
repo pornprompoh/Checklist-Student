@@ -14,6 +14,7 @@ import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
 import '../../domain/services/roster_renumber_service.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
 import '../providers/homeroom_roster_controller.dart';
 import '../providers/homeroom_roster_providers.dart';
 import 'ai_roster_import_dialog.dart';
@@ -85,6 +86,11 @@ class HomeroomMasterTabView extends ConsumerWidget {
             orElse: () => homerooms.first,
           );
 
+    final unlinkedGroups = UnlinkedRoomSyncService.findUnlinkedRooms(
+      homerooms: homerooms,
+      subjectClasses: classes,
+    );
+
     final listPanel = HomeroomListPanel(
       homerooms: homerooms,
       selectedHomeroomId: selectedHomeroom?.id,
@@ -96,6 +102,12 @@ class HomeroomMasterTabView extends ConsumerWidget {
       onRename: (room) => _renameHomeroom(context, ref, room),
       onDelete: (room) =>
           _deleteHomeroom(context, ref, room, linkedCounts[room.id] ?? 0),
+      unlinkedRoomGroups: unlinkedGroups,
+      onSyncUnlinkedGroup: (group) =>
+          _syncUnlinkedRooms(context, ref, <UnlinkedRoomGroup>[group]),
+      onSyncAllUnlinked: unlinkedGroups.isEmpty
+          ? null
+          : () => _syncUnlinkedRooms(context, ref, unlinkedGroups),
     );
 
     final detailCard = selectedHomeroom == null
@@ -129,6 +141,29 @@ class HomeroomMasterTabView extends ConsumerWidget {
         ],
       ],
     );
+  }
+
+  Future<void> _syncUnlinkedRooms(
+    BuildContext context,
+    WidgetRef ref,
+    List<UnlinkedRoomGroup> groups,
+  ) async {
+    final first = await ref
+        .read(homeroomRosterControllerProvider.notifier)
+        .syncUnlinkedRoomGroups(
+          termId: term.id,
+          groups: groups,
+          enrolledAt: term.startDate,
+        );
+    if (first != null && context.mounted) {
+      AppFeedbackBanner.showSnackBar(
+        context,
+        type: AppFeedbackType.success,
+        message: groups.length == 1
+            ? 'เชื่อมห้อง "${first.name}" เข้าคลังรายชื่อเรียบร้อยแล้ว พร้อมเพิ่มนักเรียนได้ทันที'
+            : 'นำเข้าและเชื่อม ${groups.length} ห้องจากโครงสร้างสอนเข้าคลังรายชื่อเรียบร้อยแล้ว',
+      );
+    }
   }
 
   Future<void> _createHomeroom(BuildContext context, WidgetRef ref) async {
@@ -353,6 +388,7 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
       homeroomName: homeroom.name,
       existingStudents: existing,
       linkedClassIds: _linkedClassIds,
+      defaultEnrolledAt: term.startDate,
     );
     if (result == null || !context.mounted) return;
     AppFeedbackBanner.showSnackBar(
@@ -360,6 +396,7 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
       type: AppFeedbackType.success,
       message:
           'นำเข้าด้วย AI สำเร็จ: เพิ่มใหม่ ${result.insertedCount} คน'
+          '${result.autoEnrolledClassesCount > 0 ? ' · ซิงค์เข้า ${result.autoEnrolledClassesCount} รายวิชาแล้ว' : ''}'
           '${result.updatedCount > 0 ? ' · อัปเดตทับ ${result.updatedCount} คน' : ''}'
           '${result.skippedCount > 0 ? ' · ข้าม ${result.skippedCount} แถว' : ''}',
     );
@@ -376,6 +413,7 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
       homeroomName: homeroom.name,
       existingStudents: existing,
       linkedClassIds: _linkedClassIds,
+      defaultEnrolledAt: term.startDate,
     );
     if (result == null || !context.mounted) return;
     AppFeedbackBanner.showSnackBar(
@@ -383,6 +421,7 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
       type: AppFeedbackType.success,
       message:
           'นำเข้าสำเร็จ: เพิ่มใหม่ ${result.insertedCount} คน'
+          '${result.autoEnrolledClassesCount > 0 ? ' · ซิงค์เข้า ${result.autoEnrolledClassesCount} รายวิชาแล้ว' : ''}'
           '${result.updatedCount > 0 ? ' · อัปเดตทับ ${result.updatedCount} คน' : ''}'
           '${result.skippedCount > 0 ? ' · ข้าม ${result.skippedCount} แถว' : ''}',
     );
@@ -427,6 +466,8 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
       context,
       title: 'เพิ่มนักเรียนเข้าคลัง ${homeroom.name}',
       initialStudentNumber: nextNum,
+      showSyncToLinkedClassesOption: _linkedClassIds.isNotEmpty,
+      linkedClassCount: _linkedClassIds.length,
     );
     if (result == null || !context.mounted) return;
     final created = await ref
@@ -438,12 +479,17 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
           prefix: result.prefix,
           firstName: result.firstName,
           lastName: result.lastName,
+          autoEnrollLinkedClasses: result.syncToLinkedClasses,
+          enrolledAt: term.startDate,
+          linkedClassIds: _linkedClassIds,
         );
     if (created != null && context.mounted) {
       AppFeedbackBanner.showSnackBar(
         context,
         type: AppFeedbackType.success,
-        message: 'เพิ่ม ${created.fullName} เข้าคลังเรียบร้อยแล้ว',
+        message: result.syncToLinkedClasses && _linkedClassIds.isNotEmpty
+            ? 'เพิ่ม ${created.fullName} เข้าคลังและซิงค์เข้า ${_linkedClassIds.length} รายวิชาที่ผูกไว้เรียบร้อยแล้ว'
+            : 'เพิ่ม ${created.fullName} เข้าคลังเรียบร้อยแล้ว',
       );
     }
   }

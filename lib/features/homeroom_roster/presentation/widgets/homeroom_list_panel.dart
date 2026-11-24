@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../domain/entities/homeroom.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
 
 /// Master list panel displaying all term-level [Homeroom] rosters with linked
-/// class count badges and create/rename/delete actions.
+/// class count badges, unlinked rooms detected from `academic_structure`,
+/// and create/rename/delete actions.
 class HomeroomListPanel extends StatelessWidget {
   const HomeroomListPanel({
     super.key,
@@ -16,6 +18,9 @@ class HomeroomListPanel extends StatelessWidget {
     required this.onCreate,
     required this.onRename,
     required this.onDelete,
+    this.unlinkedRoomGroups = const <UnlinkedRoomGroup>[],
+    this.onSyncUnlinkedGroup,
+    this.onSyncAllUnlinked,
   });
 
   final List<Homeroom> homerooms;
@@ -26,6 +31,9 @@ class HomeroomListPanel extends StatelessWidget {
   final VoidCallback onCreate;
   final ValueChanged<Homeroom> onRename;
   final ValueChanged<Homeroom> onDelete;
+  final List<UnlinkedRoomGroup> unlinkedRoomGroups;
+  final ValueChanged<UnlinkedRoomGroup>? onSyncUnlinkedGroup;
+  final VoidCallback? onSyncAllUnlinked;
 
   @override
   Widget build(BuildContext context) {
@@ -57,17 +65,17 @@ class HomeroomListPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            if (homerooms.isEmpty)
+            if (homerooms.isEmpty && unlinkedRoomGroups.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'ยังไม่มีคลังห้องเรียนในเทอมนี้ กด "สร้างห้อง" เพื่อเริ่มต้น',
+                  'ยังไม่มีคลังห้องเรียนในเทอมนี้ กด "สร้างห้อง" หรือสร้างห้องในหน้าโครงสร้างสอนเพื่อเริ่มต้น',
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               )
-            else
+            else ...[
               for (final room in homerooms) ...[
                 _HomeroomTile(
                   homeroom: room,
@@ -81,6 +89,82 @@ class HomeroomListPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
               ],
+            ],
+            if (unlinkedRoomGroups.isNotEmpty) ...[
+              const Divider(height: 20),
+              Text(
+                'ห้องจากโครงสร้างสอน (${unlinkedRoomGroups.length})',
+                style: textTheme.labelLarge?.copyWith(
+                  color: semantic.warning,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'กดเลือกห้องเพื่อสร้าง/เชื่อมคลังรายชื่ออัตโนมัติโดยไม่ต้องพิมพ์ชื่อห้องซ้ำ',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (onSyncAllUnlinked != null) ...[
+                OutlinedButton.icon(
+                  onPressed: isBusy ? null : onSyncAllUnlinked,
+                  icon: const Icon(Icons.sync_rounded, size: 18),
+                  label: const Text('นำห้องจากโครงสร้างสอนเข้าคลังทั้งหมด'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              for (final group in unlinkedRoomGroups) ...[
+                Material(
+                  color: semantic.warningContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: isBusy || onSyncUnlinkedGroup == null
+                        ? null
+                        : () => onSyncUnlinkedGroup!(group),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  group.roomName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  'จากโครงสร้างสอน · ${group.classCount} วิชา',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: semantic.warning,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.add_link_rounded,
+                            size: 20,
+                            color: semantic.warning,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+            ],
           ],
         ),
       ),

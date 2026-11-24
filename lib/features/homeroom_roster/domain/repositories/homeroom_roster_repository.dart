@@ -8,6 +8,7 @@ import '../entities/roster_import_row_preview.dart';
 import '../entities/student_lifecycle_status.dart';
 import '../entities/uploaded_import_file.dart';
 import '../services/roster_renumber_service.dart';
+import '../services/unlinked_room_sync_service.dart';
 
 /// Abstract repository contract for term-level homeroom master rosters,
 /// subject-class enrollment linking, mid-term additions, soft deletes,
@@ -38,6 +39,8 @@ abstract interface class HomeroomRosterRepository {
     required String prefix,
     required String firstName,
     required String lastName,
+    bool autoEnrollLinkedClasses = false,
+    DateTime? enrolledAt,
   });
   Future<int> updateHomeroomStudent({
     required String homeroomStudentId,
@@ -64,6 +67,8 @@ abstract interface class HomeroomRosterRepository {
     required String homeroomId,
     required List<RosterImportRowPreview> rows,
     required bool syncOverwrittenToLinkedClasses,
+    bool autoEnrollNewToLinkedClasses = false,
+    DateTime? enrolledAt,
   });
   Future<UploadedImportFileResult> uploadAndParseRosterWithAi({
     required String teacherId,
@@ -76,6 +81,12 @@ abstract interface class HomeroomRosterRepository {
   });
 
   // Linking & Subject-Class Enrollments
+  Future<Homeroom?> syncUnlinkedRoomGroups({
+    required String teacherId,
+    required String termId,
+    required List<UnlinkedRoomGroup> groups,
+    required DateTime enrolledAt,
+  });
   Future<int> linkHomeroomToSubjectClasses({
     required String teacherId,
     required String homeroomId,

@@ -153,8 +153,11 @@ class AcademicStructureRepositoryImpl implements AcademicStructureRepository {
   Future<SubjectClass> createSubjectClass({
     required String teacherId,
     required String subjectId,
+    String? termId,
     String? homeroomId,
     required String roomName,
+    bool autoLinkHomeroom = false,
+    DateTime? defaultEnrolledAt,
     List<int> teachingDays = const <int>[],
     bool isPinned = false,
     double? absentThresholdPct,
@@ -163,8 +166,11 @@ class AcademicStructureRepositoryImpl implements AcademicStructureRepository {
     final dto = await _requireRemote().createSubjectClass(
       teacherId: teacherId,
       subjectId: subjectId,
+      termId: termId,
       homeroomId: homeroomId,
       roomName: roomName,
+      autoLinkHomeroom: autoLinkHomeroom,
+      defaultEnrolledAt: defaultEnrolledAt,
       teachingDays: teachingDays,
       isPinned: isPinned,
       absentThresholdPct: absentThresholdPct,
