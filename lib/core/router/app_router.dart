@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/academic_structure/presentation/pages/academic_structure_page.dart';
 import '../../features/auth/domain/entities/auth_state.dart';
 import '../../features/auth/presentation/pages/teacher_login_page.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
@@ -60,10 +61,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.teacherAcademicStructure,
-            builder: (context, state) => const _ModulePlaceholderView(
-              title: 'โครงสร้างปีการศึกษาและรายวิชา',
-              subtitle: 'พร้อมพัฒนาต่อใน Phase 2 (ปีการศึกษา → เทอม → วิชา → ห้องสอน)',
-            ),
+            builder: (context, state) => const AcademicStructurePage(),
           ),
           GoRoute(
             path: AppRoutes.teacherHomeroomRoster,
