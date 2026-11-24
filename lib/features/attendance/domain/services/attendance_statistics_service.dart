@@ -1,5 +1,6 @@
 import '../../../../core/constants/attendance_status.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
+import '../../../homeroom_roster/domain/entities/student_lifecycle_status.dart';
 import '../entities/attendance_record.dart';
 import '../entities/attendance_rule_config.dart';
 import '../entities/attendance_session.dart';
@@ -9,11 +10,26 @@ import '../entities/student_attendance_summary.dart';
 /// effective absences, `มส` risk levels, and session status counters.
 ///
 /// Handles mid-term enrollments (`enrolledAt`) and soft-deleted students
-/// (`transferredOutAt`) strictly via date-only comparisons.
+/// (`transferredOutAt`) strictly via date-only comparisons:
+/// - Sessions before `enrolledAt` are excluded.
+/// - `transferredOutAt` is the termination date: sessions on or after
+///   `transferredOutAt` (`sessionDate >= transferredOutAt`) are excluded.
 class AttendanceStatisticsService {
   const AttendanceStatisticsService();
 
   static const double _approachingRatio = 0.75;
+
+  /// Returns `true` when [enrollment] should be actively checked in on
+  /// [sessionDate] (must be `active` and already enrolled on or before that date).
+  bool isEligibleForDate({
+    required ClassEnrollment enrollment,
+    required DateTime sessionDate,
+  }) {
+    if (enrollment.isTransferredOut) {
+      return false;
+    }
+    return !_dateOnly(sessionDate).isBefore(_dateOnly(enrollment.enrolledAt));
+  }
 
   /// Computes attendance statistics for one student across [sessions] and
   /// [records] according to [ruleConfig].
@@ -21,6 +37,7 @@ class AttendanceStatisticsService {
     required String enrollmentId,
     required DateTime enrolledAt,
     DateTime? transferredOutAt,
+    StudentLifecycleStatus status = StudentLifecycleStatus.active,
     required List<AttendanceSession> sessions,
     required List<AttendanceRecord> records,
     required AttendanceRuleConfig ruleConfig,
@@ -29,17 +46,23 @@ class AttendanceStatisticsService {
     final transferredDate = transferredOutAt == null
         ? null
         : _dateOnly(transferredOutAt);
+    final isTransferredWithoutDate =
+        status == StudentLifecycleStatus.transferredOut &&
+        transferredDate == null;
 
     final eligibleSessionIds = <String>{};
-    for (final session in sessions) {
-      final sessionDate = _dateOnly(session.sessionDate);
-      if (sessionDate.isBefore(enrolledDate)) {
-        continue;
+    if (!isTransferredWithoutDate) {
+      for (final session in sessions) {
+        final sessionDate = _dateOnly(session.sessionDate);
+        if (sessionDate.isBefore(enrolledDate)) {
+          continue;
+        }
+        // transferredOutAt is the exit date: exclude sessionDate >= transferredOutAt.
+        if (transferredDate != null && !sessionDate.isBefore(transferredDate)) {
+          continue;
+        }
+        eligibleSessionIds.add(session.id);
       }
-      if (transferredDate != null && sessionDate.isAfter(transferredDate)) {
-        continue;
-      }
-      eligibleSessionIds.add(session.id);
     }
 
     var presentCount = 0;
@@ -121,6 +144,7 @@ class AttendanceStatisticsService {
         enrollmentId: student.id,
         enrolledAt: student.enrolledAt,
         transferredOutAt: student.transferredOutAt,
+        status: student.status,
         sessions: sessions,
         records:
             recordsByEnrollment[student.id] ?? const <AttendanceRecord>[],

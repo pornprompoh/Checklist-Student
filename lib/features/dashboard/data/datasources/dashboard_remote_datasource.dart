@@ -54,7 +54,7 @@ class DashboardRemoteDataSource {
       final batchResults = await Future.wait<List<Map<String, dynamic>>>([
         _client
             .from('class_enrollments')
-            .select('subject_class_id')
+            .select('id, subject_class_id')
             .inFilter('subject_class_id', classIds)
             .eq('status', 'active'),
         _client
@@ -65,8 +65,11 @@ class DashboardRemoteDataSource {
       ]);
 
       final activeCountByClass = <String, int>{};
+      final activeEnrollmentIds = <String>{};
       for (final row in batchResults[0]) {
+        final enrollmentId = row['id'] as String;
         final classId = row['subject_class_id'] as String;
+        activeEnrollmentIds.add(enrollmentId);
         activeCountByClass[classId] = (activeCountByClass[classId] ?? 0) + 1;
       }
 
@@ -83,9 +86,14 @@ class DashboardRemoteDataSource {
       if (sessionIds.isNotEmpty) {
         final recordRows = await _client
             .from('attendance_records')
-            .select('session_id, status')
+            .select('session_id, enrollment_id, status')
             .inFilter('session_id', sessionIds);
         for (final row in recordRows) {
+          final enrollmentId = row['enrollment_id'] as String?;
+          if (enrollmentId == null ||
+              !activeEnrollmentIds.contains(enrollmentId)) {
+            continue;
+          }
           final sessionId = row['session_id'] as String;
           final status = AttendanceStatus.tryFromDbValue(
             row['status'] as String?,

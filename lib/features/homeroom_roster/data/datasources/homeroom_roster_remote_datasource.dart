@@ -278,6 +278,38 @@ class HomeroomRosterRemoteDataSource {
     }
   }
 
+  /// Permanently removes a student added/imported by mistake.
+  ///
+  /// Deletes linked `class_enrollments` FIRST (triggering PostgreSQL
+  /// `ON DELETE CASCADE` for attendance/scores/audit logs) before deleting the
+  /// `homeroom_students` row so `ON DELETE SET NULL` never leaves orphans.
+  /// Never touches `public.student_identities`.
+  Future<int> permanentlyDeleteHomeroomStudent({
+    required String homeroomStudentId,
+    required bool deleteFromLinkedClasses,
+  }) async {
+    try {
+      var deletedEnrollmentsCount = 0;
+      if (deleteFromLinkedClasses) {
+        final deletedRows = await _client
+            .from('class_enrollments')
+            .delete()
+            .eq('homeroom_student_id', homeroomStudentId)
+            .select('id');
+        deletedEnrollmentsCount = deletedRows.length;
+      }
+
+      await _client
+          .from('homeroom_students')
+          .delete()
+          .eq('id', homeroomStudentId);
+
+      return deletedEnrollmentsCount;
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
   Future<int> renumberHomeroomStudents({
     required List<RenumberAssignment> assignments,
     required bool syncLinkedClasses,

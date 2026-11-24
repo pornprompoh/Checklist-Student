@@ -58,6 +58,10 @@ abstract interface class HomeroomRosterRepository {
     DateTime? transferredOutAt,
     required bool syncLinkedClasses,
   });
+  Future<int> permanentlyDeleteHomeroomStudent({
+    required String homeroomStudentId,
+    required bool deleteFromLinkedClasses,
+  });
   Future<int> renumberHomeroomStudents({
     required List<RenumberAssignment> assignments,
     required bool syncLinkedClasses,
@@ -120,6 +124,11 @@ abstract interface class HomeroomRosterRepository {
     required StudentLifecycleStatus status,
     DateTime? transferredOutAt,
     required bool syncToHomeroomAndAllClasses,
+  });
+  Future<void> permanentlyDeleteClassEnrollment({
+    required String enrollmentId,
+    String? homeroomStudentId,
+    required bool alsoDeleteFromHomeroom,
   });
   Future<void> renumberClassEnrollments({
     required List<ClassEnrollment> currentEnrollments,

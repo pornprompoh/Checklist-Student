@@ -287,6 +287,28 @@ class ClassEnrollmentRemoteDataSource {
     }
   }
 
+  /// Permanently removes a `class_enrollments` row (cascading attendance,
+  /// scores, and audit logs), optionally removing the linked homeroom master
+  /// student and all sibling enrollments in the same term. Never touches
+  /// `public.student_identities`.
+  Future<void> permanentlyDeleteClassEnrollment({
+    required String enrollmentId,
+    String? homeroomStudentId,
+    required bool alsoDeleteFromHomeroom,
+  }) async {
+    try {
+      if (alsoDeleteFromHomeroom && homeroomStudentId != null) {
+        await _homeroomRemote.permanentlyDeleteHomeroomStudent(
+          homeroomStudentId: homeroomStudentId,
+          deleteFromLinkedClasses: true,
+        );
+      }
+      await _client.from('class_enrollments').delete().eq('id', enrollmentId);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
   Future<void> renumberClassEnrollments({
     required List<ClassEnrollment> currentEnrollments,
     required List<RenumberAssignment> assignments,

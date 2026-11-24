@@ -19,6 +19,7 @@ import 'attendance_save_bar.dart';
 import 'attendance_session_header.dart';
 import 'attendance_status_summary_bar.dart';
 import 'attendance_student_row.dart';
+import 'transferred_out_attendance_section.dart';
 
 /// Interactive body of the daily check-in screen guarded by [UnsavedChangesGuard].
 class AttendanceCheckInBody extends ConsumerWidget {
@@ -54,15 +55,32 @@ class AttendanceCheckInBody extends ConsumerWidget {
 
     final enrollments =
         enrollmentsAsync.asData?.value ?? const <ClassEnrollment>[];
-    final eligibleIds = _eligibleIds(enrollments, state.selectedDate);
-    final counts = _countDrafts(eligibleIds, state.draftStatuses);
+    final statsService = ref.watch(attendanceStatisticsServiceProvider);
+    final activeStudents = enrollments
+        .where((e) => !e.isTransferredOut)
+        .toList(growable: false);
+    final transferredWithHistory = enrollments
+        .where(
+          (e) =>
+              e.isTransferredOut &&
+              state.existingRecordsByEnrollment.containsKey(e.id),
+        )
+        .toList(growable: false);
 
-    final activeOrFuture = enrollments
-        .where((e) => !_isTransferredBeforeDate(e, state.selectedDate))
+    final eligibleIds = activeStudents
+        .where(
+          (e) => statsService.isEligibleForDate(
+            enrollment: e,
+            sessionDate: state.selectedDate,
+          ),
+        )
+        .map((e) => e.id)
         .toList(growable: false);
-    final transferredBefore = enrollments
-        .where((e) => _isTransferredBeforeDate(e, state.selectedDate))
-        .toList(growable: false);
+    final eligibleIdSet = eligibleIds.toSet();
+    final counts = _countDrafts(eligibleIds, state.draftStatuses);
+    final hasAnyEligibleDraft = state.draftStatuses.keys.any(
+      eligibleIdSet.contains,
+    );
 
     return UnsavedChangesGuard(
       hasUnsavedChanges: state.isDirty,
@@ -191,7 +209,7 @@ class AttendanceCheckInBody extends ConsumerWidget {
                               _confirmUnlock(context, controller),
                         ),
                         const SizedBox(height: 12),
-                        for (final student in activeOrFuture) ...[
+                        for (final student in activeStudents) ...[
                           AttendanceStudentRow(
                             enrollment: student,
                             selectedDate: state.selectedDate,
@@ -210,30 +228,12 @@ class AttendanceCheckInBody extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                         ],
-                        if (transferredBefore.isNotEmpty) ...[
+                        if (transferredWithHistory.isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            title: Text(
-                              'นักเรียนที่ย้ายออกก่อนวันนี้ (${transferredBefore.length} คน)',
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                            children: [
-                              for (final student in transferredBefore) ...[
-                                AttendanceStudentRow(
-                                  enrollment: student,
-                                  selectedDate: state.selectedDate,
-                                  selectedStatus:
-                                      state.draftStatuses[student.id],
-                                  note: state.draftNotes[student.id] ?? '',
-                                  summary: summaries[student.id],
-                                  isLocked: true,
-                                  onStatusSelected: (_) {},
-                                  onEditNote: () {},
-                                ),
-                                const SizedBox(height: 8),
-                              ],
-                            ],
+                          TransferredOutAttendanceSection(
+                            students: transferredWithHistory,
+                            recordsByEnrollment:
+                                state.existingRecordsByEnrollment,
                           ),
                         ],
                       ],
@@ -243,16 +243,17 @@ class AttendanceCheckInBody extends ConsumerWidget {
               ),
             ),
           ),
-          if (enrollments.isNotEmpty)
+          if (activeStudents.isNotEmpty)
             AttendanceSaveBar(
               lockAfterSave: lockAfterSave,
               isLocked: state.isLocked,
               isSaving: state.isSaving,
-              canSave: state.draftStatuses.isNotEmpty,
+              canSave: hasAnyEligibleDraft,
               onToggleLockAfterSave: onToggleLockAfterSave,
               onSave: () async {
                 final ok = await controller.saveAttendance(
                   lockAfterSave: lockAfterSave,
+                  eligibleEnrollmentIds: eligibleIdSet,
                 );
                 if (ok && context.mounted) {
                   AppFeedbackBanner.showSnackBar(
@@ -308,15 +309,24 @@ class AttendanceCheckInBody extends ConsumerWidget {
     AttendanceCheckInState state,
     AttendanceCheckInController controller,
   ) async {
+    final enrollments =
+        ref.read(classEnrollmentsProvider(subjectClassId)).asData?.value ??
+        const <ClassEnrollment>[];
+    final activeIds = enrollments
+        .where((e) => !e.isTransferredOut)
+        .map((e) => e.id)
+        .toSet();
     final sessions =
         ref.read(attendanceSessionsProvider(subjectClassId)).asData?.value ??
         const [];
     final records =
-        ref
-            .read(attendanceClassRecordsProvider(subjectClassId))
-            .asData
-            ?.value ??
-        const [];
+        (ref
+                    .read(attendanceClassRecordsProvider(subjectClassId))
+                    .asData
+                    ?.value ??
+                const [])
+            .where((r) => activeIds.contains(r.enrollmentId))
+            .toList(growable: false);
     await AttendanceHistorySheet.show(
       context,
       sessions: sessions,
@@ -388,29 +398,6 @@ class AttendanceCheckInBody extends ConsumerWidget {
         message: 'ปลดล็อกคาบแล้ว สามารถแก้ไขและบันทึกใหม่ได้',
       );
     }
-  }
-
-  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
-  static bool _isTransferredBeforeDate(ClassEnrollment e, DateTime date) {
-    if (!e.isTransferredOut) return false;
-    final out = e.transferredOutAt;
-    return out == null || _dateOnly(date).isAfter(_dateOnly(out));
-  }
-
-  static List<String> _eligibleIds(
-    List<ClassEnrollment> enrollments,
-    DateTime date,
-  ) {
-    final d = _dateOnly(date);
-    return enrollments
-        .where(
-          (e) =>
-              !d.isBefore(_dateOnly(e.enrolledAt)) &&
-              !_isTransferredBeforeDate(e, date),
-        )
-        .map((e) => e.id)
-        .toList(growable: false);
   }
 
   static ({int present, int late, int leave, int absent, int unmarked})

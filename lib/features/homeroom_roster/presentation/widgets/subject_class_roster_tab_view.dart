@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/skeleton_box.dart';
+import '../../../../core/widgets/typed_confirm_dialog.dart';
 import '../../../academic_structure/domain/entities/subject.dart';
 import '../../../academic_structure/domain/entities/subject_class.dart';
 import '../../../academic_structure/domain/entities/term.dart';
@@ -234,6 +235,13 @@ class SubjectClassRosterTabView extends ConsumerWidget {
                     linkedHomeroom?.id,
                     siblingClassIds,
                   ),
+                  onPermanentDelete: (row) => _permanentDeleteEnrollment(
+                    context,
+                    ref,
+                    byId[row.id]!,
+                    linkedHomeroom?.id,
+                    siblingClassIds,
+                  ),
                 );
               },
             ),
@@ -402,6 +410,64 @@ class SubjectClassRosterTabView extends ConsumerWidget {
         message: nextStatus == StudentLifecycleStatus.transferredOut
             ? 'บันทึกย้ายออกแล้ว (คงเลขที่เดิม ${enrollment.studentNumber} ไว้)'
             : 'คืนสถานะกำลังเรียนเรียบร้อยแล้ว',
+      );
+    }
+  }
+
+  Future<void> _permanentDeleteEnrollment(
+    BuildContext context,
+    WidgetRef ref,
+    ClassEnrollment enrollment,
+    String? linkedHomeroomId,
+    List<String> siblingClassIds,
+  ) async {
+    var alsoDeleteFromHomeroom = false;
+    if (enrollment.isLinkedToHomeroom) {
+      final choice = await SyncScopeChoiceDialog.show(
+        context,
+        studentName: enrollment.fullName,
+        actionTitle: 'เลือกขอบเขตการลบถาวร (กรณีเพิ่มผิด)',
+      );
+      if (choice == null || !context.mounted) return;
+      alsoDeleteFromHomeroom = choice == RosterSyncScope.homeroomAndAllClasses;
+    }
+
+    final confirmed = await TypedConfirmDialog.show(
+      context,
+      title: 'ยืนยันการลบถาวร ${enrollment.fullName}',
+      description: alsoDeleteFromHomeroom
+          ? 'ระบบจะลบรายชื่อนี้รวมถึงประวัติเช็คชื่อและคะแนนออกจากคลังกลางและทุกวิชาที่ผูกไว้ในเทอมนี้แบบถาวร (กู้คืนไม่ได้)'
+          : 'ระบบจะลบรายชื่อนี้รวมถึงประวัติเช็คชื่อและคะแนนออกจากรายวิชานี้แบบถาวร (กู้คืนไม่ได้)',
+      expectedText: enrollment.studentCode,
+      confirmLabel: 'ลบถาวร',
+      impactSummary: <DeleteImpactItem>[
+        DeleteImpactItem(
+          label: alsoDeleteFromHomeroom
+              ? 'รายวิชาที่ผูกกับคลังห้องนี้ที่จะถูกลบ'
+              : 'รายวิชาที่จะถูกลบ',
+          count: alsoDeleteFromHomeroom
+              ? (siblingClassIds.isEmpty ? 1 : siblingClassIds.length)
+              : 1,
+        ),
+      ],
+    );
+    if (!confirmed || !context.mounted) return;
+
+    final ok = await ref
+        .read(homeroomRosterControllerProvider.notifier)
+        .permanentlyDeleteClassEnrollment(
+          existing: enrollment,
+          alsoDeleteFromHomeroom: alsoDeleteFromHomeroom,
+          linkedHomeroomId: linkedHomeroomId,
+          siblingClassIds: siblingClassIds,
+        );
+    if (ok && context.mounted) {
+      AppFeedbackBanner.showSnackBar(
+        context,
+        type: AppFeedbackType.success,
+        message: alsoDeleteFromHomeroom
+            ? 'ลบถาวร ${enrollment.fullName} ออกจากคลังกลางและทุกวิชาที่ผูกเรียบร้อยแล้ว'
+            : 'ลบถาวร ${enrollment.fullName} ออกจากรายวิชานี้เรียบร้อยแล้ว',
       );
     }
   }

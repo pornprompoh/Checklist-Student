@@ -143,6 +143,17 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
   }
 
   @override
+  Future<int> permanentlyDeleteHomeroomStudent({
+    required String homeroomStudentId,
+    required bool deleteFromLinkedClasses,
+  }) {
+    return _requireHomeroomRemote().permanentlyDeleteHomeroomStudent(
+      homeroomStudentId: homeroomStudentId,
+      deleteFromLinkedClasses: deleteFromLinkedClasses,
+    );
+  }
+
+  @override
   Future<int> renumberHomeroomStudents({
     required List<RenumberAssignment> assignments,
     required bool syncLinkedClasses,
@@ -302,6 +313,19 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
       status: status,
       transferredOutAt: transferredOutAt,
       syncToHomeroomAndAllClasses: syncToHomeroomAndAllClasses,
+    );
+  }
+
+  @override
+  Future<void> permanentlyDeleteClassEnrollment({
+    required String enrollmentId,
+    String? homeroomStudentId,
+    required bool alsoDeleteFromHomeroom,
+  }) {
+    return _requireEnrollmentRemote().permanentlyDeleteClassEnrollment(
+      enrollmentId: enrollmentId,
+      homeroomStudentId: homeroomStudentId,
+      alsoDeleteFromHomeroom: alsoDeleteFromHomeroom,
     );
   }
 

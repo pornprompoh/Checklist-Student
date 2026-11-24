@@ -308,33 +308,91 @@ void main() {
     );
 
     test(
-      '7. transferredOutAt excludes sessions after transfer-out date',
+      '7. transferredOutAt excludes sessions on or after exit date (sessionDate >= transferredOutAt)',
       () {
         final sessions = makeSessions(10);
-        // Transferred out on day 4 (sessions[0]..sessions[3] = 4 eligible sessions)
+        // Transferred out on day 4 (sessions[3]): eligible are strictly before -> sessions[0..2] (3 sessions)
         final outDate = baseDate.add(const Duration(days: 3));
         final records = <AttendanceRecord>[
           makeRecord(
             sessionId: sessions[0].id,
             status: AttendanceStatus.present,
           ),
+          // Session on exact exit date must be excluded.
+          makeRecord(sessionId: sessions[3].id, status: AttendanceStatus.absent),
           makeRecord(sessionId: sessions[8].id, status: AttendanceStatus.absent),
-          makeRecord(sessionId: sessions[9].id, status: AttendanceStatus.absent),
         ];
 
         final summary = service.calculateStudentSummary(
           enrollmentId: 'enr-1',
           enrolledAt: baseDate,
           transferredOutAt: outDate,
+          status: StudentLifecycleStatus.transferredOut,
           sessions: sessions,
           records: records,
           ruleConfig: defaultRule,
         );
 
-        expect(summary.totalEligibleSessions, 4);
+        expect(summary.totalEligibleSessions, 3);
         expect(summary.absentCount, 0);
         expect(summary.absentPercentage, 0.0);
         expect(summary.riskLevel, AttendanceRiskLevel.normal);
+
+        // Transferred out with null date has 0 eligible sessions.
+        final noDateSummary = service.calculateStudentSummary(
+          enrollmentId: 'enr-1',
+          enrolledAt: baseDate,
+          transferredOutAt: null,
+          status: StudentLifecycleStatus.transferredOut,
+          sessions: sessions,
+          records: records,
+          ruleConfig: defaultRule,
+        );
+        expect(noDateSummary.totalEligibleSessions, 0);
+        expect(noDateSummary.riskLevel, AttendanceRiskLevel.normal);
+      },
+    );
+
+    test(
+      'isEligibleForDate returns false for transferredOut on both past and future dates',
+      () {
+        final transferred = ClassEnrollment(
+          id: 'enr-out',
+          teacherId: 't-1',
+          subjectClassId: 'sc-1',
+          homeroomStudentId: null,
+          studentIdentityId: 'sid-out',
+          studentCode: '65001',
+          studentNumber: 1,
+          prefix: 'ด.ช.',
+          firstName: 'สมชาย',
+          lastName: 'ใจดี',
+          status: StudentLifecycleStatus.transferredOut,
+          enrolledAt: baseDate,
+          transferredOutAt: baseDate.add(const Duration(days: 5)),
+          specialGradeOverride: null,
+          wasRResolved: false,
+          wasMsResolved: false,
+          resolvedGradeAt: null,
+          version: 1,
+          createdAt: baseDate,
+          updatedAt: baseDate,
+        );
+
+        expect(
+          service.isEligibleForDate(
+            enrollment: transferred,
+            sessionDate: baseDate.add(const Duration(days: 1)),
+          ),
+          isFalse,
+        );
+        expect(
+          service.isEligibleForDate(
+            enrollment: transferred,
+            sessionDate: baseDate.add(const Duration(days: 10)),
+          ),
+          isFalse,
+        );
       },
     );
 

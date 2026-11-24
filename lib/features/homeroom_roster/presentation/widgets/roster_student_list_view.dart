@@ -37,12 +37,14 @@ class RosterStudentListView extends StatefulWidget {
     required this.isBusy,
     required this.onEdit,
     required this.onToggleTransferStatus,
+    this.onPermanentDelete,
   });
 
   final List<RosterStudentRowData> students;
   final bool isBusy;
   final ValueChanged<RosterStudentRowData> onEdit;
   final ValueChanged<RosterStudentRowData> onToggleTransferStatus;
+  final ValueChanged<RosterStudentRowData>? onPermanentDelete;
 
   @override
   State<RosterStudentListView> createState() => _RosterStudentListViewState();
@@ -108,6 +110,9 @@ class _RosterStudentListViewState extends State<RosterStudentListView> {
               semantic: semantic,
               onEdit: () => widget.onEdit(item),
               onToggleTransfer: () => widget.onToggleTransferStatus(item),
+              onPermanentDelete: widget.onPermanentDelete == null
+                  ? null
+                  : () => widget.onPermanentDelete!(item),
             ),
             const SizedBox(height: 8),
           ],
@@ -123,6 +128,7 @@ class _StudentRowCard extends StatelessWidget {
     required this.semantic,
     required this.onEdit,
     required this.onToggleTransfer,
+    this.onPermanentDelete,
   });
 
   final RosterStudentRowData item;
@@ -130,6 +136,7 @@ class _StudentRowCard extends StatelessWidget {
   final AppSemanticColors semantic;
   final VoidCallback onEdit;
   final VoidCallback onToggleTransfer;
+  final VoidCallback? onPermanentDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -227,21 +234,59 @@ class _StudentRowCard extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: 'แก้ไขข้อมูลนักเรียน',
-            onPressed: isBusy ? null : onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-          ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: isOut ? 'คืนสถานะกำลังเรียน' : 'บันทึกย้ายออก (คงเลขที่เดิม)',
-            onPressed: isBusy ? null : onToggleTransfer,
-            icon: Icon(
-              isOut ? Icons.restore_rounded : Icons.person_remove_outlined,
-              size: 18,
-              color: isOut ? semantic.success : semantic.warning,
-            ),
+          PopupMenuButton<String>(
+            tooltip: 'จัดการรายชื่อนักเรียน',
+            enabled: !isBusy,
+            onSelected: (value) {
+              if (value == 'edit') onEdit();
+              if (value == 'transfer') onToggleTransfer();
+              if (value == 'delete' && onPermanentDelete != null) {
+                onPermanentDelete!();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem<String>(
+                value: 'edit',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined, size: 18),
+                  title: Text('แก้ไขข้อมูลนักเรียน'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'transfer',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    isOut ? Icons.restore_rounded : Icons.person_remove_outlined,
+                    size: 18,
+                    color: isOut ? semantic.success : semantic.warning,
+                  ),
+                  title: Text(
+                    isOut ? 'คืนสถานะกำลังเรียน' : 'ย้ายออก (เก็บประวัติ ปพ.5)',
+                  ),
+                ),
+              ),
+              if (onPermanentDelete != null)
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.delete_forever_outlined,
+                      size: 18,
+                      color: semantic.danger,
+                    ),
+                    title: Text(
+                      'ลบถาวร (กรณีเพิ่มผิด)',
+                      style: TextStyle(color: semantic.danger),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

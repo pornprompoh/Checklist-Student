@@ -187,7 +187,10 @@ class AttendanceCheckInController extends Notifier<AttendanceCheckInState> {
     }
   }
 
-  Future<bool> saveAttendance({required bool lockAfterSave}) async {
+  Future<bool> saveAttendance({
+    required bool lockAfterSave,
+    Set<String>? eligibleEnrollmentIds,
+  }) async {
     if (state.isSaving || state.isLocked) return false;
 
     final teacherId = ref.read(authStateProvider).userId;
@@ -197,7 +200,13 @@ class AttendanceCheckInController extends Notifier<AttendanceCheckInState> {
       );
       return false;
     }
-    if (state.draftStatuses.isEmpty) {
+
+    final filteredDraftEntries = state.draftStatuses.entries.where((entry) {
+      if (eligibleEnrollmentIds == null) return true;
+      return eligibleEnrollmentIds.contains(entry.key);
+    }).toList(growable: false);
+
+    if (filteredDraftEntries.isEmpty) {
       state = state.copyWith(
         errorMessage: 'กรุณาเลือกสถานะการเข้าเรียนอย่างน้อย 1 คนก่อนบันทึก',
       );
@@ -223,7 +232,7 @@ class AttendanceCheckInController extends Notifier<AttendanceCheckInState> {
       );
 
       final inputs = <AttendanceRecordInput>[];
-      for (final entry in state.draftStatuses.entries) {
+      for (final entry in filteredDraftEntries) {
         final existing = state.existingRecordsByEnrollment[entry.key];
         inputs.add(
           AttendanceRecordInput(
@@ -255,12 +264,15 @@ class AttendanceCheckInController extends Notifier<AttendanceCheckInState> {
       }
 
       if (!ref.mounted) return false;
-      final savedByEnrollment = <String, AttendanceRecord>{
-        for (final r in savedRecords) r.enrollmentId: r,
-      };
+      final mergedByEnrollment = Map<String, AttendanceRecord>.of(
+        state.existingRecordsByEnrollment,
+      );
+      for (final r in savedRecords) {
+        mergedByEnrollment[r.enrollmentId] = r;
+      }
       state = state.copyWith(
         currentSession: session,
-        existingRecordsByEnrollment: Map.unmodifiable(savedByEnrollment),
+        existingRecordsByEnrollment: Map.unmodifiable(mergedByEnrollment),
         isSaving: false,
         isDirty: false,
         isConflictError: false,

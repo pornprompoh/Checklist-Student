@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
+import '../../../attendance/presentation/providers/attendance_providers.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../domain/entities/class_enrollment.dart';
 import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
@@ -186,6 +188,7 @@ class HomeroomRosterController extends AsyncNotifier<void> {
       for (final classId in linkedClassIds) {
         ref.invalidate(classEnrollmentsProvider(classId));
       }
+      ref.invalidate(dashboardOverviewProvider);
       return synced;
     });
   }
@@ -211,7 +214,32 @@ class HomeroomRosterController extends AsyncNotifier<void> {
       for (final classId in linkedClassIds) {
         ref.invalidate(classEnrollmentsProvider(classId));
       }
+      ref.invalidate(dashboardOverviewProvider);
       return synced;
+    });
+  }
+
+  Future<int?> permanentlyDeleteHomeroomStudent({
+    required String homeroomId,
+    required String homeroomStudentId,
+    required bool deleteFromLinkedClasses,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final deletedClasses = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .permanentlyDeleteHomeroomStudent(
+            homeroomStudentId: homeroomStudentId,
+            deleteFromLinkedClasses: deleteFromLinkedClasses,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      for (final classId in linkedClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+        ref.invalidate(attendanceSessionsProvider(classId));
+        ref.invalidate(attendanceClassRecordsProvider(classId));
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return deletedClasses;
     });
   }
 
@@ -232,6 +260,7 @@ class HomeroomRosterController extends AsyncNotifier<void> {
       for (final classId in linkedClassIds) {
         ref.invalidate(classEnrollmentsProvider(classId));
       }
+      ref.invalidate(dashboardOverviewProvider);
       return synced;
     });
   }
@@ -327,6 +356,7 @@ class HomeroomRosterController extends AsyncNotifier<void> {
           ref.invalidate(classEnrollmentsProvider(classId));
         }
       }
+      ref.invalidate(dashboardOverviewProvider);
       return synced;
     });
   }
@@ -357,8 +387,42 @@ class HomeroomRosterController extends AsyncNotifier<void> {
           ref.invalidate(classEnrollmentsProvider(classId));
         }
       }
+      ref.invalidate(dashboardOverviewProvider);
       return synced;
     });
+  }
+
+  Future<bool> permanentlyDeleteClassEnrollment({
+    required ClassEnrollment existing,
+    required bool alsoDeleteFromHomeroom,
+    String? linkedHomeroomId,
+    List<String> siblingClassIds = const <String>[],
+  }) async {
+    final ok = await _run(() async {
+      await ref
+          .read(homeroomRosterRepositoryProvider)
+          .permanentlyDeleteClassEnrollment(
+            enrollmentId: existing.id,
+            homeroomStudentId: existing.homeroomStudentId,
+            alsoDeleteFromHomeroom: alsoDeleteFromHomeroom,
+          );
+      ref.invalidate(classEnrollmentsProvider(existing.subjectClassId));
+      ref.invalidate(attendanceSessionsProvider(existing.subjectClassId));
+      ref.invalidate(attendanceClassRecordsProvider(existing.subjectClassId));
+      if (alsoDeleteFromHomeroom) {
+        if (linkedHomeroomId != null) {
+          ref.invalidate(homeroomStudentsProvider(linkedHomeroomId));
+        }
+        for (final classId in siblingClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+          ref.invalidate(attendanceSessionsProvider(classId));
+          ref.invalidate(attendanceClassRecordsProvider(classId));
+        }
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return true;
+    });
+    return ok ?? false;
   }
 
   Future<bool> renumberClassEnrollments({

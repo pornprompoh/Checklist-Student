@@ -20,29 +20,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class _FakeAttendanceRepository implements AttendanceRepository {
-  _FakeAttendanceRepository({required this.ruleConfig});
+  _FakeAttendanceRepository({
+    required this.ruleConfig,
+    this.existingSession,
+    this.existingRecords = const <AttendanceRecord>[],
+  });
 
   AttendanceRuleConfig ruleConfig;
+  AttendanceSession? existingSession;
+  List<AttendanceRecord> existingRecords;
 
   @override
   Future<List<AttendanceSession>> fetchSessions(String subjectClassId) async =>
-      const <AttendanceSession>[];
+      existingSession == null
+      ? const <AttendanceSession>[]
+      : <AttendanceSession>[existingSession!];
 
   @override
   Future<AttendanceSession?> fetchSessionByDate({
     required String subjectClassId,
     required DateTime sessionDate,
-  }) async => null;
+  }) async => existingSession;
 
   @override
   Future<List<AttendanceRecord>> fetchRecordsBySession(
     String sessionId,
-  ) async => const <AttendanceRecord>[];
+  ) async => existingRecords;
 
   @override
   Future<List<AttendanceRecord>> fetchRecordsByClass(
     String subjectClassId,
-  ) async => const <AttendanceRecord>[];
+  ) async => existingRecords;
 
   @override
   Future<AttendanceSession> createSession({
@@ -354,6 +362,129 @@ void main() {
         await tester.tap(find.text('อยู่หน้านี้ต่อ'));
         await tester.pumpAndSettle();
         expect(find.text('ตั้งค่าเกณฑ์เวลาเรียน (มส) รายวิชา'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'UC-009: transferred_out students with old records stay separated in collapsed section and excluded from 20 active total',
+      (tester) async {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final pastStart = today.subtract(const Duration(days: 15));
+
+        final activeEnrollments = List<ClassEnrollment>.generate(
+          20,
+          (i) => _makeEnrollment(
+            id: 'active-${i + 1}',
+            number: i + 1,
+            code: '700${(i + 1).toString().padLeft(2, '0')}',
+            firstName: 'นักเรียน${i + 1}',
+            enrolledAt: pastStart,
+          ),
+        );
+        final transferredEnrollments = <ClassEnrollment>[
+          _makeEnrollment(
+            id: 'out-1',
+            number: 1,
+            code: '65001',
+            firstName: 'สมชาย',
+            enrolledAt: pastStart,
+            status: StudentLifecycleStatus.transferredOut,
+            transferredOutAt: today,
+          ),
+          _makeEnrollment(
+            id: 'out-2',
+            number: 2,
+            code: '65002',
+            firstName: 'สุดา',
+            enrolledAt: pastStart,
+            status: StudentLifecycleStatus.transferredOut,
+            transferredOutAt: today,
+          ),
+        ];
+
+        final existingSession = AttendanceSession(
+          id: 'sess-past',
+          teacherId: 't-1',
+          subjectClassId: 'sc-1',
+          sessionDate: today,
+          isLocked: false,
+          note: '',
+          version: 1,
+          createdAt: today,
+          updatedAt: today,
+        );
+        final existingRecords = <AttendanceRecord>[
+          for (final student in activeEnrollments)
+            AttendanceRecord(
+              id: 'rec-${student.id}',
+              teacherId: 't-1',
+              sessionId: 'sess-past',
+              enrollmentId: student.id,
+              status: AttendanceStatus.present,
+              note: '',
+              version: 1,
+              updatedAt: today,
+            ),
+          for (final student in transferredEnrollments)
+            AttendanceRecord(
+              id: 'rec-${student.id}',
+              teacherId: 't-1',
+              sessionId: 'sess-past',
+              enrollmentId: student.id,
+              status: AttendanceStatus.absent,
+              note: '',
+              version: 1,
+              updatedAt: today,
+            ),
+        ];
+
+        final fakeRepo = _FakeAttendanceRepository(
+          ruleConfig: const AttendanceRuleConfig(
+            subjectClassId: 'sc-1',
+            absentThresholdPct: 20.0,
+            countLeaveAsAbsent: false,
+          ),
+          existingSession: existingSession,
+          existingRecords: existingRecords,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            attendanceRepositoryProvider.overrideWithValue(fakeRepo),
+            classEnrollmentsProvider('sc-1').overrideWith(
+              (ref) async => <ClassEnrollment>[
+                ...activeEnrollments,
+                ...transferredEnrollments,
+              ],
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.light,
+              home: const Scaffold(
+                body: AttendanceCheckInPage(initialClassId: 'sc-1'),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Summary bar counts only the 20 active students: มา 20, ขาด 0 (NOT ขาด 2 / 22 total)
+        expect(find.text('มา 20'), findsOneWidget);
+        expect(find.text('ขาด 0'), findsOneWidget);
+
+        // Main active list must render exactly 20 AttendanceStudentRow widgets.
+        expect(find.byType(AttendanceStudentRow), findsNWidgets(20));
+
+        // Transferred-out students with old history appear in the collapsed section only.
+        expect(find.text('นักเรียนที่ย้ายออกแล้ว (2 คน)'), findsOneWidget);
+        expect(find.textContaining('65001'), findsNothing);
       },
     );
   });

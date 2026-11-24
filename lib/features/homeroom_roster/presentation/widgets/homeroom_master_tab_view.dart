@@ -367,6 +367,8 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
                   onEdit: (row) => _editStudent(context, ref, byId[row.id]!),
                   onToggleTransferStatus: (row) =>
                       _toggleStatus(context, ref, byId[row.id]!),
+                  onPermanentDelete: (row) =>
+                      _permanentDeleteStudent(context, ref, byId[row.id]!),
                 );
               },
             ),
@@ -558,6 +560,46 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
         message: nextStatus == StudentLifecycleStatus.transferredOut
             ? 'บันทึกย้ายออกแล้ว (คงเลขที่เดิม ${student.studentNumber} ไว้)'
             : 'คืนสถานะกำลังเรียนเรียบร้อยแล้ว',
+      );
+    }
+  }
+
+  Future<void> _permanentDeleteStudent(
+    BuildContext context,
+    WidgetRef ref,
+    HomeroomStudent student,
+  ) async {
+    final confirmed = await TypedConfirmDialog.show(
+      context,
+      title: 'ยืนยันการลบถาวร ${student.fullName}',
+      description:
+          'การลบถาวรเหมาะสำหรับรายชื่อที่เพิ่มหรือนำเข้าผิดพลาด ระบบจะลบรายชื่อนี้รวมถึงประวัติเช็คชื่อและคะแนนทั้งหมดออกจากคลังกลางและทุกวิชาที่ผูกไว้ในเทอมนี้แบบถาวร (ไม่สามารถกู้คืนได้)',
+      expectedText: student.studentCode,
+      confirmLabel: 'ลบถาวร',
+      impactSummary: <DeleteImpactItem>[
+        DeleteImpactItem(
+          label: 'รายวิชาที่ผูกกับคลังห้องนี้ที่จะถูกลบไปด้วย',
+          count: _linkedClassIds.length,
+        ),
+      ],
+    );
+    if (!confirmed || !context.mounted) return;
+
+    final deletedClasses = await ref
+        .read(homeroomRosterControllerProvider.notifier)
+        .permanentlyDeleteHomeroomStudent(
+          homeroomId: homeroom.id,
+          homeroomStudentId: student.id,
+          deleteFromLinkedClasses: true,
+          linkedClassIds: _linkedClassIds,
+        );
+    if (deletedClasses != null && context.mounted) {
+      AppFeedbackBanner.showSnackBar(
+        context,
+        type: AppFeedbackType.success,
+        message: deletedClasses > 0
+            ? 'ลบถาวร ${student.fullName} ออกจากคลังกลางและ $deletedClasses รายวิชาเรียบร้อยแล้ว'
+            : 'ลบถาวร ${student.fullName} ออกจากคลังกลางเรียบร้อยแล้ว',
       );
     }
   }
