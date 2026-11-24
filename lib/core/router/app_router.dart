@@ -6,6 +6,7 @@ import '../../features/academic_structure/presentation/pages/academic_structure_
 import '../../features/auth/domain/entities/auth_state.dart';
 import '../../features/auth/presentation/pages/teacher_login_page.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
+import '../../features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
 import '../../features/settings/presentation/pages/teacher_settings_page.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_color_scheme.dart';
@@ -65,10 +66,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.teacherHomeroomRoster,
-            builder: (context, state) => const _ModulePlaceholderView(
-              title: 'คลังรายชื่อนักเรียนประจำเทอม',
-              subtitle: 'พร้อมพัฒนาต่อใน Phase 2 (นำเข้า CSV / Excel / AI)',
-            ),
+            builder: (context, state) => const HomeroomRosterPage(),
           ),
           GoRoute(
             path: AppRoutes.teacherExportReports,
