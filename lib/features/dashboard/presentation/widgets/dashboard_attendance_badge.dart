@@ -5,20 +5,20 @@ import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/today_attendance_summary.dart';
 
-/// Compact pill badge used on Teacher Dashboard cards.
+/// Compact status pill badge with optional 6px dot indicator and tabular digits.
 class DashboardTagPill extends StatelessWidget {
   const DashboardTagPill({
     super.key,
     required this.label,
     required this.background,
     required this.foreground,
-    this.icon,
+    this.showDot = false,
   });
 
   final String label;
   final Color background;
   final Color foreground;
-  final IconData? icon;
+  final bool showDot;
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +26,21 @@ class DashboardTagPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: foreground),
-            const SizedBox(width: 4),
+          if (showDot) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: foreground,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
           ],
           Flexible(
             child: Text(
@@ -42,7 +49,7 @@ class DashboardTagPill extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: foreground,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 fontFeatures: AppTheme.tabularFigures,
               ),
             ),
@@ -53,9 +60,8 @@ class DashboardTagPill extends StatelessWidget {
   }
 }
 
-/// Renders today's attendance status strip inside a [DashboardClassCard]:
-/// either a clear "ยังไม่เช็ควันนี้" pill or "เช็คแล้ววันนี้" (with lock icon)
-/// plus concise 4-state counts (`มา X · สาย Y · ลา Z · ขาด W`).
+/// Today's attendance status strip inside [DashboardClassCard] using a
+/// concentric `8px` inner radius (`outer: 16`, `padding: 16 → inner: 8`).
 class DashboardTodayStatusStrip extends StatelessWidget {
   const DashboardTodayStatusStrip({
     super.key,
@@ -74,12 +80,12 @@ class DashboardTodayStatusStrip extends StatelessWidget {
 
     if (current == null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: teachesToday
               ? semantic.warningContainer.withValues(alpha: 0.65)
               : colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
@@ -104,6 +110,7 @@ class DashboardTodayStatusStrip extends StatelessWidget {
                   color: teachesToday
                       ? semantic.warning
                       : colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -113,10 +120,10 @@ class DashboardTodayStatusStrip extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,13 +148,13 @@ class DashboardTodayStatusStrip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: semantic.success,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 6,
             runSpacing: 6,

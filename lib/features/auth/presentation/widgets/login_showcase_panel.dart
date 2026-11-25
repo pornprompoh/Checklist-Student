@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// Left showcase column shown on wide desktop viewports (`>= 840px`) on
-/// [TeacherLoginPage] highlighting the 3 core teacher workflows cleanly.
+/// [TeacherLoginPage], written in calm, authentic Thai EdTech copy without
+/// redundant inner borders.
 class LoginShowcasePanel extends StatelessWidget {
   const LoginShowcasePanel({super.key});
 
@@ -9,18 +10,18 @@ class LoginShowcasePanel extends StatelessWidget {
       <(IconData, String, String)>[
         (
           Icons.fact_check_rounded,
-          'เช็คชื่อไวใน 1 แตะ พร้อมใช้งานออฟไลน์',
-          'บันทึก มา / สาย / ลา / ขาด ได้แม้อินเทอร์เน็ตในห้องเรียนขัดข้อง และซิงค์ให้อัตโนมัติ',
+          'เช็คชื่อรายคาบและทำงานออฟไลน์ได้',
+          'บันทึก มา / สาย / ลา / ขาด ได้แม้สัญญาณเน็ตหลุด และซิงค์ข้อมูลอัตโนมัติเมื่อกลับมาออนไลน์',
         ),
         (
           Icons.table_chart_rounded,
-          'ตารางคะแนนทศนิยมจริง ตัดเกรด ปพ.5',
-          'รวมคะแนนไม่ปัดเศษ แนะนำ ร / มส อัตโนมัติ และส่งออก Excel, PDF Sarabun, Word ได้ทันที',
+          'ตารางคะแนนทศนิยมจริง พร้อมส่งออก ปพ.5',
+          'รวมคะแนนตามจริงไม่ปัดเศษ แนะนำ ร / มส อัตโนมัติ และส่งออก Excel, PDF Sarabun, Word ได้ทันที',
         ),
         (
           Icons.badge_rounded,
-          'พอร์ทัลนักเรียนปลอดภัยด้วย PIN 6 หลัก',
-          'นักเรียนตรวจเวลาเรียน งานค้าง และคะแนนได้เองผ่านลิงก์ครูโดยไม่ต้องสมัครบัญชี',
+          'พอร์ทัลนักเรียนด้วยรหัส PIN 6 หลัก',
+          'นักเรียนตรวจสอบเวลาเรียน งานค้าง และคะแนนได้เองผ่านลิงก์ครูโดยไม่ต้องสมัครบัญชี',
         ),
       ];
 
@@ -30,51 +31,29 @@ class LoginShowcasePanel extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.48),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.42),
         border: Border(right: BorderSide(color: colorScheme.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.school_rounded,
-                  size: 16,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'สำหรับครูผู้สอนยุคใหม่',
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
           Text(
-            'ผู้ช่วยจัดการชั้นเรียน\nครบจบในที่เดียว',
-            style: textTheme.headlineMedium?.copyWith(
+            'พื้นที่ทำงานสำหรับครูผู้สอน',
+            style: textTheme.labelLarge?.copyWith(color: colorScheme.primary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'เช็คชื่อ ตรวจงาน และตัดเกรด ปพ.5 ในระบบเดียว',
+            style: textTheme.headlineSmall?.copyWith(
               color: colorScheme.onSurface,
-              height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'ออกแบบเพื่อลดภาระงานเอกสารของครูไทย ใช้งานลื่นทั้งคอมพิวเตอร์ แท็บเล็ต และมือถือ',
+            'จัดเก็บรายชื่อ แผนเก็บงาน และสรุปผลการเรียนแยกตามปีการศึกษาและภาคเรียนอย่างเป็นระบบ',
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -86,7 +65,7 @@ class LoginShowcasePanel extends StatelessWidget {
               title: _highlights[i].$2,
               subtitle: _highlights[i].$3,
             ),
-            if (i != _highlights.length - 1) const SizedBox(height: 14),
+            if (i != _highlights.length - 1) const SizedBox(height: 16),
           ],
         ],
       ),
@@ -119,7 +98,6 @@ class _HighlightRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: colorScheme.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Icon(icon, size: 19, color: colorScheme.primary),
         ),
@@ -129,7 +107,7 @@ class _HighlightRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: textTheme.titleSmall),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: textTheme.bodySmall?.copyWith(

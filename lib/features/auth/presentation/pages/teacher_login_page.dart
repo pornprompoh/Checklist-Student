@@ -14,8 +14,9 @@ import '../widgets/login_showcase_panel.dart';
 
 /// Teacher Google Sign-In page (`/teacher/login`).
 ///
-/// Modern EdTech split showcase layout on desktop (`>= 840px`) and clean
-/// single-column card on mobile (`320px–839px`) with direct Student Portal link.
+/// Desktop (`>= 840px`) renders a balanced split showcase card; narrow screens
+/// (`320px–839px`) render a single clean card with generous whitespace and a
+/// direct shortcut to the Student Portal (`/student`).
 class TeacherLoginPage extends ConsumerWidget {
   const TeacherLoginPage({super.key});
 
@@ -50,11 +51,12 @@ class TeacherLoginPage extends ConsumerWidget {
               ref,
               signInState: signInState,
               isConfigured: isConfigured,
+              isSplit: isSplit,
             );
 
             return Center(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(isSplit ? 28 : 16),
+                padding: EdgeInsets.all(isSplit ? 32 : 16),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: isSplit ? 920 : 440),
                   child: AppSurfaceCard(
@@ -88,13 +90,14 @@ class TeacherLoginPage extends ConsumerWidget {
     WidgetRef ref, {
     required AsyncValue<void> signInState,
     required bool isConfigured,
+    required bool isSplit,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isSplit ? 32 : 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -106,7 +109,7 @@ class TeacherLoginPage extends ConsumerWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.fact_check_rounded,
@@ -114,7 +117,7 @@ class TeacherLoginPage extends ConsumerWidget {
                   color: colorScheme.onPrimary,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Checklist-Student',
@@ -122,7 +125,6 @@ class TeacherLoginPage extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleLarge?.copyWith(
                     color: colorScheme.primary,
-                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -139,14 +141,14 @@ class TeacherLoginPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
           Text(
             'เข้าสู่ระบบสำหรับครูผู้สอน',
             style: textTheme.headlineSmall,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
-            'จัดการชั้นเรียน เช็คชื่อ แผนเก็บงาน ตัดเกรด และส่งออกรายงาน ปพ.5 ในที่เดียว',
+            'ลงชื่อเข้าใช้ด้วยบัญชี Google ของครูเพื่อจัดการข้อมูลชั้นเรียนแบบแยกบัญชีส่วนตัว',
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -178,15 +180,15 @@ class TeacherLoginPage extends ConsumerWidget {
             onPressed: () =>
                 ref.read(signInControllerProvider.notifier).signInWithGoogle(),
           ),
-          const SizedBox(height: 12),
+          const Divider(height: 32),
           Text(
-            'ใช้บัญชี Google ของครูเพื่อเข้าถึงข้อมูลชั้นเรียนส่วนตัวแบบแยกบัญชีอย่างปลอดภัย',
+            'สำหรับนักเรียน',
             textAlign: TextAlign.center,
-            style: textTheme.bodySmall?.copyWith(
+            style: textTheme.labelMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
-          const Divider(height: 32),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () =>
                 GoRouter.maybeOf(context)?.go(AppRoutes.studentPortalRoot),

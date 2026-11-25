@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 
-/// Skeleton placeholder matching the compact KPI strip and classroom card grid.
+/// Skeleton placeholder matching the compact KPI strip and classroom grid.
 class DashboardSkeletonView extends StatelessWidget {
   const DashboardSkeletonView({super.key});
 
@@ -15,7 +15,7 @@ class DashboardSkeletonView extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 720 ? 4 : 2;
-            const spacing = 10.0;
+            const spacing = 12.0;
             final width =
                 (constraints.maxWidth - spacing * (columns - 1)) / columns;
             return Wrap(
@@ -26,10 +26,7 @@ class DashboardSkeletonView extends StatelessWidget {
                   SizedBox(
                     width: width,
                     child: const AppSurfaceCard(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
+                      padding: EdgeInsets.all(12),
                       child: Row(
                         children: [
                           SkeletonBox(width: 36, height: 36),
@@ -38,8 +35,8 @@ class DashboardSkeletonView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SkeletonBox.line(width: 72, height: 11),
-                                SizedBox(height: 6),
+                                SkeletonBox.line(width: 72, height: 12),
+                                SizedBox(height: 8),
                                 SkeletonBox.line(width: 56, height: 16),
                               ],
                             ),
@@ -52,16 +49,16 @@ class DashboardSkeletonView extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         for (var i = 0; i < 2; i++) ...[
           const AppSurfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SkeletonBox.line(width: 110, height: 14),
+                SkeletonBox.line(width: 112, height: 16),
                 SizedBox(height: 8),
-                SkeletonBox.line(width: 170, height: 18),
-                SizedBox(height: 14),
+                SkeletonBox.line(width: 176, height: 20),
+                SizedBox(height: 16),
                 SkeletonBox(height: 40),
               ],
             ),

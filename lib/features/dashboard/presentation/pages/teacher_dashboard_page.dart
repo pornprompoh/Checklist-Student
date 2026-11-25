@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
+import '../../../audit_log/presentation/providers/audit_log_providers.dart';
 import '../../../audit_log/presentation/widgets/audit_log_cleanup_banner.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/dashboard_class_item.dart';
@@ -23,8 +24,8 @@ import '../widgets/dashboard_skeleton_view.dart';
 import '../widgets/dashboard_summary_metrics.dart';
 
 /// Main Teacher Dashboard (`/teacher/dashboard`) with clear visual hierarchy:
-/// compact header & term pill, 4-metric KPI strip, alert slot, prominent
-/// "คาบสอนวันนี้" section, and full term class grid.
+/// compact header & term pill, 4-metric KPI strip, conditional alert slot,
+/// prominent "คาบสอนวันนี้" section, and full term class grid.
 class TeacherDashboardPage extends ConsumerStatefulWidget {
   const TeacherDashboardPage({super.key});
 
@@ -52,6 +53,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
     final overviewAsync = ref.watch(dashboardOverviewProvider);
     final filterState = ref.watch(dashboardFilterProvider);
     final isBusy = ref.watch(dashboardControllerProvider).isLoading;
+    final hasCleanupAlerts = ref.watch(auditLogCleanupAlertsProvider).isNotEmpty;
 
     ref.listen<AsyncValue<void>>(dashboardControllerProvider, (prev, next) {
       if (next.hasError && prev?.error != next.error) {
@@ -89,9 +91,11 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                 onAddClass: () =>
                     context.go(AppRoutes.teacherAcademicStructure),
               ),
-              const SizedBox(height: 14),
-              const AuditLogCleanupBanner(),
-              const SizedBox(height: 14),
+              if (hasCleanupAlerts) ...[
+                const SizedBox(height: 16),
+                const AuditLogCleanupBanner(),
+              ],
+              const SizedBox(height: 16),
               if (yearsAsync.isLoading || termsAsync.isLoading)
                 const DashboardSkeletonView()
               else if (yearsAsync.hasError || termsAsync.hasError)
@@ -108,7 +112,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                   icon: Icons.school_outlined,
                   title: 'ยังไม่มีภาคเรียนในระบบ',
                   description:
-                      'เริ่มต้นสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนที่หน้าโครงสร้างการสอน',
+                      'เริ่มต้นสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนที่หน้าโครงสร้างสอน',
                   actionLabel: 'ไปหน้าโครงสร้างสอน',
                   onAction: () =>
                       context.go(AppRoutes.teacherAcademicStructure),
@@ -190,7 +194,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DashboardSummaryMetrics(overview: overview),
-        const SizedBox(height: 18),
+        const SizedBox(height: 20),
         DashboardFilterBar(
           totalClassesCount: overview.totalClassesCount,
           todayClassesCount: overview.todayClassesCount,
@@ -228,7 +232,7 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
             onTogglePin: handleTogglePin,
           ),
           if (otherClasses.isNotEmpty) ...[
-            const SizedBox(height: 22),
+            const SizedBox(height: 24),
             DashboardClassGridSection(
               heading: 'ห้องเรียนทั้งหมดในเทอมนี้ (${otherClasses.length} ห้อง)',
               headingAccent: Theme.of(context).colorScheme.onSurfaceVariant,

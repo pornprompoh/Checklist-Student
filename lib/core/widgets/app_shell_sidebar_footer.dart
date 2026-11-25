@@ -6,8 +6,8 @@ import '../../features/auth/presentation/providers/sign_in_controller.dart';
 import '../theme/app_color_scheme.dart';
 import '../theme/theme_mode_provider.dart';
 
-/// Sidebar footer: compact teacher profile with online/offline status dot,
-/// Light/Dark toggle and sign-out action.
+/// Sidebar footer: borderless tonal teacher profile strip with online/offline
+/// status dot, theme switcher, and sign-out action (zero card-in-card clutter).
 class AppShellSidebarFooter extends ConsumerWidget {
   const AppShellSidebarFooter({
     super.key,
@@ -36,9 +36,13 @@ class AppShellSidebarFooter extends ConsumerWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: colorScheme.primaryContainer,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(
               Icons.person_rounded,
               size: 20,
@@ -46,8 +50,8 @@ class AppShellSidebarFooter extends ConsumerWidget {
             ),
           ),
           Positioned(
-            right: -1,
-            bottom: -1,
+            right: -2,
+            bottom: -2,
             child: Container(
               width: 11,
               height: 11,
@@ -67,22 +71,25 @@ class AppShellSidebarFooter extends ConsumerWidget {
       onPressed: () => ref
           .read(themeModeProvider.notifier)
           .toggleTheme(platformBrightness: Theme.of(context).brightness),
-      icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+      icon: Icon(
+        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+        size: 20,
+      ),
     );
 
     if (collapsed) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             avatar,
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             themeButton,
             IconButton(
               tooltip: 'ออกจากระบบ',
               onPressed: isSigningOut ? null : onSignOut,
-              icon: const Icon(Icons.logout_rounded),
+              icon: const Icon(Icons.logout_rounded, size: 20),
             ),
           ],
         ),
@@ -90,22 +97,21 @@ class AppShellSidebarFooter extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outlineVariant),
             ),
             child: Row(
               children: [
                 avatar,
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +125,7 @@ class AppShellSidebarFooter extends ConsumerWidget {
                       ),
                       Text(
                         profile != null
-                            ? 'รหัสครู ${profile.teacherCode} · $statusLabel'
+                            ? '${profile.teacherCode} · $statusLabel'
                             : statusLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -133,7 +139,7 @@ class AppShellSidebarFooter extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               themeButton,

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/dashboard_class_item.dart';
 import 'dashboard_attendance_badge.dart';
 import 'dashboard_class_card_menu.dart';
 
-/// Scannable classroom card for [TeacherDashboardPage]:
-/// - Top row: subject code pill + bold room name + "สอนวันนี้" pill + pin + `⋯`
-/// - Middle: subject name + student/schedule meta + today's attendance status
-/// - Bottom: clear 2-button hierarchy (`เช็คชื่อวันนี้`/`ดูเช็คชื่อ` + `ตารางคะแนน`)
+/// Scannable classroom card for [TeacherDashboardPage] with subtle desktop
+/// hover highlight, decluttered single overflow menu (`⋯`), concentric inner
+/// status strip, and clear 2-button hierarchy (`เช็คชื่อวันนี้`/`ดูเช็คชื่อ`
+/// + `ตารางคะแนน`).
 class DashboardClassCard extends StatelessWidget {
   const DashboardClassCard({
     super.key,
@@ -48,8 +49,9 @@ class DashboardClassCard extends StatelessWidget {
     final isChecked = item.todayAttendance != null;
 
     return AppSurfaceCard(
+      enableHoverHighlight: true,
       borderColor: teachesToday
-          ? colorScheme.primary.withValues(alpha: 0.45)
+          ? colorScheme.primary.withValues(alpha: 0.4)
           : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,7 +65,7 @@ class DashboardClassCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Wrap(
-                      spacing: 6,
+                      spacing: 8,
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
@@ -75,7 +77,7 @@ class DashboardClassCard extends StatelessWidget {
                         if (teachesToday)
                           DashboardTagPill(
                             label: 'สอนวันนี้',
-                            icon: Icons.circle,
+                            showDot: true,
                             background: semantic.successContainer,
                             foreground: semantic.success,
                           ),
@@ -93,10 +95,10 @@ class DashboardClassCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       item.subjectName,
                       maxLines: 1,
@@ -106,20 +108,6 @@ class DashboardClassCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-              ),
-              IconButton(
-                tooltip: item.isPinned ? 'ยกเลิกปักหมุด' : 'ปักหมุดห้องนี้',
-                visualDensity: VisualDensity.compact,
-                onPressed: isBusy ? null : onTogglePin,
-                icon: Icon(
-                  item.isPinned
-                      ? Icons.push_pin_rounded
-                      : Icons.push_pin_outlined,
-                  size: 19,
-                  color: item.isPinned
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
                 ),
               ),
               DashboardClassCardMenu(
@@ -165,7 +153,7 @@ class DashboardClassCard extends StatelessWidget {
                 child: isChecked
                     ? FilledButton.tonalIcon(
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                         onPressed: onOpenAttendance,
                         icon: const Icon(Icons.fact_check_outlined, size: 17),
@@ -177,7 +165,7 @@ class DashboardClassCard extends StatelessWidget {
                       )
                     : FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                         onPressed: onOpenAttendance,
                         icon: const Icon(Icons.fact_check_outlined, size: 17),
@@ -192,7 +180,7 @@ class DashboardClassCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
                   onPressed: onOpenGradingTable,
                   icon: const Icon(Icons.table_chart_outlined, size: 17),
@@ -239,6 +227,7 @@ class _MetaChip extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
+              fontFeatures: AppTheme.tabularFigures,
             ),
           ),
         ),
@@ -258,7 +247,7 @@ class _EmptyRosterHint extends StatelessWidget {
     return Row(
       children: [
         Icon(Icons.info_outline_rounded, size: 15, color: semantic.warning),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             'ยังไม่มีรายชื่อนักเรียน',

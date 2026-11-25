@@ -6,7 +6,7 @@ import 'app_shell_sidebar_footer.dart';
 import 'app_shell_sidebar_tile.dart';
 
 /// Collapsible Desktop Sidebar (`>= 900px`) with grouped destinations
-/// (`การสอนประจำวัน` / `รายงานและระบบ`), brand header and profile footer.
+/// (`การสอนประจำวัน` / `รายงานและระบบ`), brand header, and tonal footer.
 class AppShellSidebar extends StatelessWidget {
   const AppShellSidebar({
     super.key,
@@ -19,7 +19,7 @@ class AppShellSidebar extends StatelessWidget {
     required this.onSignOut,
   });
 
-  static const double expandedWidth = 260;
+  static const double expandedWidth = 264;
   static const double collapsedWidth = 76;
 
   final bool collapsed;
@@ -35,7 +35,7 @@ class AppShellSidebar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
       width: collapsed ? collapsedWidth : expandedWidth,
       decoration: BoxDecoration(
@@ -62,7 +62,7 @@ class AppShellSidebar extends StatelessWidget {
             isOnline: isOnline,
             onSignOut: onSignOut,
           );
-          const navPadding = EdgeInsets.symmetric(horizontal: 10, vertical: 4);
+          const navPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 4);
 
           if (isShortHeight) {
             return SingleChildScrollView(
@@ -115,13 +115,13 @@ class AppShellSidebar extends StatelessWidget {
 
     if (isCompact) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+        padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
         child: Center(child: toggleButton),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 8, 6),
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
       child: Row(
         children: [
           Container(
@@ -137,7 +137,7 @@ class AppShellSidebar extends StatelessWidget {
               color: colorScheme.onPrimary,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,15 +148,16 @@ class AppShellSidebar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
-                  'พื้นที่ทำงานของครู',
+                  'สำหรับครูผู้สอน',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -181,11 +182,11 @@ class AppShellSidebar extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: isFirst ? 4 : 8),
           child: isFirst
               ? const SizedBox.shrink()
-              : const Divider(height: 1, indent: 14, endIndent: 14),
+              : const Divider(height: 1, indent: 12, endIndent: 12),
         )
       else
         Padding(
-          padding: EdgeInsets.fromLTRB(12, isFirst ? 8 : 18, 12, 6),
+          padding: EdgeInsets.fromLTRB(12, isFirst ? 8 : 20, 12, 8),
           child: Text(
             group.label,
             maxLines: 1,

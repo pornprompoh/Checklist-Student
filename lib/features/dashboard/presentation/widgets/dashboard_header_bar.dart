@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
 
-/// Clean top header for [TeacherDashboardPage] built on [AppPageHeader]:
-/// greeting, Thai Buddhist Era date, compact pill term switcher, quick
-/// "+ เพิ่มวิชา/ห้อง" CTA and refresh action.
+/// Top header for [TeacherDashboardPage] built on [AppPageHeader]:
+/// greeting, Thai Buddhist Era date, tactile pill term switcher, quick
+/// "+ เพิ่มวิชา/ห้อง" CTA, and refresh icon button.
 class DashboardHeaderBar extends StatelessWidget {
   const DashboardHeaderBar({
     super.key,
@@ -38,7 +39,6 @@ class DashboardHeaderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final semantic = AppSemanticColors.of(context);
     final yearById = {for (final y in academicYears) y.id: y};
     final isViewingActiveTerm =
         selectedTerm != null && selectedTerm!.id == activeTermId;
@@ -75,6 +75,7 @@ class DashboardHeaderBar extends StatelessWidget {
           style: IconButton.styleFrom(
             backgroundColor: colorScheme.surface,
             side: BorderSide(color: colorScheme.outlineVariant),
+            minimumSize: const Size(42, 42),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -83,7 +84,9 @@ class DashboardHeaderBar extends StatelessWidget {
           icon: Icon(
             Icons.refresh_rounded,
             size: 20,
-            color: isBusy ? colorScheme.onSurfaceVariant : semantic.leave,
+            color: isBusy
+                ? colorScheme.onSurfaceVariant
+                : colorScheme.onSurface,
           ),
         ),
       ],
@@ -91,7 +94,7 @@ class DashboardHeaderBar extends StatelessWidget {
   }
 }
 
-class _TermPickerPill extends StatelessWidget {
+class _TermPickerPill extends StatefulWidget {
   const _TermPickerPill({
     required this.selectedTerm,
     required this.terms,
@@ -111,105 +114,127 @@ class _TermPickerPill extends StatelessWidget {
   final ValueChanged<String> onSelectTerm;
 
   @override
+  State<_TermPickerPill> createState() => _TermPickerPillState();
+}
+
+class _TermPickerPillState extends State<_TermPickerPill> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
-    final yearBe = yearById[selectedTerm.academicYearId]?.yearBe;
+    final yearBe = widget.yearById[widget.selectedTerm.academicYearId]?.yearBe;
     final compactLabel = yearBe != null
-        ? 'เทอม ${selectedTerm.termLabel}/$yearBe'
-        : 'เทอม ${selectedTerm.termLabel}';
+        ? 'เทอม ${widget.selectedTerm.termLabel}/$yearBe'
+        : 'เทอม ${widget.selectedTerm.termLabel}';
 
-    return PopupMenuButton<String>(
-      enabled: enabled,
-      tooltip: 'สลับภาคเรียน',
-      onSelected: onSelectTerm,
-      itemBuilder: (context) => [
-        for (final term in terms)
-          PopupMenuItem<String>(
-            value: term.id,
-            child: Row(
-              children: [
-                Icon(
-                  term.id == selectedTerm.id
-                      ? Icons.check_rounded
-                      : Icons.school_outlined,
-                  size: 18,
-                  color: term.id == selectedTerm.id
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatTermHeadline(term),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelLarge,
-                      ),
-                      Text(
-                        ThaiDateFormatter.formatDateRange(
-                          term.startDate,
-                          term.endDate,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+    return MouseRegion(
+      cursor: widget.enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: PopupMenuButton<String>(
+        enabled: widget.enabled,
+        tooltip: 'สลับภาคเรียน',
+        onSelected: widget.onSelectTerm,
+        itemBuilder: (context) => [
+          for (final term in widget.terms)
+            PopupMenuItem<String>(
+              value: term.id,
+              child: Row(
+                children: [
+                  Icon(
+                    term.id == widget.selectedTerm.id
+                        ? Icons.check_rounded
+                        : Icons.school_outlined,
+                    size: 18,
+                    color: term.id == widget.selectedTerm.id
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatTermHeadline(term),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge,
+                        ),
+                        Text(
+                          ThaiDateFormatter.formatDateRange(
+                            term.startDate,
+                            term.endDate,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 260),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: _hovered && widget.enabled
+                  ? colorScheme.surfaceContainerLow
+                  : colorScheme.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _hovered && widget.enabled
+                    ? colorScheme.primary.withValues(alpha: 0.45)
+                    : colorScheme.outlineVariant,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: widget.isViewingActiveTerm
+                        ? semantic.success
+                        : colorScheme.onSurfaceVariant,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    widget.isViewingActiveTerm
+                        ? '$compactLabel (ปัจจุบัน)'
+                        : '$compactLabel (ย้อนหลัง)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.labelLarge?.copyWith(
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
-          ),
-      ],
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 260),
-        child: Container(
-          height: 42,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isViewingActiveTerm
-                      ? semantic.success
-                      : colorScheme.onSurfaceVariant,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  isViewingActiveTerm
-                      ? '$compactLabel (ปัจจุบัน)'
-                      : '$compactLabel (ย้อนหลัง)',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelLarge,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ],
           ),
         ),
       ),
@@ -217,9 +242,9 @@ class _TermPickerPill extends StatelessWidget {
   }
 
   String _formatTermHeadline(Term term) {
-    final yearBe = yearById[term.academicYearId]?.yearBe;
+    final yearBe = widget.yearById[term.academicYearId]?.yearBe;
     final yearPart = yearBe != null ? 'ปีการศึกษา $yearBe ' : '';
-    final activeTag = term.id == activeTermId ? ' (ปัจจุบัน)' : '';
+    final activeTag = term.id == widget.activeTermId ? ' (ปัจจุบัน)' : '';
     return '$yearPartเทอม ${term.termLabel}$activeTag';
   }
 }

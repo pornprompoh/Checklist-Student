@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_surface_card.dart';
 
-/// Standard empty state: soft-tinted icon circle, clear heading, short
-/// description and at most one primary call-to-action.
+/// Standard empty state: soft-tinted icon circle, clear heading, concise
+/// description, and a single primary CTA aligned to the closed spacing scale.
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
@@ -33,7 +33,7 @@ class AppEmptyState extends StatelessWidget {
     final hasAction = actionLabel != null && onAction != null;
 
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+      padding: const EdgeInsets.fromLTRB(8, 20, 8, 24),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -41,13 +41,13 @@ class AppEmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.72),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 30, color: colorScheme.primary),
+                child: Icon(icon, size: 26, color: colorScheme.primary),
               ),
               const SizedBox(height: 16),
               Text(
@@ -57,7 +57,7 @@ class AppEmptyState extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 description,
                 textAlign: TextAlign.center,
@@ -66,7 +66,7 @@ class AppEmptyState extends StatelessWidget {
                 ),
               ),
               if (hasAction) ...[
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 FilledButton.icon(
                   onPressed: onAction,
                   icon: Icon(actionIcon ?? Icons.arrow_forward_rounded, size: 18),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Standard page header: title + short description on the left and an action
-/// bar on the right. Below `640px` it stacks vertically and wraps actions so
-/// nothing overflows on `320px` screens.
+/// Standard page header: title + short description on the left and a wrapping
+/// action bar on the right. Stacks cleanly below `640px` using the closed
+/// spacing scale (`4, 8, 12, 16`).
 class AppPageHeader extends StatelessWidget {
   const AppPageHeader({
     super.key,
@@ -97,7 +97,7 @@ class AppPageHeader extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
-          children: [mainArea, const SizedBox(height: 14), bottom!],
+          children: [mainArea, const SizedBox(height: 16), bottom!],
         );
       },
     );

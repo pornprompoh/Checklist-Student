@@ -5,11 +5,11 @@ import 'app_color_scheme.dart';
 
 /// Material Design 3 theme definitions for Checklist-Student.
 ///
-/// Flat hairline surfaces (`outlineVariant` 1px), consistent radii
-/// (`10` buttons · `12` inputs · `16` cards · `20` dialogs) and a Thai-friendly
-/// type scale with comfortable line heights that never clip vowels/tone marks.
+/// Flat hairline surfaces (`outlineVariant` 1px), concentric radii
+/// (`8` inner · `10` buttons · `12` inputs/menus · `16` cards · `20` dialogs),
+/// explicit hover/focus/pressed states, and Thai-safe line heights.
 abstract final class AppTheme {
-  /// Use on statistics / scores so digits align in columns.
+  /// Tabular digits for KPI counters, attendance totals, scores, and timers.
   static const List<FontFeature> tabularFigures = <FontFeature>[
     FontFeature.tabularFigures(),
   ];
@@ -35,7 +35,7 @@ abstract final class AppTheme {
 
     return t.copyWith(
       headlineMedium: s(t.headlineMedium, FontWeight.w700, 1.3),
-      headlineSmall: s(t.headlineSmall, FontWeight.w700, 1.3),
+      headlineSmall: s(t.headlineSmall, FontWeight.w700, 1.35),
       titleLarge: s(t.titleLarge, FontWeight.w700, 1.35),
       titleMedium: s(t.titleMedium, FontWeight.w600, 1.4),
       titleSmall: s(t.titleSmall, FontWeight.w600, 1.4),
@@ -43,10 +43,24 @@ abstract final class AppTheme {
       bodyMedium: s(t.bodyMedium, FontWeight.w400, 1.5),
       bodySmall: s(t.bodySmall, FontWeight.w400, 1.45),
       labelLarge: s(t.labelLarge, FontWeight.w600, 1.35),
-      labelMedium: s(t.labelMedium, FontWeight.w600, 1.35),
+      labelMedium: s(t.labelMedium, FontWeight.w500, 1.35),
       labelSmall: s(t.labelSmall, FontWeight.w600, 1.35),
     );
   }
+
+  static WidgetStateProperty<Color?> _stateOverlay(Color base) =>
+      WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return base.withValues(alpha: 0.14);
+        }
+        if (states.contains(WidgetState.focused)) {
+          return base.withValues(alpha: 0.12);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return base.withValues(alpha: 0.08);
+        }
+        return null;
+      });
 
   static ThemeData _buildTheme({
     required ColorScheme colorScheme,
@@ -60,7 +74,7 @@ abstract final class AppTheme {
     final buttonShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(10),
     );
-    const buttonPadding = EdgeInsets.symmetric(horizontal: 18, vertical: 10);
+    const buttonPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 10);
     const buttonMinSize = Size(64, 42);
     OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
         OutlineInputBorder(
@@ -71,6 +85,9 @@ abstract final class AppTheme {
     return baseTheme.copyWith(
       scaffoldBackgroundColor: canvas,
       canvasColor: canvas,
+      hoverColor: cs.primary.withValues(alpha: 0.06),
+      focusColor: cs.primary.withValues(alpha: 0.12),
+      highlightColor: cs.primary.withValues(alpha: 0.08),
       textTheme: textTheme,
       primaryTextTheme: GoogleFonts.notoSansThaiTextTheme(
         baseTheme.primaryTextTheme,
@@ -84,8 +101,8 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         foregroundColor: cs.onSurface,
         shape: Border(bottom: hairline),
-        titleTextStyle: textTheme.titleLarge?.copyWith(
-          fontSize: 19,
+        titleTextStyle: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
           color: cs.onSurface,
         ),
       ),
@@ -104,8 +121,9 @@ abstract final class AppTheme {
         fillColor: cs.brightness == Brightness.dark
             ? cs.surfaceContainerLowest
             : cs.surfaceContainerLow,
+        hoverColor: cs.primary.withValues(alpha: 0.04),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
+          horizontal: 12,
           vertical: 12,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
@@ -123,21 +141,39 @@ abstract final class AppTheme {
           shape: buttonShape,
           elevation: 0,
           textStyle: textTheme.labelLarge,
-        ),
+        ).copyWith(overlayColor: _stateOverlay(cs.onPrimary)),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: buttonMinSize,
           padding: buttonPadding,
           shape: buttonShape,
-          side: BorderSide(color: cs.outline.withValues(alpha: 0.45)),
           textStyle: textTheme.labelLarge,
+        ).copyWith(
+          overlayColor: _stateOverlay(cs.primary),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return BorderSide(color: cs.primary, width: 1.5);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return BorderSide(color: cs.primary.withValues(alpha: 0.5));
+            }
+            return BorderSide(color: cs.outline.withValues(alpha: 0.45));
+          }),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           shape: buttonShape,
           textStyle: textTheme.labelLarge,
+        ).copyWith(overlayColor: _stateOverlay(cs.primary)),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: _stateOverlay(cs.primary),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -148,7 +184,7 @@ abstract final class AppTheme {
         labelStyle: textTheme.labelMedium?.copyWith(color: cs.onSurface),
         secondaryLabelStyle: textTheme.labelMedium?.copyWith(
           color: cs.onPrimaryContainer,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
         ),
         checkmarkColor: cs.onPrimaryContainer,
       ),
@@ -168,9 +204,10 @@ abstract final class AppTheme {
       popupMenuTheme: PopupMenuThemeData(
         color: cs.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 3,
+        shadowColor: cs.shadow.withValues(alpha: 0.14),
+        elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           side: hairline,
         ),
         textStyle: textTheme.bodyMedium,
@@ -188,7 +225,7 @@ abstract final class AppTheme {
                 : cs.onSurfaceVariant,
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
-                : FontWeight.w600,
+                : FontWeight.w500,
           ),
         ),
       ),

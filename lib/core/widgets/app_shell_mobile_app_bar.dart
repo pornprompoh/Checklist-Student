@@ -7,11 +7,11 @@ import '../../features/sync_queue/presentation/widgets/sync_status_badge.dart';
 import '../theme/app_color_scheme.dart';
 import '../theme/theme_mode_provider.dart';
 
-enum _MobileMenuAction { auditLog, syncQueue, signOut }
+enum _MobileMenuAction { auditLog, syncQueue, toggleTheme, signOut }
 
-/// Clean Mobile/Tablet (`< 900px`) top AppBar: contextual title, sync queue
-/// button with [SyncStatusBadge], theme toggle and an overflow menu holding
-/// secondary destinations (`ประวัติคะแนน`, `สถานะซิงค์`, `ออกจากระบบ`).
+/// Clean Mobile/Tablet (`< 900px`) top AppBar with generous breathing room
+/// for page titles even at `320px`: sync queue icon + compact [SyncStatusBadge]
+/// and an overflow menu (`ประวัติคะแนน`, `สถานะซิงค์`, สลับธีม, `ออกจากระบบ`).
 class AppShellMobileAppBar extends ConsumerWidget
     implements PreferredSizeWidget {
   const AppShellMobileAppBar({
@@ -44,6 +44,7 @@ class AppShellMobileAppBar extends ConsumerWidget
       actions: [
         IconButton(
           tooltip: 'สถานะการซิงค์ข้อมูลออฟไลน์',
+          visualDensity: VisualDensity.compact,
           onPressed: onOpenSyncQueue,
           icon: Stack(
             clipBehavior: Clip.none,
@@ -52,6 +53,7 @@ class AppShellMobileAppBar extends ConsumerWidget
                 syncCounts.hasConflicts
                     ? Icons.sync_problem_rounded
                     : Icons.sync_rounded,
+                size: 21,
                 color: syncCounts.hasConflicts ? semantic.danger : null,
               ),
               if (syncCounts.hasAnyItems)
@@ -63,30 +65,27 @@ class AppShellMobileAppBar extends ConsumerWidget
             ],
           ),
         ),
-        IconButton(
-          tooltip: isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด',
-          onPressed: () => ref
-              .read(themeModeProvider.notifier)
-              .toggleTheme(platformBrightness: Theme.of(context).brightness),
-          icon: Icon(
-            isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-          ),
-        ),
         PopupMenuButton<_MobileMenuAction>(
           tooltip: 'เมนูเพิ่มเติม',
-          icon: const Icon(Icons.more_vert_rounded),
+          icon: const Icon(Icons.more_vert_rounded, size: 21),
           onSelected: (action) {
             switch (action) {
               case _MobileMenuAction.auditLog:
                 onOpenAuditLog();
               case _MobileMenuAction.syncQueue:
                 onOpenSyncQueue();
+              case _MobileMenuAction.toggleTheme:
+                ref
+                    .read(themeModeProvider.notifier)
+                    .toggleTheme(
+                      platformBrightness: Theme.of(context).brightness,
+                    );
               case _MobileMenuAction.signOut:
                 if (!isSigningOut) onSignOut();
             }
           },
-          itemBuilder: (context) => const [
-            PopupMenuItem(
+          itemBuilder: (context) => [
+            const PopupMenuItem(
               value: _MobileMenuAction.auditLog,
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -94,7 +93,7 @@ class AppShellMobileAppBar extends ConsumerWidget
                 title: Text('ประวัติคะแนน'),
               ),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: _MobileMenuAction.syncQueue,
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -102,8 +101,20 @@ class AppShellMobileAppBar extends ConsumerWidget
                 title: Text('สถานะซิงค์'),
               ),
             ),
-            PopupMenuDivider(),
             PopupMenuItem(
+              value: _MobileMenuAction.toggleTheme,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  isDark
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined,
+                ),
+                title: Text(isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด'),
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
               value: _MobileMenuAction.signOut,
               child: ListTile(
                 contentPadding: EdgeInsets.zero,

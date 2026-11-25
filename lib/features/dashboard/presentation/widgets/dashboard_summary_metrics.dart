@@ -6,7 +6,8 @@ import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/dashboard_overview.dart';
 
 /// Compact 4-KPI summary strip (4 columns on desktop, 2×2 on mobile using
-/// `LayoutBuilder` + intrinsic height — never fixed `childAspectRatio`).
+/// `LayoutBuilder` + intrinsic height, concentric `8px` inner icon boxes, and
+/// `tabularFigures` aligned baselines).
 class DashboardSummaryMetrics extends StatelessWidget {
   const DashboardSummaryMetrics({super.key, required this.overview});
 
@@ -59,7 +60,7 @@ class DashboardSummaryMetrics extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 720 ? 4 : 2;
-        const spacing = 10.0;
+        const spacing = 12.0;
         final itemWidth =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
@@ -108,7 +109,7 @@ class _KpiTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return AppSurfaceCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
@@ -116,7 +117,7 @@ class _KpiTile extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: item.container,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(item.icon, size: 19, color: item.accent),
           ),
@@ -134,7 +135,6 @@ class _KpiTile extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 1),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
@@ -145,7 +145,7 @@ class _KpiTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),

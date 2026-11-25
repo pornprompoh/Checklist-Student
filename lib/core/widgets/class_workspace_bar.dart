@@ -6,7 +6,7 @@ import '../constants/app_routes.dart';
 import 'unsaved_changes_guard.dart';
 import 'unsaved_changes_provider.dart';
 
-/// The four class-scoped workspaces a teacher jumps between.
+/// The four class-scoped workspaces a teacher switches between in 1 tap.
 enum ClassWorkspaceTab {
   attendance('เช็คชื่อ', Icons.fact_check_outlined, Icons.fact_check_rounded),
   grading('ตารางคะแนน', Icons.table_chart_outlined, Icons.table_chart_rounded),
@@ -36,9 +36,9 @@ enum ClassWorkspaceTab {
   };
 }
 
-/// Compact segmented pill bar to switch between `เช็คชื่อ · ตารางคะแนน ·
-/// แผนเก็บงาน · ส่งออกรายงาน` of the same class in one tap. Scrolls
-/// horizontally on `320px` screens and respects [UnsavedChangesGuard].
+/// Compact segmented pill bar with exact concentric radii (`outer: 12`,
+/// `padding: 4` → `inner: 8`), desktop hover/focus feedback, horizontal
+/// scroll on `320px` screens, and [UnsavedChangesGuard] protection.
 class ClassWorkspaceBar extends ConsumerWidget {
   const ClassWorkspaceBar({
     super.key,
@@ -50,7 +50,7 @@ class ClassWorkspaceBar extends ConsumerWidget {
   final String subjectClassId;
   final ClassWorkspaceTab activeTab;
 
-  /// Overrides the default `GoRouter` navigation when provided.
+  /// Overrides default `GoRouter` navigation when provided.
   final ValueChanged<ClassWorkspaceTab>? onSelectTab;
 
   Future<void> _handleSelect(
@@ -76,6 +76,7 @@ class ClassWorkspaceBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final innerRadius = BorderRadius.circular(8);
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -89,57 +90,98 @@ class ClassWorkspaceBar extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final tab in ClassWorkspaceTab.values)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Material(
-                  key: ValueKey<String>('class_workspace_tab_${tab.name}'),
-                  color: tab == activeTab
-                      ? colorScheme.surface
-                      : Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
-                    side: tab == activeTab
-                        ? BorderSide(color: colorScheme.outlineVariant)
-                        : BorderSide.none,
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(9),
-                    onTap: () => _handleSelect(context, ref, tab),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            tab == activeTab ? tab.selectedIcon : tab.icon,
-                            size: 18,
-                            color: tab == activeTab
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            tab.label,
-                            style: textTheme.labelLarge?.copyWith(
-                              color: tab == activeTab
-                                  ? colorScheme.onSurface
-                                  : colorScheme.onSurfaceVariant,
-                              fontWeight: tab == activeTab
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            for (var i = 0; i < ClassWorkspaceTab.values.length; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              _WorkspaceSegment(
+                tab: ClassWorkspaceTab.values[i],
+                isSelected: ClassWorkspaceTab.values[i] == activeTab,
+                radius: innerRadius,
+                textTheme: textTheme,
+                onTap: () =>
+                    _handleSelect(context, ref, ClassWorkspaceTab.values[i]),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkspaceSegment extends StatelessWidget {
+  const _WorkspaceSegment({
+    required this.tab,
+    required this.isSelected,
+    required this.radius,
+    required this.textTheme,
+    required this.onTap,
+  });
+
+  final ClassWorkspaceTab tab;
+  final bool isSelected;
+  final BorderRadius radius;
+  final TextTheme textTheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AnimatedContainer(
+      key: ValueKey<String>('class_workspace_tab_${tab.name}'),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isSelected ? colorScheme.surface : Colors.transparent,
+        borderRadius: radius,
+        border: isSelected
+            ? Border.all(color: colorScheme.outlineVariant)
+            : null,
+        boxShadow: isSelected
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: radius,
+          mouseCursor: SystemMouseCursors.click,
+          hoverColor: colorScheme.primary.withValues(alpha: 0.07),
+          focusColor: colorScheme.primary.withValues(alpha: 0.12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? tab.selectedIcon : tab.icon,
+                  size: 18,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  tab.label,
+                  style: textTheme.labelLarge?.copyWith(
+                    color: isSelected
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

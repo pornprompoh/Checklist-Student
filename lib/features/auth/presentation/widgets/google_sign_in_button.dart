@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Responsive Google Sign-In button with built-in loading indicator and
-/// double-tap prevention, styled strictly with Material 3 [ColorScheme].
+/// Responsive Google Sign-In button following `AppTheme` tokens (`10px` radius,
+/// explicit hover/focus/pressed states, loading indicator, double-tap guard).
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
@@ -29,7 +29,7 @@ class GoogleSignInButton extends StatelessWidget {
           minimumSize: const Size(double.infinity, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
         onPressed: isInteractive ? onPressed : null,
@@ -47,17 +47,31 @@ class GoogleSignInButton extends StatelessWidget {
                 ),
               )
             else
-              const Icon(Icons.login_rounded, size: 20),
-            const SizedBox(width: 10),
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: colorScheme.onPrimary.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.g_mobiledata_rounded,
+                  size: 22,
+                  color: isInteractive
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            const SizedBox(width: 12),
             Flexible(
               child: Text(
                 isLoading ? 'กำลังเชื่อมต่อ Google...' : label,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: textTheme.labelLarge?.copyWith(
                   color: isInteractive
                       ? colorScheme.onPrimary
                       : colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

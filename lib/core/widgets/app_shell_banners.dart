@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'app_feedback_banner.dart';
 
-/// Global shell banners rendered above every Teacher page: the Offline
-/// warning and the Sync Conflict alert (hidden on the Sync Queue page).
+/// Global shell banners rendered above Teacher pages: Offline warning and
+/// Sync Conflict alert aligned to the closed spacing scale (`8, 12, 16`).
 class AppShellBanners extends StatelessWidget {
   const AppShellBanners({
     super.key,
@@ -35,7 +35,7 @@ class AppShellBanners extends StatelessWidget {
               message:
                   'ขณะนี้อยู่ในโหมดออฟไลน์ การเชื่อมต่ออินเทอร์เน็ตขาดหายชั่วคราว',
             ),
-          if (isOffline && showConflictBanner) const SizedBox(height: 10),
+          if (isOffline && showConflictBanner) const SizedBox(height: 8),
           if (showConflictBanner)
             AppFeedbackBanner(
               type: AppFeedbackType.error,

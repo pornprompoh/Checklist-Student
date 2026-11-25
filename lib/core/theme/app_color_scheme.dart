@@ -6,11 +6,11 @@ const Color seedColor = Color(0xFF3B5BDB);
 /// Soft neutral canvas behind cards (Light Mode).
 const Color lightCanvasColor = Color(0xFFF6F8FB);
 
-/// Soft neutral canvas behind cards (Dark Mode).
+/// Soft neutral canvas behind cards (Dark Mode — deep slate, never pure black).
 const Color darkCanvasColor = Color(0xFF0F141E);
 
 /// Light Mode: crisp white surfaces on a cool neutral canvas with hairline
-/// `#E2E8F0` borders and slate text for comfortable long reading sessions.
+/// `#E2E8F0` borders and WCAG-AA slate text for long classroom sessions.
 final ColorScheme lightColorScheme =
     ColorScheme.fromSeed(
       seedColor: seedColor,
@@ -18,46 +18,52 @@ final ColorScheme lightColorScheme =
     ).copyWith(
       primary: seedColor,
       onPrimary: Colors.white,
-      primaryContainer: const Color(0xFFE3E9FF),
-      onPrimaryContainer: const Color(0xFF1C2E7A),
-      secondaryContainer: const Color(0xFFE8EDF8),
-      onSecondaryContainer: const Color(0xFF243256),
+      primaryContainer: const Color(0xFFE5EBFF),
+      onPrimaryContainer: const Color(0xFF1A2B73),
+      secondary: const Color(0xFF475569),
+      onSecondary: Colors.white,
+      secondaryContainer: const Color(0xFFEBF0F7),
+      onSecondaryContainer: const Color(0xFF1E293B),
       surface: Colors.white,
       onSurface: const Color(0xFF0F172A),
-      onSurfaceVariant: const Color(0xFF526077),
+      onSurfaceVariant: const Color(0xFF475569),
       surfaceContainerLowest: Colors.white,
       surfaceContainerLow: const Color(0xFFF8FAFC),
       surfaceContainer: const Color(0xFFF1F5F9),
-      surfaceContainerHigh: const Color(0xFFEBF0F6),
-      surfaceContainerHighest: const Color(0xFFE4EAF2),
+      surfaceContainerHigh: const Color(0xFFEAEFF6),
+      surfaceContainerHighest: const Color(0xFFE2E8F0),
       outline: const Color(0xFF94A3B8),
       outlineVariant: const Color(0xFFE2E8F0),
+      shadow: const Color(0xFF1E293B),
       surfaceTint: Colors.transparent,
     );
 
-/// Dark Mode: deep blue-slate canvas (not pure black) with lifted `#171F2E`
-/// surfaces and `#273247` hairlines to keep depth without harsh contrast.
+/// Dark Mode: deep blue-slate canvas with lifted `#171F2E` surfaces,
+/// `#273247` hairlines, and muted slate copy that stays crisp without glare.
 final ColorScheme darkColorScheme =
     ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
     ).copyWith(
       primary: const Color(0xFF9DB0FF),
-      onPrimary: const Color(0xFF0D1B5E),
-      primaryContainer: const Color(0xFF26346E),
-      onPrimaryContainer: const Color(0xFFDDE4FF),
-      secondaryContainer: const Color(0xFF242F45),
-      onSecondaryContainer: const Color(0xFFD7DEEE),
+      onPrimary: const Color(0xFF0E1B59),
+      primaryContainer: const Color(0xFF233166),
+      onPrimaryContainer: const Color(0xFFE0E7FF),
+      secondary: const Color(0xFF94A3B8),
+      onSecondary: const Color(0xFF0F172A),
+      secondaryContainer: const Color(0xFF222D42),
+      onSecondaryContainer: const Color(0xFFD8E0EE),
       surface: const Color(0xFF171F2E),
-      onSurface: const Color(0xFFE2E8F0),
-      onSurfaceVariant: const Color(0xFF9AA8BE),
+      onSurface: const Color(0xFFE5ECF6),
+      onSurfaceVariant: const Color(0xFFA0AEC4),
       surfaceContainerLowest: const Color(0xFF121926),
-      surfaceContainerLow: const Color(0xFF1A2333),
-      surfaceContainer: const Color(0xFF1E2839),
-      surfaceContainerHigh: const Color(0xFF232E41),
-      surfaceContainerHighest: const Color(0xFF2A3549),
-      outline: const Color(0xFF52627C),
+      surfaceContainerLow: const Color(0xFF1B2436),
+      surfaceContainer: const Color(0xFF202B3E),
+      surfaceContainerHigh: const Color(0xFF263348),
+      surfaceContainerHighest: const Color(0xFF2D3A52),
+      outline: const Color(0xFF5A6B86),
       outlineVariant: const Color(0xFF273247),
+      shadow: const Color(0xFF05080F),
       surfaceTint: Colors.transparent,
     );
 

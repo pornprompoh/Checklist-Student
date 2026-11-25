@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Flat, hairline-bordered surface card used across the app instead of heavy
-/// shadows or card-in-card nesting. Optional header (title, subtitle,
-/// trailing) and consistent `16px` padding / radius.
-class AppSurfaceCard extends StatelessWidget {
+/// Flat hairline-bordered surface card (`16px` radius, `1px` `outlineVariant`)
+/// with optional desktop hover highlight (subtle tinted border + soft shadow)
+/// and click cursor when interactive.
+class AppSurfaceCard extends StatefulWidget {
   const AppSurfaceCard({
     super.key,
     required this.child,
@@ -14,6 +14,7 @@ class AppSurfaceCard extends StatelessWidget {
     this.borderColor,
     this.backgroundColor,
     this.onTap,
+    this.enableHoverHighlight = false,
   });
 
   final Widget child;
@@ -25,15 +26,33 @@ class AppSurfaceCard extends StatelessWidget {
   final Color? backgroundColor;
   final VoidCallback? onTap;
 
+  /// Enables subtle desktop hover border + tinted shadow lift even when actions
+  /// live on buttons inside the card rather than a whole-card [onTap].
+  final bool enableHoverHighlight;
+
+  @override
+  State<AppSurfaceCard> createState() => _AppSurfaceCardState();
+}
+
+class _AppSurfaceCardState extends State<AppSurfaceCard> {
+  bool _isHovered = false;
+
+  bool get _tracksHover => widget.onTap != null || widget.enableHoverHighlight;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final hasHeader = title != null || trailing != null;
+    final hasHeader = widget.title != null || widget.trailing != null;
     final radius = BorderRadius.circular(16);
+    final hovered = _tracksHover && _isHovered;
+
+    final effectiveBorderColor = hovered
+        ? colorScheme.primary.withValues(alpha: 0.4)
+        : (widget.borderColor ?? colorScheme.outlineVariant);
 
     final content = Padding(
-      padding: padding,
+      padding: widget.padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -47,19 +66,19 @@ class AppSurfaceCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (title != null)
+                      if (widget.title != null)
                         Text(
-                          title!,
+                          widget.title!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
+                      if (widget.subtitle != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          subtitle!,
+                          widget.subtitle!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.bodySmall?.copyWith(
@@ -70,29 +89,61 @@ class AppSurfaceCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) ...[
+                if (widget.trailing != null) ...[
                   const SizedBox(width: 12),
-                  trailing!,
+                  widget.trailing!,
                 ],
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
           ],
-          child,
+          widget.child,
         ],
       ),
     );
 
-    return Material(
-      color: backgroundColor ?? colorScheme.surface,
-      shape: RoundedRectangleBorder(
+    final card = AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: widget.backgroundColor ?? colorScheme.surface,
         borderRadius: radius,
-        side: BorderSide(color: borderColor ?? colorScheme.outlineVariant),
+        border: Border.all(color: effectiveBorderColor),
+        boxShadow: hovered
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: onTap == null
-          ? content
-          : InkWell(borderRadius: radius, onTap: onTap, child: content),
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: widget.onTap == null
+            ? content
+            : InkWell(
+                borderRadius: radius,
+                mouseCursor: SystemMouseCursors.click,
+                onTap: widget.onTap,
+                child: content,
+              ),
+      ),
+    );
+
+    if (!_tracksHover) {
+      return card;
+    }
+    return MouseRegion(
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: card,
     );
   }
 }

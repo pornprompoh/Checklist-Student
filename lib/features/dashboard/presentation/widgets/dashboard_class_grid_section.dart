@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/dashboard_class_item.dart';
 import '../../domain/entities/dashboard_overview.dart';
 import 'dashboard_class_card.dart';
 
-/// Responsive 1/2/3-column classroom card grid with an optional section heading
-/// (used for "คาบสอนวันนี้" and "ห้องเรียนทั้งหมดในเทอมนี้").
+/// Responsive 1/2/3-column classroom card grid with aligned section heading.
 class DashboardClassGridSection extends StatelessWidget {
   const DashboardClassGridSection({
     super.key,
@@ -103,14 +103,15 @@ class DashboardClassGridSection extends StatelessWidget {
                 heading!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         grid,
       ],
     );
