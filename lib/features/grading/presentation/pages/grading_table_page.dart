@@ -138,7 +138,11 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
 
   void _openStudentProfileDrawer(ClassEnrollment enrollment) {
     setState(() => _selectedDrawerEnrollmentId = enrollment.id);
-    _scaffoldKey.currentState?.openEndDrawer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scaffoldKey.currentState?.openEndDrawer();
+      }
+    });
   }
 
   @override
