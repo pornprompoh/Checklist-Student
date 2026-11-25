@@ -53,8 +53,8 @@ class DashboardFilterBar extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(
-          width: 260,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 260),
           child: TextField(
             controller: searchController,
             onChanged: onQueryChanged,

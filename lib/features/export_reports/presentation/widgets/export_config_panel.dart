@@ -169,7 +169,11 @@ class ExportConfigPanel extends StatelessWidget {
                 for (final mode in ExportOrientationMode.values)
                   ButtonSegment<ExportOrientationMode>(
                     value: mode,
-                    label: Text(mode.thaiLabel),
+                    label: Text(
+                      mode.thaiLabel,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
               ],
               selected: <ExportOrientationMode>{options.orientationMode},

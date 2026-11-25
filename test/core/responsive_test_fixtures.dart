@@ -582,6 +582,7 @@ class ResponsiveTestFixtures {
         retryCount: 0,
         nextRetryAt: null,
         lastError: null,
+        serverSnapshot: null,
         createdAt: now,
         updatedAt: now,
       ),

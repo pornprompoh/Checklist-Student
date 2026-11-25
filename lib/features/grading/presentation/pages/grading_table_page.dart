@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -310,90 +312,128 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
                 );
               },
             ),
-      body: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GradingTableToolbar(
-              classOptions: options,
-              selectedClassId: classId,
-              isEditMode: tableState.isEditMode,
-              saveStatus: tableState.overallSaveStatus,
-              lastSavedAt: tableState.lastSavedAt,
-              filterState: filterState,
-              filterCounts: filterCounts,
-              transferredOutCount: transferredOutCount,
-              searchController: _searchController,
-              onSelectClass: (nextId) {
-                setState(() {
-                  _selectedClassId = nextId;
-                  _selectedDrawerEnrollmentId = null;
-                });
-                ref.read(gradingFilterProvider.notifier).reset();
-                _searchController.clear();
-              },
-              onOpenPlanPage: () =>
-                  context.go(AppRoutes.teacherGradingPlanForClass(classId)),
-              onOpenAuditLog: () =>
-                  context.go(AppRoutes.teacherAuditLogForClass(classId)),
-              onOpenExportReports: () =>
-                  context.go(AppRoutes.teacherExportReportsForClass(classId)),
-              onToggleEditMode: controller.toggleEditMode,
-              onRetrySave: controller.retryLastFailedSave,
-              onReloadLatest: () => controller.reloadFromServer(classId),
-              onSearchChanged: (q) =>
-                  ref.read(gradingFilterProvider.notifier).setSearchQuery(q),
-              onSelectFilter: (f) =>
-                  ref.read(gradingFilterProvider.notifier).setQuickFilter(f),
-              onToggleShowTransferredOut: (v) => ref
-                  .read(gradingFilterProvider.notifier)
-                  .setShowTransferredOut(v),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final useScrollableLayout =
+              constraints.maxHeight < 640 || constraints.maxWidth < 600;
+          final toolbar = GradingTableToolbar(
+            classOptions: options,
+            selectedClassId: classId,
+            isEditMode: tableState.isEditMode,
+            saveStatus: tableState.overallSaveStatus,
+            lastSavedAt: tableState.lastSavedAt,
+            filterState: filterState,
+            filterCounts: filterCounts,
+            transferredOutCount: transferredOutCount,
+            searchController: _searchController,
+            onSelectClass: (nextId) {
+              setState(() {
+                _selectedClassId = nextId;
+                _selectedDrawerEnrollmentId = null;
+              });
+              ref.read(gradingFilterProvider.notifier).reset();
+              _searchController.clear();
+            },
+            onOpenPlanPage: () =>
+                context.go(AppRoutes.teacherGradingPlanForClass(classId)),
+            onOpenAuditLog: () =>
+                context.go(AppRoutes.teacherAuditLogForClass(classId)),
+            onOpenExportReports: () =>
+                context.go(AppRoutes.teacherExportReportsForClass(classId)),
+            onToggleEditMode: controller.toggleEditMode,
+            onRetrySave: controller.retryLastFailedSave,
+            onReloadLatest: () => controller.reloadFromServer(classId),
+            onSearchChanged: (q) =>
+                ref.read(gradingFilterProvider.notifier).setSearchQuery(q),
+            onSelectFilter: (f) =>
+                ref.read(gradingFilterProvider.notifier).setQuickFilter(f),
+            onToggleShowTransferredOut: (v) => ref
+                .read(gradingFilterProvider.notifier)
+                .setShowTransferredOut(v),
+          );
+          final previewBanner =
+              !tableState.isEditMode &&
+                  !isInitialLoading &&
+                  loadError == null &&
+                  enrollments.isNotEmpty &&
+                  assignments.isNotEmpty
+              ? const AppFeedbackBanner(
+                  type: AppFeedbackType.info,
+                  message:
+                      'โหมดพรีวิว: ดับเบิลคลิกที่ช่องคะแนน หรือกดปุ่ม "โหมดพรีวิว · กดเพื่อแก้ไข" เพื่อเริ่มกรอกคะแนน (กด Enter เลื่อนลง / Tab เลื่อนขวา)',
+                )
+              : null;
+          final errorBanner = tableState.lastErrorMessage == null
+              ? null
+              : AppFeedbackBanner(
+                  type: tableState.overallSaveStatus == CellSaveStatus.conflict
+                      ? AppFeedbackType.warning
+                      : AppFeedbackType.error,
+                  message: tableState.lastErrorMessage!,
+                  retryLabel:
+                      tableState.overallSaveStatus == CellSaveStatus.conflict
+                      ? 'โหลดข้อมูลล่าสุด'
+                      : 'ลองใหม่',
+                  onRetry:
+                      tableState.overallSaveStatus == CellSaveStatus.conflict
+                      ? () => controller.reloadFromServer(classId)
+                      : controller.retryLastFailedSave,
+                );
+          final gridArea = _buildGridArea(
+            context,
+            teacherId: teacherId,
+            classId: classId,
+            isInitialLoading: isInitialLoading,
+            loadError: loadError,
+            enrollments: enrollments,
+            assignments: assignments,
+            visibleRows: visibleRows,
+            tableState: tableState,
+          );
+
+          if (useScrollableLayout) {
+            final gridHeight = math.max(320.0, constraints.maxHeight * 0.65);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  toolbar,
+                  if (previewBanner != null) ...[
+                    const SizedBox(height: 8),
+                    previewBanner,
+                  ],
+                  if (errorBanner != null) ...[
+                    const SizedBox(height: 8),
+                    errorBanner,
+                  ],
+                  const SizedBox(height: 10),
+                  SizedBox(height: gridHeight, child: gridArea),
+                ],
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                toolbar,
+                if (previewBanner != null) ...[
+                  const SizedBox(height: 8),
+                  previewBanner,
+                ],
+                if (errorBanner != null) ...[
+                  const SizedBox(height: 8),
+                  errorBanner,
+                ],
+                const SizedBox(height: 10),
+                Expanded(child: gridArea),
+              ],
             ),
-            if (!tableState.isEditMode &&
-                !isInitialLoading &&
-                loadError == null &&
-                enrollments.isNotEmpty &&
-                assignments.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const AppFeedbackBanner(
-                type: AppFeedbackType.info,
-                message:
-                    'โหมดพรีวิว: ดับเบิลคลิกที่ช่องคะแนน หรือกดปุ่ม "โหมดพรีวิว · กดเพื่อแก้ไข" เพื่อเริ่มกรอกคะแนน (กด Enter เลื่อนลง / Tab เลื่อนขวา)',
-              ),
-            ],
-            if (tableState.lastErrorMessage != null) ...[
-              const SizedBox(height: 8),
-              AppFeedbackBanner(
-                type: tableState.overallSaveStatus == CellSaveStatus.conflict
-                    ? AppFeedbackType.warning
-                    : AppFeedbackType.error,
-                message: tableState.lastErrorMessage!,
-                retryLabel:
-                    tableState.overallSaveStatus == CellSaveStatus.conflict
-                    ? 'โหลดข้อมูลล่าสุด'
-                    : 'ลองใหม่',
-                onRetry: tableState.overallSaveStatus == CellSaveStatus.conflict
-                    ? () => controller.reloadFromServer(classId)
-                    : controller.retryLastFailedSave,
-              ),
-            ],
-            const SizedBox(height: 10),
-            Expanded(
-              child: _buildGridArea(
-                context,
-                teacherId: teacherId,
-                classId: classId,
-                isInitialLoading: isInitialLoading,
-                loadError: loadError,
-                enrollments: enrollments,
-                assignments: assignments,
-                visibleRows: visibleRows,
-                tableState: tableState,
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

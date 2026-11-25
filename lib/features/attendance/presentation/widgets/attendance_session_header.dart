@@ -176,27 +176,43 @@ class AttendanceSessionHeader extends StatelessWidget {
                   children: [
                     IconButton.outlined(
                       tooltip: 'วันก่อนหน้า',
+                      visualDensity: VisualDensity.compact,
                       onPressed: isBusy ? null : onPreviousDay,
                       icon: const Icon(Icons.chevron_left_rounded, size: 20),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Flexible(
-                      child: OutlinedButton.icon(
+                      child: OutlinedButton(
                         onPressed: isBusy ? null : onPickDate,
-                        icon: const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 16,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                         ),
-                        label: Text(
-                          dateLabel,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                dateLabel,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     IconButton.outlined(
                       tooltip: 'วันถัดไป',
+                      visualDensity: VisualDensity.compact,
                       onPressed: isBusy ? null : onNextDay,
                       icon: const Icon(Icons.chevron_right_rounded, size: 20),
                     ),

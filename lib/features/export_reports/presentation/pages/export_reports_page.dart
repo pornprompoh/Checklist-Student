@@ -285,11 +285,19 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
                         segments: const <ButtonSegment<_MobileExportTab>>[
                           ButtonSegment(
                             value: _MobileExportTab.config,
-                            label: Text('ตั้งค่าเอกสาร'),
+                            label: Text(
+                              'ตั้งค่าเอกสาร',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                           ButtonSegment(
                             value: _MobileExportTab.preview,
-                            label: Text('ตัวอย่างก่อนส่งออก (Preview)'),
+                            label: Text(
+                              'ตัวอย่างก่อนส่งออก (Preview)',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                         selected: <_MobileExportTab>{_mobileTab},

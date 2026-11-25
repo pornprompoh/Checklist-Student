@@ -3,8 +3,11 @@ import 'package:checklist_student/core/theme/app_theme.dart';
 import 'package:checklist_student/core/widgets/app_shell_scaffold.dart';
 import 'package:checklist_student/core/widgets/typed_confirm_dialog.dart';
 import 'package:checklist_student/features/academic_structure/presentation/pages/academic_structure_page.dart';
+import 'package:checklist_student/features/academic_structure/presentation/widgets/subject_class_form_dialog.dart';
+import 'package:checklist_student/features/academic_structure/presentation/widgets/term_form_dialog.dart';
 import 'package:checklist_student/features/attendance/presentation/pages/attendance_check_in_page.dart';
 import 'package:checklist_student/features/attendance/presentation/pages/attendance_rule_settings_page.dart';
+import 'package:checklist_student/features/attendance/presentation/widgets/attendance_history_sheet.dart';
 import 'package:checklist_student/features/audit_log/presentation/pages/audit_log_page.dart';
 import 'package:checklist_student/features/auth/presentation/pages/teacher_login_page.dart';
 import 'package:checklist_student/features/dashboard/presentation/pages/teacher_dashboard_page.dart';
@@ -14,9 +17,13 @@ import 'package:checklist_student/features/grading/presentation/pages/grading_ta
 import 'package:checklist_student/features/grading/presentation/providers/grading_table_state.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/assignment_form_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/copy_plan_dialog.dart';
+import 'package:checklist_student/features/grading/presentation/widgets/score_cell_detail_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/special_grade_action_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/student_profile_drawer.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/ai_roster_import_dialog.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/link_homeroom_classes_dialog.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/roster_import_dialog.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/widgets/student_form_dialog.dart';
 import 'package:checklist_student/features/settings/presentation/pages/teacher_settings_page.dart';
 import 'package:checklist_student/features/sync_queue/presentation/pages/sync_queue_page.dart';
@@ -98,15 +105,47 @@ void main() {
         ),
         afterPump: (tester, vp) async {
           if (vp.size.width >= AppShellScaffold.desktopBreakpoint) {
-            final collapseBtn = find.byTooltip('ย่อแถบเมนู');
-            if (collapseBtn.evaluate().isNotEmpty) {
-              await tester.tap(collapseBtn);
-              await tester.pumpAndSettle();
-            }
+            final collapseBtn = find.byTooltip('พับแถบด้านข้าง');
+            expect(collapseBtn, findsOneWidget);
+            await tester.tap(collapseBtn);
+            await tester.pump(const Duration(milliseconds: 60));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            final expandBtn = find.byTooltip('ขยายแถบด้านข้าง');
+            expect(expandBtn, findsOneWidget);
+            await tester.tap(expandBtn);
+            await tester.pump(const Duration(milliseconds: 60));
+            await tester.pumpAndSettle();
           }
         },
       );
     });
+
+    testWidgets(
+      'AppShellScaffold hosting GradingTablePage & AuditLogPage with offline+conflict banners across 6 viewports',
+      (tester) async {
+        await pumpAcross6Viewports(
+          tester,
+          fixtures: fixtures,
+          isOnline: false,
+          wrapInScaffold: false,
+          builder: () => const AppShellScaffold(
+            currentPath: AppRoutes.teacherGrading,
+            child: GradingTablePage(initialClassId: 'class-1'),
+          ),
+        );
+        await pumpAcross6Viewports(
+          tester,
+          fixtures: fixtures,
+          isOnline: false,
+          wrapInScaffold: false,
+          builder: () => const AppShellScaffold(
+            currentPath: AppRoutes.teacherAuditLog,
+            child: AuditLogPage(),
+          ),
+        );
+      },
+    );
 
     testWidgets('TeacherLoginPage renders without overflow across 6 viewports', (
       tester,
@@ -225,11 +264,10 @@ void main() {
         fixtures: fixtures,
         builder: () => const AuditLogPage(),
         afterPump: (tester, vp) async {
-          final cleanupTab = find.text('จัดการพื้นที่รายปี');
-          if (cleanupTab.evaluate().isNotEmpty) {
-            await tester.tap(cleanupTab);
-            await tester.pumpAndSettle();
-          }
+          final cleanupTab = find.text('จัดการล้าง Log รายปี');
+          expect(cleanupTab, findsOneWidget);
+          await tester.tap(cleanupTab);
+          await tester.pumpAndSettle();
         },
       );
     });
@@ -309,6 +347,46 @@ void main() {
           showAddToHomeroomOption: true,
           showSyncToLinkedClassesOption: true,
           linkedClassCount: 3,
+        ),
+        'ScoreCellDetailDialog': () => ScoreCellDetailDialog(
+          studentLabel: 'เลขที่ 1 นายกิตติพงศ์วัฒนากูล1 รัตนประเสริฐศักดิ์',
+          assignment: fixtures.assignments.first,
+          existingScore: fixtures.studentScores.first,
+        ),
+        'TermFormDialog': () => TermFormDialog(
+          academicYears: fixtures.years,
+          existingTerm: fixtures.terms.first,
+        ),
+        'SubjectClassFormDialog': () => SubjectClassFormDialog(
+          subjectLabel: 'ว31101 วิทยาการคำนวณและการออกแบบเทคโนโลยี 1',
+          existingClass: fixtures.classes.first,
+          suggestedRoomNames: const <String>['ม.4/1', 'ม.4/2', 'ม.4/3'],
+        ),
+        'LinkHomeroomClassesDialog': () => LinkHomeroomClassesDialog(
+          homeroomId: 'hr-1',
+          homeroomName: 'ม.4/1 ห้องเรียนพิเศษวิทย์-คณิต',
+          subjects: fixtures.subjects,
+          subjectClasses: fixtures.classes,
+          defaultEnrolledAt: fixtures.terms.first.startDate,
+        ),
+        'RosterImportDialog': () => RosterImportDialog(
+          homeroomId: 'hr-1',
+          homeroomName: 'ม.4/1 ห้องเรียนพิเศษวิทย์-คณิต',
+          existingStudents: fixtures.homeroomStudents,
+          linkedClassIds: const <String>['class-1'],
+        ),
+        'AiRosterImportDialog': () => AiRosterImportDialog(
+          academicYearId: 'y-2569',
+          homeroomId: 'hr-1',
+          homeroomName: 'ม.4/1 ห้องเรียนพิเศษวิทย์-คณิต',
+          existingStudents: fixtures.homeroomStudents,
+          linkedClassIds: const <String>['class-1'],
+        ),
+        'AttendanceHistorySheet': () => AttendanceHistorySheet(
+          sessions: fixtures.sessions,
+          allRecords: fixtures.attendanceRecords,
+          selectedDate: fixtures.sessions.first.sessionDate,
+          onSelectDate: (_) {},
         ),
       };
 

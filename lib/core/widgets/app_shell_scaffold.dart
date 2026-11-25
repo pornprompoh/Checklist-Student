@@ -199,7 +199,11 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_currentTitle),
+        title: Text(
+          _currentTitle,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
         actions: [
           IconButton(
             tooltip: 'สถานะการซิงค์ข้อมูลออฟไลน์',
@@ -293,16 +297,19 @@ class _DesktopSidebar extends ConsumerWidget {
       duration: const Duration(milliseconds: 180),
       width: collapsed ? 76 : 248,
       color: colorScheme.surfaceContainerLow,
-      child: Column(
-        children: [
-          Padding(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = collapsed || constraints.maxWidth < 180;
+          final isShortHeight = constraints.maxHeight < 340;
+
+          final header = Padding(
             padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
             child: Row(
-              mainAxisAlignment: collapsed
+              mainAxisAlignment: isCompact
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.spaceBetween,
               children: [
-                if (!collapsed)
+                if (!isCompact)
                   Expanded(
                     child: Row(
                       children: [
@@ -335,67 +342,66 @@ class _DesktopSidebar extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-          if (!collapsed && profile != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.effectiveDisplayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+          );
+
+          final profileBox = (!isCompact && profile != null)
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'รหัสครู: ${profile.teacherCode}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.effectiveDisplayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'รหัสครู: ${profile.teacherCode}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              children: [
-                for (final item in allItems)
-                  _SidebarTile(
-                    item: item,
-                    selected: currentPath.startsWith(item.route),
-                    collapsed: collapsed,
-                    syncBadgeCounts: item.route == AppRoutes.teacherSyncQueue
-                        ? syncCounts
-                        : null,
-                    onTap: () => onSelectRoute(item.route),
                   ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
+                )
+              : null;
+
+          final navTiles = <Widget>[
+            for (final item in allItems)
+              _SidebarTile(
+                item: item,
+                selected: currentPath.startsWith(item.route),
+                collapsed: isCompact,
+                syncBadgeCounts: item.route == AppRoutes.teacherSyncQueue
+                    ? syncCounts
+                    : null,
+                onTap: () => onSelectRoute(item.route),
+              ),
+          ];
+
+          final footer = Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Tooltip(
                   message: isOnline ? 'ออนไลน์' : 'ออฟไลน์',
                   child: Row(
-                    mainAxisAlignment: collapsed
+                    mainAxisAlignment: isCompact
                         ? MainAxisAlignment.center
                         : MainAxisAlignment.start,
                     children: [
@@ -404,7 +410,7 @@ class _DesktopSidebar extends ConsumerWidget {
                         size: 18,
                         color: isOnline ? semantic.success : semantic.danger,
                       ),
-                      if (!collapsed) ...[
+                      if (!isCompact) ...[
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -423,7 +429,7 @@ class _DesktopSidebar extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: collapsed
+                  mainAxisAlignment: isCompact
                       ? MainAxisAlignment.center
                       : MainAxisAlignment.spaceBetween,
                   children: [
@@ -442,21 +448,29 @@ class _DesktopSidebar extends ConsumerWidget {
                             : Icons.dark_mode_outlined,
                       ),
                     ),
-                    if (!collapsed)
+                    if (!isCompact)
                       Flexible(
-                        child: TextButton.icon(
+                        child: TextButton(
                           onPressed: isSigningOut ? null : onSignOut,
-                          icon: const Icon(Icons.logout_rounded, size: 18),
-                          label: const Text(
-                            'ออกจากระบบ',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.logout_rounded, size: 18),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'ออกจากระบบ',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                   ],
                 ),
-                if (collapsed)
+                if (isCompact)
                   IconButton(
                     tooltip: 'ออกจากระบบ',
                     onPressed: isSigningOut ? null : onSignOut,
@@ -464,8 +478,47 @@ class _DesktopSidebar extends ConsumerWidget {
                   ),
               ],
             ),
-          ),
-        ],
+          );
+
+          if (isShortHeight) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  header,
+                  ?profileBox,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: navTiles),
+                  ),
+                  const Divider(height: 1),
+                  footer,
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              header,
+              ?profileBox,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  children: navTiles,
+                ),
+              ),
+              const Divider(height: 1),
+              footer,
+            ],
+          );
+        },
       ),
     );
   }

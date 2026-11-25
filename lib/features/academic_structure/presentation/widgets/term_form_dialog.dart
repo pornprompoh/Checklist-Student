@@ -152,6 +152,7 @@ class _TermFormDialogState extends State<TermFormDialog> {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: _selectedYearId,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'ปีการศึกษา (พ.ศ.)',
                 ),
@@ -159,7 +160,10 @@ class _TermFormDialogState extends State<TermFormDialog> {
                   for (final year in widget.academicYears)
                     DropdownMenuItem<String>(
                       value: year.id,
-                      child: Text('ปีการศึกษา ${year.yearBe}'),
+                      child: Text(
+                        'ปีการศึกษา ${year.yearBe}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
                 onChanged: _isEditing

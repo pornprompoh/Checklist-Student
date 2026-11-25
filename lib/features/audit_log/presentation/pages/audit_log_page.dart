@@ -144,172 +144,218 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
               .firstOrNull
               ?.yearBe;
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useScrollableLayout =
+            constraints.maxHeight < 680 || constraints.maxWidth < 640;
+
+        final headerSection = Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ประวัติการแก้ไขคะแนนและสถานะเกรด',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'บันทึกอัตโนมัติแบบอ่านอย่างเดียว พร้อมส่งออก CSV/JSON และล้าง Log ประจำปี',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            SegmentedButton<_AuditLogTab>(
+              showSelectedIcon: false,
+              segments: const <ButtonSegment<_AuditLogTab>>[
+                ButtonSegment(
+                  value: _AuditLogTab.history,
+                  label: Text(
+                    'ประวัติการแก้ไข',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+                ButtonSegment(
+                  value: _AuditLogTab.yearlyCleanup,
+                  label: Text(
+                    'จัดการล้าง Log รายปี',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+              selected: <_AuditLogTab>{_tab},
+              onSelectionChanged: (sel) => setState(() => _tab = sel.first),
+            ),
+          ],
+        );
+
+        final filterBar = AuditLogFilterBar(
+          filter: filter,
+          academicYears: years,
+          classOptions: classOptions,
+          searchController: _searchCtrl,
+          filteredCount: filteredEntries.length,
+          isBusy: isBusy,
+          onYearChanged: (id) =>
+              ref.read(auditLogFilterProvider.notifier).setAcademicYearId(id),
+          onClassChanged: (id) =>
+              ref.read(auditLogFilterProvider.notifier).setSubjectClassId(id),
+          onClearEnrollmentFilter: () => ref
+              .read(auditLogFilterProvider.notifier)
+              .clearEnrollmentFilter(),
+          onTargetTypeChanged: (type) =>
+              ref.read(auditLogFilterProvider.notifier).setTargetType(type),
+          onSearchChanged: (q) =>
+              ref.read(auditLogFilterProvider.notifier).setSearchQuery(q),
+          onExportCsv: () {
+            ref
+                .read(auditLogControllerProvider.notifier)
+                .exportEntries(
+                  entries: filteredEntries,
+                  asJson: false,
+                  yearBe: selectedYearBe,
+                  academicYearId: filter.academicYearId,
+                );
+            AppFeedbackBanner.showSnackBar(
+              context,
+              type: AppFeedbackType.success,
+              message:
+                  'ส่งออกไฟล์ .csv (${filteredEntries.length} รายการ) เรียบร้อยแล้ว',
+            );
+          },
+          onExportJson: () {
+            ref
+                .read(auditLogControllerProvider.notifier)
+                .exportEntries(
+                  entries: filteredEntries,
+                  asJson: true,
+                  yearBe: selectedYearBe,
+                  academicYearId: filter.academicYearId,
+                );
+            AppFeedbackBanner.showSnackBar(
+              context,
+              type: AppFeedbackType.success,
+              message:
+                  'ส่งออกไฟล์ .json (${filteredEntries.length} รายการ) เรียบร้อยแล้ว',
+            );
+          },
+        );
+
+        Widget buildHistoryBody({required bool shrinkWrap}) {
+          return entriesAsync.when(
+            loading: () => const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SkeletonBox(height: 92),
+                SizedBox(height: 10),
+                SkeletonBox(height: 92),
+              ],
+            ),
+            error: (error, _) => AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(error),
+              onRetry: () => ref.invalidate(auditLogEntriesProvider),
+            ),
+            data: (_) {
+              if (filteredEntries.isEmpty) {
+                return const AppFeedbackBanner(
+                  type: AppFeedbackType.info,
+                  message:
+                      'ไม่พบประวัติการแก้ไขคะแนนตามตัวกรองที่เลือก — เมื่อมีการกรอก/แก้คะแนนหรือสถานะ ร/มส ระบบจะบันทึกให้อัตโนมัติ',
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: shrinkWrap,
+                physics: shrinkWrap
+                    ? const NeverScrollableScrollPhysics()
+                    : null,
+                itemCount: filteredEntries.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (_, index) =>
+                    AuditLogEntryTile(entry: filteredEntries[index]),
+              );
+            },
+          );
+        }
+
+        final cleanupBody = summariesAsync.when(
+          loading: () => const SkeletonBox(height: 180),
+          error: (error, _) => AppFeedbackBanner(
+            type: AppFeedbackType.error,
+            message: ThaiErrorMapper.map(error),
+            onRetry: () => ref.invalidate(auditLogYearSummariesProvider),
+          ),
+          data: (summaries) => AuditLogYearlyCleanupCard(
+            summaries: summaries,
+            exportedYearIds: exportedYearIds,
+            isBusy: isBusy,
+            onExportYearCsv: (s) => _exportYear(s, asJson: false),
+            onExportYearJson: (s) => _exportYear(s, asJson: true),
+            onDeleteYearLogs: _deleteYear,
+          ),
+        );
+
+        if (useScrollableLayout) {
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    headerSection,
+                    const SizedBox(height: 12),
+                    const AuditLogCleanupBanner(showNavigationAction: false),
+                    const SizedBox(height: 12),
+                    if (_tab == _AuditLogTab.history) ...[
+                      filterBar,
+                      const SizedBox(height: 12),
+                      buildHistoryBody(shrinkWrap: true),
+                    ] else
+                      cleanupBody,
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ประวัติการแก้ไขคะแนนและสถานะเกรด',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        'บันทึกอัตโนมัติแบบอ่านอย่างเดียว พร้อมส่งออก CSV/JSON และล้าง Log ประจำปี',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SegmentedButton<_AuditLogTab>(
-                    showSelectedIcon: false,
-                    segments: const <ButtonSegment<_AuditLogTab>>[
-                      ButtonSegment(
-                        value: _AuditLogTab.history,
-                        label: Text('ประวัติการแก้ไข'),
-                      ),
-                      ButtonSegment(
-                        value: _AuditLogTab.yearlyCleanup,
-                        label: Text('จัดการล้าง Log รายปี'),
-                      ),
-                    ],
-                    selected: <_AuditLogTab>{_tab},
-                    onSelectionChanged: (sel) =>
-                        setState(() => _tab = sel.first),
-                  ),
+                  headerSection,
+                  const SizedBox(height: 12),
+                  const AuditLogCleanupBanner(showNavigationAction: false),
+                  const SizedBox(height: 12),
+                  if (_tab == _AuditLogTab.history) ...[
+                    filterBar,
+                    const SizedBox(height: 12),
+                    Expanded(child: buildHistoryBody(shrinkWrap: false)),
+                  ] else
+                    Expanded(child: SingleChildScrollView(child: cleanupBody)),
                 ],
               ),
-              const SizedBox(height: 12),
-              const AuditLogCleanupBanner(showNavigationAction: false),
-              const SizedBox(height: 12),
-              if (_tab == _AuditLogTab.history) ...[
-                AuditLogFilterBar(
-                  filter: filter,
-                  academicYears: years,
-                  classOptions: classOptions,
-                  searchController: _searchCtrl,
-                  filteredCount: filteredEntries.length,
-                  isBusy: isBusy,
-                  onYearChanged: (id) => ref
-                      .read(auditLogFilterProvider.notifier)
-                      .setAcademicYearId(id),
-                  onClassChanged: (id) => ref
-                      .read(auditLogFilterProvider.notifier)
-                      .setSubjectClassId(id),
-                  onClearEnrollmentFilter: () => ref
-                      .read(auditLogFilterProvider.notifier)
-                      .clearEnrollmentFilter(),
-                  onTargetTypeChanged: (type) => ref
-                      .read(auditLogFilterProvider.notifier)
-                      .setTargetType(type),
-                  onSearchChanged: (q) => ref
-                      .read(auditLogFilterProvider.notifier)
-                      .setSearchQuery(q),
-                  onExportCsv: () {
-                    ref
-                        .read(auditLogControllerProvider.notifier)
-                        .exportEntries(
-                          entries: filteredEntries,
-                          asJson: false,
-                          yearBe: selectedYearBe,
-                          academicYearId: filter.academicYearId,
-                        );
-                    AppFeedbackBanner.showSnackBar(
-                      context,
-                      type: AppFeedbackType.success,
-                      message:
-                          'ส่งออกไฟล์ .csv (${filteredEntries.length} รายการ) เรียบร้อยแล้ว',
-                    );
-                  },
-                  onExportJson: () {
-                    ref
-                        .read(auditLogControllerProvider.notifier)
-                        .exportEntries(
-                          entries: filteredEntries,
-                          asJson: true,
-                          yearBe: selectedYearBe,
-                          academicYearId: filter.academicYearId,
-                        );
-                    AppFeedbackBanner.showSnackBar(
-                      context,
-                      type: AppFeedbackType.success,
-                      message:
-                          'ส่งออกไฟล์ .json (${filteredEntries.length} รายการ) เรียบร้อยแล้ว',
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: entriesAsync.when(
-                    loading: () => const Column(
-                      children: [
-                        SkeletonBox(height: 92),
-                        SizedBox(height: 10),
-                        SkeletonBox(height: 92),
-                      ],
-                    ),
-                    error: (error, _) => AppFeedbackBanner(
-                      type: AppFeedbackType.error,
-                      message: ThaiErrorMapper.map(error),
-                      onRetry: () => ref.invalidate(auditLogEntriesProvider),
-                    ),
-                    data: (_) {
-                      if (filteredEntries.isEmpty) {
-                        return const AppFeedbackBanner(
-                          type: AppFeedbackType.info,
-                          message:
-                              'ไม่พบประวัติการแก้ไขคะแนนตามตัวกรองที่เลือก — เมื่อมีการกรอก/แก้คะแนนหรือสถานะ ร/มส ระบบจะบันทึกให้อัตโนมัติ',
-                        );
-                      }
-                      return ListView.separated(
-                        itemCount: filteredEntries.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (_, index) =>
-                            AuditLogEntryTile(entry: filteredEntries[index]),
-                      );
-                    },
-                  ),
-                ),
-              ] else
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: summariesAsync.when(
-                      loading: () => const SkeletonBox(height: 180),
-                      error: (error, _) => AppFeedbackBanner(
-                        type: AppFeedbackType.error,
-                        message: ThaiErrorMapper.map(error),
-                        onRetry: () =>
-                            ref.invalidate(auditLogYearSummariesProvider),
-                      ),
-                      data: (summaries) => AuditLogYearlyCleanupCard(
-                        summaries: summaries,
-                        exportedYearIds: exportedYearIds,
-                        isBusy: isBusy,
-                        onExportYearCsv: (s) => _exportYear(s, asJson: false),
-                        onExportYearJson: (s) => _exportYear(s, asJson: true),
-                        onDeleteYearLogs: _deleteYear,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

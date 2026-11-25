@@ -219,11 +219,12 @@ class _AcademicYearStorageTile extends StatelessWidget {
         ? 'ปีการศึกษา ${summary.yearBe}'
         : 'ปีการศึกษาไม่ระบุ';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+        side: BorderSide(
           color: summary.isRecommendedForCleanup
               ? semantic.warning.withValues(alpha: 0.7)
               : colorScheme.outlineVariant,

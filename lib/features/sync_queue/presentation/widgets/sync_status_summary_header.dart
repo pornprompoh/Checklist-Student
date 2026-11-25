@@ -67,11 +67,16 @@ class SyncStatusSummaryHeader extends StatelessWidget {
                         color: isOnline ? semantic.success : semantic.warning,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
-                        style: textTheme.labelMedium?.copyWith(
-                          color: isOnline ? semantic.success : semantic.warning,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: isOnline
+                                ? semantic.success
+                                : semantic.warning,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],

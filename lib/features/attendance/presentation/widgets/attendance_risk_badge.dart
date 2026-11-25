@@ -51,11 +51,14 @@ class AttendanceRiskBadge extends StatelessWidget {
               color: fg,
             ),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: fg,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

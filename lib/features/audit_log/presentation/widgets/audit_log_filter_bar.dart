@@ -67,7 +67,7 @@ class AuditLogFilterBar extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 190, minWidth: 140),
+                  constraints: const BoxConstraints(maxWidth: 190, minWidth: 0),
                   child: DropdownButtonFormField<String?>(
                     key: ValueKey<String?>('year_$validYearId'),
                     initialValue: validYearId,
@@ -91,7 +91,7 @@ class AuditLogFilterBar extends StatelessWidget {
                   ),
                 ),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280, minWidth: 180),
+                  constraints: const BoxConstraints(maxWidth: 280, minWidth: 0),
                   child: DropdownButtonFormField<String?>(
                     key: ValueKey<String?>('class_$validClassId'),
                     initialValue: validClassId,
@@ -118,7 +118,7 @@ class AuditLogFilterBar extends StatelessWidget {
                   ),
                 ),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 260, minWidth: 180),
+                  constraints: const BoxConstraints(maxWidth: 260, minWidth: 0),
                   child: TextField(
                     controller: searchController,
                     onChanged: onSearchChanged,

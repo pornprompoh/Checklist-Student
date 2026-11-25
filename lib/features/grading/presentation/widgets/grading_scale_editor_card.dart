@@ -236,11 +236,21 @@ class _GradingScaleEditorCardState extends State<GradingScaleEditorCard> {
             SegmentedButton<GradingScaleType>(
               showSelectedIcon: false,
               segments: const <ButtonSegment<GradingScaleType>>[
-                ButtonSegment(value: GradingScaleType.scale0To4, label: Text('0-4')),
-                ButtonSegment(value: GradingScaleType.scaleAToF, label: Text('A-F')),
+                ButtonSegment(
+                  value: GradingScaleType.scale0To4,
+                  label: Text('0-4', overflow: TextOverflow.ellipsis, maxLines: 1),
+                ),
+                ButtonSegment(
+                  value: GradingScaleType.scaleAToF,
+                  label: Text('A-F', overflow: TextOverflow.ellipsis, maxLines: 1),
+                ),
                 ButtonSegment(
                   value: GradingScaleType.custom,
-                  label: Text('กำหนดเอง'),
+                  label: Text(
+                    'กำหนดเอง',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
               ],
               selected: <GradingScaleType>{_scaleType},
@@ -262,8 +272,11 @@ class _GradingScaleEditorCardState extends State<GradingScaleEditorCard> {
               ),
             ),
             const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   'ช่วงคะแนนตัดเกรด',

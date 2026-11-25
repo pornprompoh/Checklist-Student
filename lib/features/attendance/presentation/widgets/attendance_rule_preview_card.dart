@@ -42,10 +42,12 @@ class AttendanceRulePreviewCard extends StatelessWidget {
               children: [
                 Icon(Icons.insights_rounded, size: 18, color: colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'ตัวอย่างผลกระทบสดในห้องนี้ (Live Preview)',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    'ตัวอย่างผลกระทบสดในห้องนี้ (Live Preview)',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],

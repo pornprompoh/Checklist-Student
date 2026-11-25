@@ -62,10 +62,14 @@ class ExportPreviewCanvas extends StatelessWidget {
                       color: colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'ตัวอย่างเอกสาร · ${bundle.orientationDecision.orientation.dimensionThaiLabel}',
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Text(
+                        'ตัวอย่างเอกสาร · ${bundle.orientationDecision.orientation.dimensionThaiLabel}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -228,10 +232,22 @@ class _ExportActionButton extends StatelessWidget {
 
     return Tooltip(
       message: label,
-      child: FilledButton.tonalIcon(
+      child: FilledButton.tonal(
         onPressed: onPressed,
-        icon: leading,
-        label: Text(label),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            leading,
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

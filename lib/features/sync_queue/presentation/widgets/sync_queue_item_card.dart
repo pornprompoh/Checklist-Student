@@ -148,11 +148,23 @@ class SyncQueueItemCard extends StatelessWidget {
     switch (item.status) {
       case SyncItemStatus.conflict:
         return <Widget>[
-          FilledButton.icon(
+          FilledButton(
             style: FilledButton.styleFrom(backgroundColor: semantic.danger),
             onPressed: isBusy ? null : onResolveConflict,
-            icon: const Icon(Icons.compare_arrows_rounded, size: 18),
-            label: const Text('เปรียบเทียบและแก้ปัญหา'),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.compare_arrows_rounded, size: 18),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'เปรียบเทียบและแก้ปัญหา',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ];
       case SyncItemStatus.failed:

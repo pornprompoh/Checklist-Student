@@ -80,7 +80,7 @@ class GradingTableToolbar extends StatelessWidget {
               alignment: WrapAlignment.spaceBetween,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 340, minWidth: 200),
+                  constraints: const BoxConstraints(maxWidth: 340, minWidth: 0),
                   child: DropdownButtonFormField<String>(
                     key: ValueKey<String?>(validClassId),
                     initialValue: validClassId,
@@ -165,7 +165,7 @@ class GradingTableToolbar extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280, minWidth: 180),
+                  constraints: const BoxConstraints(maxWidth: 280, minWidth: 0),
                   child: TextField(
                     controller: searchController,
                     onChanged: onSearchChanged,

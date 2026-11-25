@@ -134,7 +134,11 @@ class _ScoreCellDetailDialogState extends State<ScoreCellDetailDialog> {
                   for (final status in SubmissionStatus.values)
                     ButtonSegment<SubmissionStatus>(
                       value: status,
-                      label: Text(status.thaiLabel),
+                      label: Text(
+                        status.thaiLabel,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                 ],
                 selected: <SubmissionStatus>{_status},

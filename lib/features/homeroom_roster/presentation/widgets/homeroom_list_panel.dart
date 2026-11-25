@@ -108,10 +108,22 @@ class HomeroomListPanel extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               if (onSyncAllUnlinked != null) ...[
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: isBusy ? null : onSyncAllUnlinked,
-                  icon: const Icon(Icons.sync_rounded, size: 18),
-                  label: const Text('นำห้องจากโครงสร้างสอนเข้าคลังทั้งหมด'),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sync_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'นำห้องจากโครงสร้างสอนเข้าคลังทั้งหมด',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],

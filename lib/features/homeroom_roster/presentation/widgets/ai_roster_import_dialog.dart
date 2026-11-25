@@ -97,6 +97,7 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
     return PopScope(
       canPop: !isBusy,
       child: AlertDialog(
+        scrollable: true,
         title: Row(
           children: [
             Icon(Icons.auto_awesome_outlined, color: colorScheme.primary),
@@ -109,42 +110,40 @@ class _AiRosterImportDialogState extends ConsumerState<AiRosterImportDialog> {
             ),
           ],
         ),
-        content: SizedBox(
-          width: 660,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (errorMessage != null) ...[
-                  AppFeedbackBanner(
-                    type: AppFeedbackType.error,
-                    message: errorMessage,
-                    onRetry: (!isBusy && _step == 0 && _compressedFile != null)
-                        ? _analyzeWithAi
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (isBusy) ...[
-                  const LinearProgressIndicator(),
-                  const SizedBox(height: 8),
-                  Text(
-                    aiState.isLoading
-                        ? 'กำลังอัปโหลดและให้ AI อ่านรายชื่อจากเอกสาร...'
-                        : 'กำลังบันทึกรายชื่อนักเรียนเข้าคลังกลาง...',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (_step == 0)
-                  _buildSelectFileStep(context, isBusy, semantic)
-                else
-                  _buildPreviewStep(context),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 660),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (errorMessage != null) ...[
+                AppFeedbackBanner(
+                  type: AppFeedbackType.error,
+                  message: errorMessage,
+                  onRetry: (!isBusy && _step == 0 && _compressedFile != null)
+                      ? _analyzeWithAi
+                      : null,
+                ),
+                const SizedBox(height: 12),
               ],
-            ),
+              if (isBusy) ...[
+                const LinearProgressIndicator(),
+                const SizedBox(height: 8),
+                Text(
+                  aiState.isLoading
+                      ? 'กำลังอัปโหลดและให้ AI อ่านรายชื่อจากเอกสาร...'
+                      : 'กำลังบันทึกรายชื่อนักเรียนเข้าคลังกลาง...',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_step == 0)
+                _buildSelectFileStep(context, isBusy, semantic)
+              else
+                _buildPreviewStep(context),
+            ],
           ),
         ),
         actions: _buildActions(context, isBusy),

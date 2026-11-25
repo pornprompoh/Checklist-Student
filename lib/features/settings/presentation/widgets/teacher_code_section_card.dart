@@ -199,23 +199,40 @@ class _TeacherCodeSectionCardState
                 color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SelectableText(
-                      _portalUrl(widget.currentCode),
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.tonalIcon(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final copyButton = FilledButton.tonalIcon(
                     onPressed: _copyLink,
                     icon: const Icon(Icons.copy_rounded, size: 18),
                     label: const Text('คัดลอกลิงก์'),
-                  ),
-                ],
+                  );
+                  final urlText = SelectableText(
+                    _portalUrl(widget.currentCode),
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                  if (constraints.maxWidth < 360) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        urlText,
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: copyButton,
+                        ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: urlText),
+                      const SizedBox(width: 8),
+                      copyButton,
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),

@@ -159,24 +159,42 @@ class _HomeroomRosterPageState extends ConsumerState<HomeroomRosterPage> {
                         },
                 ),
                 const SizedBox(height: 12),
-                SegmentedButton<_RosterTabMode>(
-                  segments: const [
-                    ButtonSegment<_RosterTabMode>(
-                      value: _RosterTabMode.homeroomMaster,
-                      icon: Icon(Icons.groups_outlined, size: 18),
-                      label: Text('คลังห้องเรียนกลาง'),
-                    ),
-                    ButtonSegment<_RosterTabMode>(
-                      value: _RosterTabMode.subjectClassRoster,
-                      icon: Icon(Icons.class_outlined, size: 18),
-                      label: Text('รายชื่อแยกตามวิชา+ห้อง'),
-                    ),
-                  ],
-                  selected: <_RosterTabMode>{_tabMode},
-                  onSelectionChanged: (selection) {
-                    if (selection.isNotEmpty) {
-                      setState(() => _tabMode = selection.first);
-                    }
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showSegmentIcons = constraints.maxWidth >= 460;
+                    return SegmentedButton<_RosterTabMode>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment<_RosterTabMode>(
+                          value: _RosterTabMode.homeroomMaster,
+                          icon: showSegmentIcons
+                              ? const Icon(Icons.groups_outlined, size: 18)
+                              : null,
+                          label: const Text(
+                            'คลังห้องเรียนกลาง',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        ButtonSegment<_RosterTabMode>(
+                          value: _RosterTabMode.subjectClassRoster,
+                          icon: showSegmentIcons
+                              ? const Icon(Icons.class_outlined, size: 18)
+                              : null,
+                          label: const Text(
+                            'รายชื่อแยกตามวิชา+ห้อง',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                      selected: <_RosterTabMode>{_tabMode},
+                      onSelectionChanged: (selection) {
+                        if (selection.isNotEmpty) {
+                          setState(() => _tabMode = selection.first);
+                        }
+                      },
+                    );
                   },
                 ),
               ],
