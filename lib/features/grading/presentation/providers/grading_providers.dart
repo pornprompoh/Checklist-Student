@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/env_config.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import '../../../academic_structure/domain/entities/subject.dart';
 import '../../../academic_structure/domain/entities/subject_class.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../homeroom_roster/presentation/providers/homeroom_roster_providers.dart';
+import '../../../sync_queue/presentation/providers/sync_queue_providers.dart';
+import '../../data/datasources/grading_local_datasource.dart';
+import '../../data/datasources/grading_local_datasource_impl.dart';
 import '../../data/datasources/grading_remote_datasource.dart';
 import '../../data/repositories/grading_repository_impl.dart';
 import '../../domain/entities/assignment.dart';
@@ -54,11 +60,27 @@ class CopyPlanSourcePreview {
   final GradingScaleType gradingScaleType;
 }
 
+final gradingLocalDataSourceProvider = Provider<GradingLocalDataSource>((ref) {
+  return GradingLocalDataSourceImpl(
+    ref.watch(appDatabaseProvider),
+    ref.watch(localCacheStoreProvider),
+  );
+});
+
 final gradingRepositoryProvider = Provider<GradingRepository>((ref) {
   final remote = EnvConfig.isSupabaseConfigured
       ? ref.watch(gradingRemoteDataSourceProvider)
       : null;
-  return GradingRepositoryImpl(remoteDataSource: remote);
+  return GradingRepositoryImpl(
+    remoteDataSource: remote,
+    localDataSource: ref.watch(gradingLocalDataSourceProvider),
+    homeroomRosterLocalDataSource: ref.watch(
+      homeroomRosterLocalDataSourceProvider,
+    ),
+    syncQueueRepository: ref.watch(syncQueueRepositoryProvider),
+    currentTeacherId: () => ref.read(authStateProvider).userId,
+    isOnline: () => ref.read(connectivityStatusProvider).asData?.value ?? true,
+  );
 });
 
 final scoreCalculatorServiceProvider = Provider<ScoreCalculatorService>((ref) {

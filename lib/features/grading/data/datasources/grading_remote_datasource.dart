@@ -129,7 +129,28 @@ class GradingRemoteDataSource {
     return _scores.fetchStudentScoresByClass(subjectClassId);
   }
 
+  Future<StudentScoreDto?> fetchStudentScoreById(String scoreId) {
+    return _scores.fetchStudentScoreById(scoreId);
+  }
+
+  Future<StudentScoreDto?> fetchStudentScoreByCell({
+    required String assignmentId,
+    required String enrollmentId,
+  }) {
+    return _scores.fetchStudentScoreByCell(
+      assignmentId: assignmentId,
+      enrollmentId: enrollmentId,
+    );
+  }
+
+  Future<Map<String, dynamic>?> fetchEnrollmentGradeStatusById(
+    String enrollmentId,
+  ) {
+    return _scores.fetchEnrollmentGradeStatusById(enrollmentId);
+  }
+
   Future<StudentScoreDto> upsertStudentScore({
+    String? clientId,
     required String teacherId,
     required String assignmentId,
     required String enrollmentId,
@@ -140,6 +161,7 @@ class GradingRemoteDataSource {
     String note = '',
   }) {
     return _scores.upsertStudentScore(
+      clientId: clientId,
       teacherId: teacherId,
       assignmentId: assignmentId,
       enrollmentId: enrollmentId,

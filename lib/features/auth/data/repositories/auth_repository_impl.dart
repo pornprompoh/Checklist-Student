@@ -14,12 +14,14 @@ class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl({
     required this._remoteDataSource,
     this._localDataSource,
+    this._onClearTeacherLocalData,
   });
 
   final AuthRemoteDataSource? _remoteDataSource;
   // Reserved for Phase 6 Drift local caching.
   // ignore: unused_field
   final AuthLocalDataSource? _localDataSource;
+  final Future<void> Function(String teacherId)? _onClearTeacherLocalData;
 
   @override
   String? get currentUserId => _remoteDataSource?.currentUserId;
@@ -47,6 +49,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    final teacherId = _remoteDataSource?.currentUserId;
+    if (teacherId != null && teacherId.isNotEmpty) {
+      await _onClearTeacherLocalData?.call(teacherId);
+    }
     final remote = _remoteDataSource;
     if (remote == null) {
       return;

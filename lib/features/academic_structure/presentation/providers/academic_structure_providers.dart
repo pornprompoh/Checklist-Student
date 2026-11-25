@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/env_config.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../data/datasources/academic_structure_local_datasource.dart';
+import '../../data/datasources/academic_structure_local_datasource_impl.dart';
 import '../../data/datasources/academic_structure_remote_datasource.dart';
 import '../../data/repositories/academic_structure_repository_impl.dart';
 import '../../domain/entities/academic_year.dart';
@@ -11,13 +15,27 @@ import '../../domain/entities/term.dart';
 import '../../domain/repositories/academic_structure_repository.dart';
 import '../../domain/services/active_term_resolver_service.dart';
 
-/// Provides [AcademicStructureRepository] backed by Supabase when configured.
+final academicStructureLocalDataSourceProvider =
+    Provider<AcademicStructureLocalDataSource>((ref) {
+      return AcademicStructureLocalDataSourceImpl(
+        ref.watch(localCacheStoreProvider),
+      );
+    });
+
+/// Provides offline-first [AcademicStructureRepository] backed by Supabase
+/// and Drift read-through caching.
 final academicStructureRepositoryProvider =
     Provider<AcademicStructureRepository>((ref) {
       final remote = EnvConfig.isSupabaseConfigured
           ? ref.watch(academicStructureRemoteDataSourceProvider)
           : null;
-      return AcademicStructureRepositoryImpl(remoteDataSource: remote);
+      return AcademicStructureRepositoryImpl(
+        remoteDataSource: remote,
+        localDataSource: ref.watch(academicStructureLocalDataSourceProvider),
+        currentTeacherId: () => ref.read(authStateProvider).userId,
+        isOnline: () =>
+            ref.read(connectivityStatusProvider).asData?.value ?? true,
+      );
     });
 
 /// Loads all academic years for the signed-in teacher ordered by `year_be DESC`.

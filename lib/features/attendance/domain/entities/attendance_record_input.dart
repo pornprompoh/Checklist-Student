@@ -7,6 +7,7 @@ import '../../../../core/constants/attendance_status.dart';
 class AttendanceRecordInput {
   const AttendanceRecordInput({
     this.existingRecordId,
+    this.clientId,
     required this.enrollmentId,
     required this.status,
     this.note = '',
@@ -14,6 +15,9 @@ class AttendanceRecordInput {
   });
 
   final String? existingRecordId;
+
+  /// Optional client-generated UUID v4 used for idempotent offline creation.
+  final String? clientId;
   final String enrollmentId;
   final AttendanceStatus status;
   final String note;

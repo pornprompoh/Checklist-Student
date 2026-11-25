@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/env_config.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/network/connectivity_provider.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../data/datasources/ai_roster_remote_datasource.dart';
 import '../../data/datasources/class_enrollment_remote_datasource.dart';
+import '../../data/datasources/homeroom_roster_local_datasource.dart';
+import '../../data/datasources/homeroom_roster_local_datasource_impl.dart';
 import '../../data/datasources/homeroom_roster_remote_datasource.dart';
 import '../../data/repositories/homeroom_roster_repository_impl.dart';
 import '../../domain/entities/class_enrollment.dart';
@@ -10,7 +15,15 @@ import '../../domain/entities/homeroom.dart';
 import '../../domain/entities/homeroom_student.dart';
 import '../../domain/repositories/homeroom_roster_repository.dart';
 
-/// Provides [HomeroomRosterRepository] backed by Supabase when configured.
+final homeroomRosterLocalDataSourceProvider =
+    Provider<HomeroomRosterLocalDataSource>((ref) {
+      return HomeroomRosterLocalDataSourceImpl(
+        ref.watch(localCacheStoreProvider),
+      );
+    });
+
+/// Provides offline-first [HomeroomRosterRepository] backed by Supabase and
+/// Drift read-through caching.
 final homeroomRosterRepositoryProvider = Provider<HomeroomRosterRepository>((
   ref,
 ) {
@@ -25,6 +38,9 @@ final homeroomRosterRepositoryProvider = Provider<HomeroomRosterRepository>((
     aiRosterRemote: isConfigured
         ? ref.watch(aiRosterRemoteDataSourceProvider)
         : null,
+    localDataSource: ref.watch(homeroomRosterLocalDataSourceProvider),
+    currentTeacherId: () => ref.read(authStateProvider).userId,
+    isOnline: () => ref.read(connectivityStatusProvider).asData?.value ?? true,
   );
 });
 

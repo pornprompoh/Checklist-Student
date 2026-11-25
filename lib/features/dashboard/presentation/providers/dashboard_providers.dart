@@ -1,8 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/env_config.dart';
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/network/connectivity_provider.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../data/datasources/dashboard_local_datasource.dart';
+import '../../data/datasources/dashboard_local_datasource_impl.dart';
 import '../../data/datasources/dashboard_remote_datasource.dart';
 import '../../data/repositories/dashboard_repository_impl.dart';
 import '../../domain/entities/dashboard_overview.dart';
@@ -57,11 +61,22 @@ final dashboardClassSorterServiceProvider =
       (ref) => const DashboardClassSorterService(),
     );
 
+final dashboardLocalDataSourceProvider = Provider<DashboardLocalDataSource>((
+  ref,
+) {
+  return DashboardLocalDataSourceImpl(ref.watch(localCacheStoreProvider));
+});
+
 final dashboardRepositoryProvider = Provider<DashboardRepository>((ref) {
   final remote = EnvConfig.isSupabaseConfigured
       ? ref.watch(dashboardRemoteDataSourceProvider)
       : null;
-  return DashboardRepositoryImpl(remoteDataSource: remote);
+  return DashboardRepositoryImpl(
+    remoteDataSource: remote,
+    localDataSource: ref.watch(dashboardLocalDataSourceProvider),
+    currentTeacherId: () => ref.read(authStateProvider).userId,
+    isOnline: () => ref.read(connectivityStatusProvider).asData?.value ?? true,
+  );
 });
 
 /// Loads and smartly sorts all classes for the effective selected term on today's date.

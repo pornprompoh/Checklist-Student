@@ -50,7 +50,57 @@ class GradingScoreRemoteHelper {
     }
   }
 
+  Future<StudentScoreDto?> fetchStudentScoreById(String scoreId) async {
+    try {
+      final row = await _client
+          .from('student_scores')
+          .select(_scoreColumns)
+          .eq('id', scoreId)
+          .maybeSingle();
+      return row == null ? null : StudentScoreDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<StudentScoreDto?> fetchStudentScoreByCell({
+    required String assignmentId,
+    required String enrollmentId,
+  }) async {
+    try {
+      final row = await _client
+          .from('student_scores')
+          .select(_scoreColumns)
+          .eq('assignment_id', assignmentId)
+          .eq('enrollment_id', enrollmentId)
+          .maybeSingle();
+      return row == null ? null : StudentScoreDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchEnrollmentGradeStatusById(
+    String enrollmentId,
+  ) async {
+    try {
+      final row = await _client
+          .from('class_enrollments')
+          .select(
+            'id, teacher_id, subject_class_id, special_grade_override, '
+            'was_r_resolved, was_ms_resolved, resolved_grade_at, version, '
+            'updated_at',
+          )
+          .eq('id', enrollmentId)
+          .maybeSingle();
+      return row == null ? null : Map<String, dynamic>.from(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
   Future<StudentScoreDto> upsertStudentScore({
+    String? clientId,
     required String teacherId,
     required String assignmentId,
     required String enrollmentId,
@@ -101,6 +151,7 @@ class GradingScoreRemoteHelper {
         final inserted = await _client
             .from('student_scores')
             .insert(<String, dynamic>{
+              'id': ?clientId,
               'teacher_id': teacherId,
               'assignment_id': assignmentId,
               'enrollment_id': enrollmentId,

@@ -15,6 +15,7 @@ import '../../features/grading/presentation/pages/grading_plan_page.dart';
 import '../../features/grading/presentation/pages/grading_table_page.dart';
 import '../../features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
 import '../../features/settings/presentation/pages/teacher_settings_page.dart';
+import '../../features/sync_queue/presentation/pages/sync_queue_page.dart';
 import '../constants/app_routes.dart';
 import '../widgets/app_shell_scaffold.dart';
 import '../widgets/app_splash_view.dart';
@@ -112,11 +113,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.teacherSyncQueue,
-            builder: (context, state) => const _ModulePlaceholderView(
-              title: 'สถานะการซิงค์ข้อมูลออฟไลน์',
-              subtitle:
-                  'พร้อมพัฒนาต่อใน Phase 6 (Drift Offline-First + Sync Queue)',
-            ),
+            builder: (context, state) => const SyncQueuePage(),
           ),
           GoRoute(
             path: AppRoutes.teacherSettings,
@@ -141,62 +138,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
-
-class _ModulePlaceholderView extends StatelessWidget {
-  const _ModulePlaceholderView({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.construction_rounded,
-                    size: 36,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _StudentPortalPlaceholderPage extends StatelessWidget {
   const _StudentPortalPlaceholderPage({

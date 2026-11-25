@@ -101,7 +101,51 @@ class AttendanceRemoteDataSource {
     }
   }
 
+  Future<AttendanceSessionDto?> fetchSessionById(String sessionId) async {
+    try {
+      final row = await _client
+          .from('attendance_sessions')
+          .select(_sessionColumns)
+          .eq('id', sessionId)
+          .maybeSingle();
+      return row == null ? null : AttendanceSessionDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<AttendanceRecordDto?> fetchRecordById(String recordId) async {
+    try {
+      final row = await _client
+          .from('attendance_records')
+          .select(_recordColumns)
+          .eq('id', recordId)
+          .maybeSingle();
+      return row == null ? null : AttendanceRecordDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<AttendanceRecordDto?> fetchRecordByCell({
+    required String sessionId,
+    required String enrollmentId,
+  }) async {
+    try {
+      final row = await _client
+          .from('attendance_records')
+          .select(_recordColumns)
+          .eq('session_id', sessionId)
+          .eq('enrollment_id', enrollmentId)
+          .maybeSingle();
+      return row == null ? null : AttendanceRecordDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
   Future<AttendanceSessionDto> createSession({
+    String? clientId,
     required String teacherId,
     required String subjectClassId,
     required DateTime sessionDate,
@@ -112,6 +156,7 @@ class AttendanceRemoteDataSource {
       final data = await _client
           .from('attendance_sessions')
           .insert(<String, dynamic>{
+            'id': ?clientId,
             'teacher_id': teacherId,
             'subject_class_id': subjectClassId,
             'session_date': ThaiDateFormatter.toIsoDate(sessionDate),
@@ -195,6 +240,7 @@ class AttendanceRemoteDataSource {
           saved.add(AttendanceRecordDto.fromJson(updated));
         } else {
           insertPayload.add(<String, dynamic>{
+            'id': ?input.clientId,
             'teacher_id': teacherId,
             'session_id': sessionId,
             'enrollment_id': input.enrollmentId,

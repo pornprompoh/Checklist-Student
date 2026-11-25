@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/auth/presentation/providers/sign_in_controller.dart';
+import '../../features/sync_queue/presentation/providers/sync_queue_providers.dart';
+import '../../features/sync_queue/presentation/widgets/sync_status_badge.dart';
 import '../constants/app_routes.dart';
 import '../network/connectivity_provider.dart';
 import '../theme/app_color_scheme.dart';
@@ -136,6 +138,10 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
     final isDesktop = width >= AppShellScaffold.desktopBreakpoint;
     final connectivity = ref.watch(connectivityStatusProvider);
     final isOffline = connectivity.asData?.value == false;
+    final syncCounts = ref.watch(syncQueueStatusCountsProvider);
+    final showConflictBanner =
+        syncCounts.hasConflicts &&
+        !widget.currentPath.startsWith(AppRoutes.teacherSyncQueue);
 
     final bodyWithBanner = Column(
       children: [
@@ -146,6 +152,17 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
               type: AppFeedbackType.warning,
               message:
                   'ขณะนี้อยู่ในโหมดออฟไลน์ การเชื่อมต่ออินเทอร์เน็ตขาดหายชั่วคราว',
+            ),
+          ),
+        if (showConflictBanner)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message:
+                  'พบข้อมูลชนกัน ${syncCounts.conflictCount} รายการจากการทำงานออฟไลน์',
+              retryLabel: 'ตรวจสอบ',
+              onRetry: () => _navigate(AppRoutes.teacherSyncQueue),
             ),
           ),
         Expanded(child: widget.child),
@@ -161,6 +178,7 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
                 collapsed: _isSidebarCollapsed,
                 currentPath: widget.currentPath,
                 isOnline: !isOffline,
+                syncCounts: syncCounts,
                 onToggleCollapse: () => setState(
                   () => _isSidebarCollapsed = !_isSidebarCollapsed,
                 ),
@@ -177,11 +195,33 @@ class _AppShellScaffoldState extends ConsumerState<AppShellScaffold> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSigningOut = ref.watch(signInControllerProvider).isLoading;
+    final semantic = AppSemanticColors.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_currentTitle),
         actions: [
+          IconButton(
+            tooltip: 'สถานะการซิงค์ข้อมูลออฟไลน์',
+            onPressed: () => _navigate(AppRoutes.teacherSyncQueue),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  syncCounts.hasConflicts
+                      ? Icons.sync_problem_rounded
+                      : Icons.sync_rounded,
+                  color: syncCounts.hasConflicts ? semantic.danger : null,
+                ),
+                if (syncCounts.hasAnyItems)
+                  Positioned(
+                    right: -8,
+                    top: -6,
+                    child: SyncStatusBadge(counts: syncCounts, compact: true),
+                  ),
+              ],
+            ),
+          ),
           IconButton(
             tooltip: isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด',
             onPressed: () => ref
@@ -221,6 +261,7 @@ class _DesktopSidebar extends ConsumerWidget {
     required this.collapsed,
     required this.currentPath,
     required this.isOnline,
+    required this.syncCounts,
     required this.onToggleCollapse,
     required this.onSelectRoute,
     required this.onSignOut,
@@ -229,6 +270,7 @@ class _DesktopSidebar extends ConsumerWidget {
   final bool collapsed;
   final String currentPath;
   final bool isOnline;
+  final SyncQueueStatusCounts syncCounts;
   final VoidCallback onToggleCollapse;
   final ValueChanged<String> onSelectRoute;
   final VoidCallback onSignOut;
@@ -337,6 +379,9 @@ class _DesktopSidebar extends ConsumerWidget {
                     item: item,
                     selected: currentPath.startsWith(item.route),
                     collapsed: collapsed,
+                    syncBadgeCounts: item.route == AppRoutes.teacherSyncQueue
+                        ? syncCounts
+                        : null,
                     onTap: () => onSelectRoute(item.route),
                   ),
               ],
@@ -431,12 +476,14 @@ class _SidebarTile extends StatelessWidget {
     required this.item,
     required this.selected,
     required this.collapsed,
+    this.syncBadgeCounts,
     required this.onTap,
   });
 
   final _NavItem item;
   final bool selected;
   final bool collapsed;
+  final SyncQueueStatusCounts? syncBadgeCounts;
   final VoidCallback onTap;
 
   @override
@@ -445,6 +492,12 @@ class _SidebarTile extends StatelessWidget {
     final foreground = selected
         ? colorScheme.onSecondaryContainer
         : colorScheme.onSurfaceVariant;
+    final counts = syncBadgeCounts;
+    final iconWidget = Icon(
+      selected ? item.selectedIcon : item.icon,
+      size: 22,
+      color: foreground,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -466,11 +519,20 @@ class _SidebarTile extends StatelessWidget {
                     ? MainAxisAlignment.center
                     : MainAxisAlignment.start,
                 children: [
-                  Icon(
-                    selected ? item.selectedIcon : item.icon,
-                    size: 22,
-                    color: foreground,
-                  ),
+                  if (collapsed && counts != null && counts.hasAnyItems)
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        iconWidget,
+                        Positioned(
+                          right: -8,
+                          top: -6,
+                          child: SyncStatusBadge(counts: counts, compact: true),
+                        ),
+                      ],
+                    )
+                  else
+                    iconWidget,
                   if (!collapsed) ...[
                     const SizedBox(width: 12),
                     Expanded(
@@ -485,6 +547,10 @@ class _SidebarTile extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (counts != null && counts.hasAnyItems) ...[
+                      const SizedBox(width: 6),
+                      SyncStatusBadge(counts: counts),
+                    ],
                   ],
                 ],
               ),

@@ -24,19 +24,31 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
     required this._enrollmentRemote,
     this._aiRosterRemote,
     this._localDataSource,
+    this._currentTeacherId,
+    this._isOnline,
   });
 
   final HomeroomRosterRemoteDataSource? _homeroomRemote;
   final ClassEnrollmentRemoteDataSource? _enrollmentRemote;
   final AiRosterRemoteDataSource? _aiRosterRemote;
-  // Reserved for Phase 6 Drift local caching (active term only).
-  // ignore: unused_field
   final HomeroomRosterLocalDataSource? _localDataSource;
+  final String? Function()? _currentTeacherId;
+  final bool Function()? _isOnline;
+
+  bool get _online => _isOnline?.call() ?? true;
+  String? get _teacherId => _currentTeacherId?.call();
 
   @override
-  Future<List<Homeroom>> fetchHomerooms(String termId) async {
-    final dtos = await _requireHomeroomRemote().fetchHomerooms(termId);
-    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+  Future<List<Homeroom>> fetchHomerooms(String termId) {
+    return _readWithCacheFallback(
+      fetchRemote: () async {
+        final dtos = await _requireHomeroomRemote().fetchHomerooms(termId);
+        return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+      },
+      saveLocal: (tid, data) =>
+          _localDataSource!.saveHomerooms(tid, termId, data),
+      readLocal: (tid) => _localDataSource!.readHomerooms(tid, termId),
+    );
   }
 
   @override
@@ -71,11 +83,19 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
   }
 
   @override
-  Future<List<HomeroomStudent>> fetchHomeroomStudents(String homeroomId) async {
-    final dtos = await _requireHomeroomRemote().fetchHomeroomStudents(
-      homeroomId,
+  Future<List<HomeroomStudent>> fetchHomeroomStudents(String homeroomId) {
+    return _readWithCacheFallback(
+      fetchRemote: () async {
+        final dtos = await _requireHomeroomRemote().fetchHomeroomStudents(
+          homeroomId,
+        );
+        return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+      },
+      saveLocal: (tid, data) =>
+          _localDataSource!.saveHomeroomStudents(tid, homeroomId, data),
+      readLocal: (tid) =>
+          _localDataSource!.readHomeroomStudents(tid, homeroomId),
     );
-    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
   }
 
   @override
@@ -243,13 +263,19 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
   }
 
   @override
-  Future<List<ClassEnrollment>> fetchClassEnrollments(
-    String subjectClassId,
-  ) async {
-    final dtos = await _requireEnrollmentRemote().fetchClassEnrollments(
-      subjectClassId,
+  Future<List<ClassEnrollment>> fetchClassEnrollments(String subjectClassId) {
+    return _readWithCacheFallback(
+      fetchRemote: () async {
+        final dtos = await _requireEnrollmentRemote().fetchClassEnrollments(
+          subjectClassId,
+        );
+        return dtos.map((dto) => dto.toEntity()).toList(growable: false);
+      },
+      saveLocal: (tid, data) =>
+          _localDataSource!.saveClassEnrollments(tid, subjectClassId, data),
+      readLocal: (tid) =>
+          _localDataSource!.readClassEnrollments(tid, subjectClassId),
     );
-    return dtos.map((dto) => dto.toEntity()).toList(growable: false);
   }
 
   @override
@@ -337,6 +363,38 @@ class HomeroomRosterRepositoryImpl implements HomeroomRosterRepository {
     return _requireEnrollmentRemote().renumberClassEnrollments(
       currentEnrollments: currentEnrollments,
       assignments: assignments,
+    );
+  }
+
+  Future<T> _readWithCacheFallback<T>({
+    required Future<T> Function() fetchRemote,
+    required Future<void> Function(String teacherId, T data) saveLocal,
+    required Future<T?> Function(String teacherId) readLocal,
+  }) async {
+    final tid = _teacherId;
+    final local = _localDataSource;
+    if (_online && (_homeroomRemote != null || _enrollmentRemote != null)) {
+      try {
+        final fresh = await fetchRemote();
+        if (local != null && tid != null) {
+          await saveLocal(tid, fresh);
+        }
+        return fresh;
+      } on NetworkException {
+        if (local != null && tid != null) {
+          final cached = await readLocal(tid);
+          if (cached != null) return cached;
+        }
+        rethrow;
+      }
+    }
+    if (local != null && tid != null) {
+      final cached = await readLocal(tid);
+      if (cached != null) return cached;
+    }
+    throw const NetworkException(
+      'ขณะนี้ออฟไลน์และยังไม่มีข้อมูลรายชื่อนักเรียนที่แคชไว้สำหรับห้องนี้ กรุณาเชื่อมต่ออินเทอร์เน็ตก่อนเปิดดูครั้งแรก',
+      code: 'OFFLINE_NO_LOCAL_CACHE',
     );
   }
 
