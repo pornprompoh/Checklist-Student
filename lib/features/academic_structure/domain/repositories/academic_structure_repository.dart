@@ -23,14 +23,14 @@ abstract interface class AcademicStructureRepository {
     required String teacherId,
     required String academicYearId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   });
   Future<Term> updateTerm({
     required String termId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   });
   Future<void> setPinnedActiveTerm(String? termId);
   Future<void> deleteTerm(String termId);

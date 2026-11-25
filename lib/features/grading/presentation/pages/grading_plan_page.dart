@@ -7,6 +7,9 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
@@ -36,6 +39,8 @@ class GradingPlanPage extends ConsumerStatefulWidget {
 }
 
 class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
+  final ScrollController _assignmentsScrollController = ScrollController();
+  final ScrollController _rulesScrollController = ScrollController();
   String? _selectedClassId;
   bool _hasUnsavedScaleChanges = false;
   String? _conflictMessage;
@@ -45,6 +50,13 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     super.initState();
     final initial = widget.initialClassId?.trim();
     _selectedClassId = (initial == null || initial.isEmpty) ? null : initial;
+  }
+
+  @override
+  void dispose() {
+    _assignmentsScrollController.dispose();
+    _rulesScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -105,21 +117,19 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
 
     return UnsavedChangesGuard(
       hasUnsavedChanges: _hasUnsavedScaleChanges,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: _buildBody(
-              context,
-              classOptionsAsync: classOptionsAsync,
-              options: options,
-              classId: effectiveClassId,
-              isBusy: editorState.isLoading,
-            ),
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSplitPane =
+              constraints.maxWidth >= 900 && constraints.maxHeight >= 520;
+          return _buildBody(
+            context,
+            classOptionsAsync: classOptionsAsync,
+            options: options,
+            classId: effectiveClassId,
+            isBusy: editorState.isLoading,
+            isSplitPane: isSplitPane,
+          );
+        },
       ),
     );
   }
@@ -139,32 +149,45 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     required List<CopyPlanSourceClassOption> options,
     required String? classId,
     required bool isBusy,
+    required bool isSplitPane,
   }) {
+    const fallbackHeader = AppPageHeader(
+      title: 'ออกแบบแผนเก็บงานและเกณฑ์ตัดเกรด',
+    );
     if (classOptionsAsync.isLoading && options.isEmpty) {
-      return const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SkeletonBox(height: 120),
-          SizedBox(height: 14),
-          SkeletonBox(height: 180),
-        ],
+      return const AppPageContainer.scrollable(
+        header: fallbackHeader,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SkeletonBox(height: 120),
+            SizedBox(height: 14),
+            SkeletonBox(height: 180),
+          ],
+        ),
       );
     }
     if (classOptionsAsync.hasError && options.isEmpty) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.error,
-        message: ThaiErrorMapper.map(classOptionsAsync.error!),
-        onRetry: () => ref.invalidate(allCopyableClassesProvider),
+      return AppPageContainer.scrollable(
+        header: fallbackHeader,
+        child: AppFeedbackBanner(
+          type: AppFeedbackType.error,
+          message: ThaiErrorMapper.map(classOptionsAsync.error!),
+          onRetry: () => ref.invalidate(allCopyableClassesProvider),
+        ),
       );
     }
     if (classId == null || options.isEmpty) {
-      return AppEmptyState(
-        icon: Icons.assignment_outlined,
-        title: 'ยังไม่มีห้องเรียนในระบบ',
-        description:
-            'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนออกแบบแผนเก็บงาน',
-        actionLabel: 'ไปหน้าโครงสร้างสอน',
-        onAction: () => context.go(AppRoutes.teacherAcademicStructure),
+      return AppPageContainer.scrollable(
+        header: fallbackHeader,
+        child: AppEmptyState(
+          icon: Icons.assignment_outlined,
+          title: 'ยังไม่มีห้องเรียนในระบบ',
+          description:
+              'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนออกแบบแผนเก็บงาน',
+          actionLabel: 'ไปหน้าโครงสร้างสอน',
+          onAction: () => context.go(AppRoutes.teacherAcademicStructure),
+        ),
       );
     }
 
@@ -179,40 +202,37 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
         categoriesAsync.asData?.value ?? const <ScoreCategory>[];
     final assignments = assignmentsAsync.asData?.value ?? const <Assignment>[];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GradingPlanHeader(
-          classOptions: options,
-          selectedClassId: classId,
-          categories: categories,
-          assignments: assignments,
-          overMaxCounts: overMaxCounts,
-          isBusy: isBusy,
-          onSelectClass: _selectClass,
-          onAddCategory: () => GradingPlanActions.handleAddOrEditCategory(
-            context,
-            ref,
-            classId: classId,
-          ),
-          onAddAssignment: () => GradingPlanActions.handleAddOrEditAssignment(
-            context,
-            ref,
-            classId: classId,
-            categories: categories,
-          ),
-          onCopyPlan: () => GradingPlanActions.handleCopyPlan(
-            context,
-            ref,
-            targetClassId: classId,
-            targetHasExistingPlan:
-                categories.isNotEmpty || assignments.isNotEmpty,
-          ),
-          onOpenGradingTable: () => _openGradingTable(classId),
-        ),
-        if (_conflictMessage != null) ...[
-          const SizedBox(height: 12),
-          AppFeedbackBanner(
+    final planHeader = GradingPlanHeader(
+      classOptions: options,
+      selectedClassId: classId,
+      categories: categories,
+      assignments: assignments,
+      overMaxCounts: overMaxCounts,
+      isBusy: isBusy,
+      onSelectClass: _selectClass,
+      onAddCategory: () => GradingPlanActions.handleAddOrEditCategory(
+        context,
+        ref,
+        classId: classId,
+      ),
+      onAddAssignment: () => GradingPlanActions.handleAddOrEditAssignment(
+        context,
+        ref,
+        classId: classId,
+        categories: categories,
+      ),
+      onCopyPlan: () => GradingPlanActions.handleCopyPlan(
+        context,
+        ref,
+        targetClassId: classId,
+        targetHasExistingPlan:
+            categories.isNotEmpty || assignments.isNotEmpty,
+      ),
+      onOpenGradingTable: () => _openGradingTable(classId),
+    );
+    final conflictBanner = _conflictMessage == null
+        ? null
+        : AppFeedbackBanner(
             type: AppFeedbackType.error,
             message: _conflictMessage!,
             retryLabel: 'โหลดล่าสุด',
@@ -222,57 +242,96 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
                   .read(planEditorControllerProvider.notifier)
                   .refreshClassPlan(classId);
             },
-          ),
-        ],
+          );
+    final planSection = GradingPlanCategoriesList(
+      classId: classId,
+      categoriesAsync: categoriesAsync,
+      assignmentsAsync: assignmentsAsync,
+      overMaxCounts: overMaxCounts,
+      isBusy: isBusy,
+    );
+    final scaleSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildScaleSection(
+          context,
+          classId: classId,
+          scaleAsync: scaleAsync,
+          isBusy: isBusy,
+        ),
         const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final planSection = GradingPlanCategoriesList(
-              classId: classId,
-              categoriesAsync: categoriesAsync,
-              assignmentsAsync: assignmentsAsync,
-              overMaxCounts: overMaxCounts,
-              isBusy: isBusy,
-            );
-            final scaleSection = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildScaleSection(
-                  context,
-                  classId: classId,
-                  scaleAsync: scaleAsync,
-                  isBusy: isBusy,
-                ),
-                const SizedBox(height: 16),
-                _buildVisibilitySection(
-                  context,
-                  classId: classId,
-                  visibilityAsync: visibilityAsync,
-                  isBusy: isBusy,
-                ),
-              ],
-            );
-            if (constraints.maxWidth >= 980) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 3, child: planSection),
-                  const SizedBox(width: 16),
-                  Expanded(flex: 2, child: scaleSection),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                planSection,
-                const SizedBox(height: 16),
-                scaleSection,
-              ],
-            );
-          },
+        _buildVisibilitySection(
+          context,
+          classId: classId,
+          visibilityAsync: visibilityAsync,
+          isBusy: isBusy,
         ),
       ],
+    );
+
+    if (isSplitPane) {
+      return AppPageContainer.viewport(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            planHeader,
+            if (conflictBanner != null) ...[
+              const SizedBox(height: 12),
+              conflictBanner,
+            ],
+            const SizedBox(height: 16),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: AppSubtleScrollbar(
+                      controller: _assignmentsScrollController,
+                      child: SingleChildScrollView(
+                        controller: _assignmentsScrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 8, bottom: 8),
+                        child: planSection,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 5,
+                    child: AppSubtleScrollbar(
+                      controller: _rulesScrollController,
+                      child: SingleChildScrollView(
+                        controller: _rulesScrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 8, bottom: 8),
+                        child: scaleSection,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AppPageContainer.scrollable(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          planHeader,
+          if (conflictBanner != null) ...[
+            const SizedBox(height: 12),
+            conflictBanner,
+          ],
+          const SizedBox(height: 16),
+          planSection,
+          const SizedBox(height: 16),
+          scaleSection,
+        ],
+      ),
     );
   }
 

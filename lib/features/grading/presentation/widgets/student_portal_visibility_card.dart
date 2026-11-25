@@ -28,8 +28,6 @@ class StudentPortalVisibilityCard extends StatelessWidget {
 
     return AppSurfaceCard(
       title: 'การเปิดเผยข้อมูลบน Student Portal',
-      subtitle:
-          'ควบคุมการมองเห็นเฉพาะวิชานี้และห้องนี้แยกอิสระ (ซ่อนตั้งแต่ระดับเซิร์ฟเวอร์)',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

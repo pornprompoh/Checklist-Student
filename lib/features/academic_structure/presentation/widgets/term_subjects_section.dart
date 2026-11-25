@@ -18,12 +18,14 @@ import '../../domain/entities/term.dart';
 import '../providers/academic_structure_controller.dart';
 import '../providers/academic_structure_providers.dart';
 import 'structural_delete_helper.dart';
-import 'subject_card.dart';
+import 'subject_block_card.dart';
 import 'subject_class_form_dialog.dart';
+import 'subject_detail_view.dart';
 import 'subject_form_dialog.dart';
 
-/// Displays and manages all [Subject] and [SubjectClass] records for [term].
-class TermSubjectsSection extends ConsumerWidget {
+/// Displays all [Subject] records as equal-height Subject Blocks in a Grid and
+/// supports in-page drill-down into a selected subject's [SubjectClass] list.
+class TermSubjectsSection extends ConsumerStatefulWidget {
   const TermSubjectsSection({
     super.key,
     required this.term,
@@ -34,7 +36,35 @@ class TermSubjectsSection extends ConsumerWidget {
   final bool isBusy;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TermSubjectsSection> createState() =>
+      _TermSubjectsSectionState();
+}
+
+class _TermSubjectsSectionState extends ConsumerState<TermSubjectsSection> {
+  final _searchCtrl = TextEditingController();
+  String? _selectedSubjectId;
+  String _searchQuery = '';
+
+  @override
+  void didUpdateWidget(covariant TermSubjectsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.term.id != widget.term.id) {
+      _selectedSubjectId = null;
+      _searchQuery = '';
+      _searchCtrl.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final term = widget.term;
+    final isBusy = widget.isBusy;
     final subjectsAsync = ref.watch(subjectsByTermProvider(term.id));
     final classesAsync = ref.watch(subjectClassesByTermProvider(term.id));
     final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
@@ -78,6 +108,51 @@ class TermSubjectsSection extends ConsumerWidget {
       classesBySubject.putIfAbsent(c.subjectId, () => <SubjectClass>[]).add(c);
     }
 
+    final selectedSubject = _selectedSubjectId == null
+        ? null
+        : subjects.where((s) => s.id == _selectedSubjectId).firstOrNull;
+
+    if (selectedSubject != null) {
+      return SubjectDetailView(
+        subject: selectedSubject,
+        classes: classesBySubject[selectedSubject.id] ?? const <SubjectClass>[],
+        isBusy: isBusy,
+        onBack: () => setState(() => _selectedSubjectId = null),
+        onEditSubject: () => _editSubject(context, selectedSubject),
+        onDeleteSubject: () => _deleteSubject(context, selectedSubject),
+        onAddClass: () =>
+            _addClass(context, selectedSubject, suggestedRoomNames),
+        onTogglePinClass: (sc) => ref
+            .read(academicStructureControllerProvider.notifier)
+            .togglePinSubjectClass(termId: term.id, subjectClass: sc),
+        onEditClass: (sc) => _editClass(context, selectedSubject, sc),
+        onDeleteClass: (sc) => _deleteClass(context, sc),
+        onOpenAttendance: (sc) => GoRouter.maybeOf(
+          context,
+        )?.go(AppRoutes.teacherAttendanceForClass(sc.id)),
+        onOpenGrading: (sc) => GoRouter.maybeOf(
+          context,
+        )?.go(AppRoutes.teacherGradingForClass(sc.id)),
+        onOpenGradingPlan: (sc) => GoRouter.maybeOf(
+          context,
+        )?.go(AppRoutes.teacherGradingPlanForClass(sc.id)),
+      );
+    }
+
+    final q = _searchQuery.trim().toLowerCase();
+    final filteredSubjects = q.isEmpty
+        ? subjects
+        : subjects
+              .where(
+                (s) =>
+                    s.subjectCode.toLowerCase().contains(q) ||
+                    s.subjectName.toLowerCase().contains(q) ||
+                    (classesBySubject[s.id] ?? const <SubjectClass>[]).any(
+                      (c) => c.roomName.toLowerCase().contains(q),
+                    ),
+              )
+              .toList(growable: false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -94,10 +169,40 @@ class TermSubjectsSection extends ConsumerWidget {
                 fontFeatures: AppTheme.tabularFigures,
               ),
             ),
-            FilledButton.icon(
-              onPressed: isBusy ? null : () => _addSubject(context, ref),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('เพิ่มรายวิชา'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (subjects.length >= 4 || _searchQuery.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: 'ค้นหารหัสวิชา ชื่อวิชา หรือห้อง...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        suffixIcon: _searchQuery.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'ล้างคำค้นหา',
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                              ),
+                      ),
+                    ),
+                  ),
+                FilledButton.icon(
+                  onPressed: isBusy ? null : () => _addSubject(context),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('เพิ่มรายวิชา'),
+                ),
+              ],
             ),
           ],
         ),
@@ -110,43 +215,100 @@ class TermSubjectsSection extends ConsumerWidget {
                 'เพิ่มรายวิชาแรกแล้วสร้างห้องเรียนพร้อมกำหนดวันสอนได้ทันที',
             actionLabel: 'เพิ่มรายวิชาแรก',
             actionIcon: Icons.add_rounded,
-            onAction: () => _addSubject(context, ref),
+            onAction: () => _addSubject(context),
+          )
+        else if (filteredSubjects.isEmpty)
+          AppEmptyState(
+            icon: Icons.search_off_rounded,
+            title: 'ไม่พบรายวิชาที่ตรงกับคำค้นหา',
+            description: 'ลองเปลี่ยนคำค้นหาหรือล้างตัวกรองเพื่อดูรายวิชาทั้งหมด',
+            actionLabel: 'ล้างคำค้นหา',
+            actionIcon: Icons.refresh_rounded,
+            onAction: () {
+              _searchCtrl.clear();
+              setState(() => _searchQuery = '');
+            },
           )
         else
-          for (final subject in subjects) ...[
-            SubjectCard(
-              subject: subject,
-              classes: classesBySubject[subject.id] ?? const <SubjectClass>[],
-              isBusy: isBusy,
-              onEditSubject: () => _editSubject(context, ref, subject),
-              onDeleteSubject: () => _deleteSubject(context, ref, subject),
-              onAddClass: () =>
-                  _addClass(context, ref, subject, suggestedRoomNames),
-              onTogglePinClass: (sc) => ref
-                  .read(academicStructureControllerProvider.notifier)
-                  .togglePinSubjectClass(termId: term.id, subjectClass: sc),
-              onEditClass: (sc) => _editClass(context, ref, subject, sc),
-              onDeleteClass: (sc) => _deleteClass(context, ref, sc),
-              onOpenAttendance: (sc) => GoRouter.maybeOf(
-                context,
-              )?.go(AppRoutes.teacherAttendanceForClass(sc.id)),
-              onOpenGrading: (sc) => GoRouter.maybeOf(
-                context,
-              )?.go(AppRoutes.teacherGradingForClass(sc.id)),
-            ),
-            const SizedBox(height: 12),
-          ],
+          _buildSubjectGrid(
+            context,
+            subjects: filteredSubjects,
+            classesBySubject: classesBySubject,
+            suggestedRoomNames: suggestedRoomNames,
+          ),
       ],
     );
   }
 
-  Future<void> _addSubject(BuildContext context, WidgetRef ref) async {
+  Widget _buildSubjectGrid(
+    BuildContext context, {
+    required List<Subject> subjects,
+    required Map<String, List<SubjectClass>> classesBySubject,
+    required List<String> suggestedRoomNames,
+  }) {
+    Widget buildBlock(Subject subject) => SubjectBlockCard(
+      subject: subject,
+      classes: classesBySubject[subject.id] ?? const <SubjectClass>[],
+      isBusy: widget.isBusy,
+      onOpenDetail: () => setState(() => _selectedSubjectId = subject.id),
+      onAddClass: () => _addClass(context, subject, suggestedRoomNames),
+      onEditSubject: () => _editSubject(context, subject),
+      onDeleteSubject: () => _deleteSubject(context, subject),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900
+            ? 3
+            : (constraints.maxWidth >= 600 ? 2 : 1);
+
+        if (columns == 1) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < subjects.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                buildBlock(subjects[i]),
+              ],
+            ],
+          );
+        }
+
+        final rowCount = (subjects.length / columns).ceil();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var row = 0; row < rowCount; row++) ...[
+              if (row > 0) const SizedBox(height: 12),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var col = 0; col < columns; col++) ...[
+                      if (col > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: (row * columns + col) < subjects.length
+                            ? buildBlock(subjects[row * columns + col])
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _addSubject(BuildContext context) async {
     final result = await SubjectFormDialog.show(context);
     if (result == null || !context.mounted) return;
     final created = await ref
         .read(academicStructureControllerProvider.notifier)
         .createSubject(
-          termId: term.id,
+          termId: widget.term.id,
           subjectCode: result.subjectCode,
           subjectName: result.subjectName,
         );
@@ -159,11 +321,7 @@ class TermSubjectsSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _editSubject(
-    BuildContext context,
-    WidgetRef ref,
-    Subject subject,
-  ) async {
+  Future<void> _editSubject(BuildContext context, Subject subject) async {
     final result = await SubjectFormDialog.show(
       context,
       existingSubject: subject,
@@ -172,7 +330,7 @@ class TermSubjectsSection extends ConsumerWidget {
     final updated = await ref
         .read(academicStructureControllerProvider.notifier)
         .updateSubject(
-          termId: term.id,
+          termId: widget.term.id,
           subjectId: subject.id,
           subjectCode: result.subjectCode,
           subjectName: result.subjectName,
@@ -186,28 +344,30 @@ class TermSubjectsSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _deleteSubject(
-    BuildContext context,
-    WidgetRef ref,
-    Subject subject,
-  ) {
+  Future<void> _deleteSubject(BuildContext context, Subject subject) {
     return confirmAndDeleteStructure(
       context: context,
       ref: ref,
       entityType: StructuralEntityType.subject,
       entityId: subject.id,
       title: 'ยืนยันการลบรายวิชา ${subject.subjectCode}',
-      description: 'การลบรายวิชาจะลบห้องเรียน ข้อมูลเช็คชื่อ และคะแนนทั้งหมดของวิชานี้',
+      description:
+          'การลบรายวิชาจะลบห้องเรียน ข้อมูลเช็คชื่อ และคะแนนทั้งหมดของวิชานี้',
       expectedText: subject.subjectCode,
-      onConfirmedDelete: () => ref
-          .read(academicStructureControllerProvider.notifier)
-          .deleteSubject(termId: term.id, subjectId: subject.id),
+      onConfirmedDelete: () async {
+        final deleted = await ref
+            .read(academicStructureControllerProvider.notifier)
+            .deleteSubject(termId: widget.term.id, subjectId: subject.id);
+        if (deleted && mounted && _selectedSubjectId == subject.id) {
+          setState(() => _selectedSubjectId = null);
+        }
+        return deleted;
+      },
     );
   }
 
   Future<void> _addClass(
     BuildContext context,
-    WidgetRef ref,
     Subject subject,
     List<String> suggestedRoomNames,
   ) async {
@@ -220,13 +380,13 @@ class TermSubjectsSection extends ConsumerWidget {
     final created = await ref
         .read(academicStructureControllerProvider.notifier)
         .createSubjectClass(
-          termId: term.id,
+          termId: widget.term.id,
           subjectId: subject.id,
           roomName: result.roomName,
           teachingDays: result.teachingDays,
           isPinned: result.isPinned,
           autoLinkHomeroom: result.autoLinkHomeroom,
-          defaultEnrolledAt: term.startDate,
+          defaultEnrolledAt: widget.term.startDate,
         );
     if (created != null && context.mounted) {
       AppFeedbackBanner.showSnackBar(
@@ -241,7 +401,6 @@ class TermSubjectsSection extends ConsumerWidget {
 
   Future<void> _editClass(
     BuildContext context,
-    WidgetRef ref,
     Subject subject,
     SubjectClass existing,
   ) async {
@@ -254,7 +413,7 @@ class TermSubjectsSection extends ConsumerWidget {
     final updated = await ref
         .read(academicStructureControllerProvider.notifier)
         .updateSubjectClass(
-          termId: term.id,
+          termId: widget.term.id,
           existing: existing,
           roomName: result.roomName,
           teachingDays: result.teachingDays,
@@ -269,22 +428,22 @@ class TermSubjectsSection extends ConsumerWidget {
     }
   }
 
-  Future<void> _deleteClass(
-    BuildContext context,
-    WidgetRef ref,
-    SubjectClass subjectClass,
-  ) {
+  Future<void> _deleteClass(BuildContext context, SubjectClass subjectClass) {
     return confirmAndDeleteStructure(
       context: context,
       ref: ref,
       entityType: StructuralEntityType.subjectClass,
       entityId: subjectClass.id,
       title: 'ยืนยันการลบห้องเรียน ${subjectClass.roomName}',
-      description: 'การลบห้องเรียนจะลบรายชื่อในวิชานี้ คาบเช็คชื่อ และคะแนนทั้งหมดของห้องนี้',
+      description:
+          'การลบห้องเรียนจะลบรายชื่อในวิชานี้ คาบเช็คชื่อ และคะแนนทั้งหมดของห้องนี้',
       expectedText: subjectClass.roomName,
       onConfirmedDelete: () => ref
           .read(academicStructureControllerProvider.notifier)
-          .deleteSubjectClass(termId: term.id, subjectClassId: subjectClass.id),
+          .deleteSubjectClass(
+            termId: widget.term.id,
+            subjectClassId: subjectClass.id,
+          ),
     );
   }
 }

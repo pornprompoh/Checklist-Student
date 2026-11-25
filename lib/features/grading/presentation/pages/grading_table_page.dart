@@ -9,6 +9,8 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
@@ -184,21 +186,25 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
         classOptionsAsync.asData?.value ?? const <CopyPlanSourceClassOption>[];
     final classId = _resolveEffectiveClassId(options);
 
+    const baseHeader = AppPageHeader(title: 'ตารางคะแนนและเกรด');
+
     if (classOptionsAsync.isLoading && options.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
+      return const AppPageContainer.scrollable(
+        header: baseHeader,
+        fullBleedWidth: true,
         child: Column(
           children: [
             SkeletonBox(height: 96),
             SizedBox(height: 12),
-            Expanded(child: SkeletonBox(height: 360)),
+            SkeletonBox(height: 360),
           ],
         ),
       );
     }
     if (classOptionsAsync.hasError && options.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
+      return AppPageContainer.scrollable(
+        header: baseHeader,
+        fullBleedWidth: true,
         child: AppFeedbackBanner(
           type: AppFeedbackType.error,
           message: ThaiErrorMapper.map(classOptionsAsync.error!),
@@ -207,20 +213,16 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
       );
     }
     if (classId == null || options.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: AppEmptyState(
-              icon: Icons.table_chart_outlined,
-              title: 'ยังไม่มีห้องเรียนในระบบ',
-              description:
-                  'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มใช้งานตารางคะแนน',
-              actionLabel: 'ไปหน้าโครงสร้างสอน',
-              onAction: () => context.go(AppRoutes.teacherAcademicStructure),
-            ),
-          ),
+      return AppPageContainer.scrollable(
+        header: baseHeader,
+        fullBleedWidth: true,
+        child: AppEmptyState(
+          icon: Icons.table_chart_outlined,
+          title: 'ยังไม่มีห้องเรียนในระบบ',
+          description:
+              'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มใช้งานตารางคะแนน',
+          actionLabel: 'ไปหน้าโครงสร้างสอน',
+          onAction: () => context.go(AppRoutes.teacherAcademicStructure),
         ),
       );
     }
@@ -400,8 +402,8 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
 
           if (useScrollableLayout) {
             final gridHeight = math.max(320.0, constraints.maxHeight * 0.65);
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+            return AppPageContainer.scrollable(
+              fullBleedWidth: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -421,8 +423,8 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
             );
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(20),
+          return AppPageContainer.viewport(
+            fullBleedWidth: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

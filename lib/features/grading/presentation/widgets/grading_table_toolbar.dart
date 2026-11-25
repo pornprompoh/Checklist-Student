@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_page_header.dart';
-import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 import '../providers/grading_filter_provider.dart';
 import '../providers/grading_providers.dart';
@@ -86,147 +85,118 @@ class GradingTableToolbar extends StatelessWidget {
                 ),
         ),
         const SizedBox(height: 12),
-        AppSurfaceCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 280),
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey<String?>(validClassId),
+                    initialValue: validClassId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'ห้องเรียน',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: [
+                      for (final option in classOptions)
+                        DropdownMenuItem<String>(
+                          value: option.subjectClassId,
+                          child: Text(
+                            '${option.displayLabel} (${option.termLabel}/${option.academicYearBe})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null && value != validClassId) {
+                        onSelectClass(value);
+                      }
+                    },
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: onSearchChanged,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'ค้นหาชื่อ, รหัส, เลขที่...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      suffixIcon: filterState.searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'ล้างคำค้นหา',
+                              onPressed: () {
+                                searchController.clear();
+                                onSearchChanged('');
+                              },
+                              icon: const Icon(Icons.close_rounded, size: 16),
+                            ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SaveStatusIndicator(
+                  status: saveStatus,
+                  lastSavedAt: lastSavedAt,
+                  onRetry: onRetrySave,
+                  onReloadLatest: onReloadLatest,
+                ),
+                _ModeSegmentedToggle(
+                  isEditMode: isEditMode,
+                  onToggle: onToggleEditMode,
+                ),
+                _buildOverflowMenu(context),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                alignment: WrapAlignment.spaceBetween,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 340),
-                    child: DropdownButtonFormField<String>(
-                      key: ValueKey<String?>(validClassId),
-                      initialValue: validClassId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'ห้องเรียน',
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      items: [
-                        for (final option in classOptions)
-                          DropdownMenuItem<String>(
-                            value: option.subjectClassId,
-                            child: Text(
-                              '${option.displayLabel} (${option.termLabel}/${option.academicYearBe})',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null && value != validClassId) {
-                          onSelectClass(value);
-                        }
-                      },
+              for (var i = 0; i < GradingQuickFilter.values.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                FilterChip(
+                  selected:
+                      filterState.quickFilter == GradingQuickFilter.values[i],
+                  label: Text(
+                    '${GradingQuickFilter.values[i].thaiLabel} (${filterCounts[GradingQuickFilter.values[i]] ?? 0})',
+                    style: const TextStyle(
+                      fontFeatures: AppTheme.tabularFigures,
                     ),
                   ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      SaveStatusIndicator(
-                        status: saveStatus,
-                        lastSavedAt: lastSavedAt,
-                        onRetry: onRetrySave,
-                        onReloadLatest: onReloadLatest,
-                      ),
-                      _ModeSegmentedToggle(
-                        isEditMode: isEditMode,
-                        onToggle: onToggleEditMode,
-                      ),
-                      _buildOverflowMenu(context),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final searchField = ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 260),
-                    child: TextField(
-                      controller: searchController,
-                      onChanged: onSearchChanged,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'ค้นหาชื่อ, รหัส หรือเลขที่...',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                        suffixIcon: filterState.searchQuery.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'ล้างคำค้นหา',
-                                onPressed: () {
-                                  searchController.clear();
-                                  onSearchChanged('');
-                                },
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                              ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                    ),
-                  );
-
-                  final filterStrip = SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (
-                          var i = 0;
-                          i < GradingQuickFilter.values.length;
-                          i++
-                        ) ...[
-                          if (i > 0) const SizedBox(width: 8),
-                          FilterChip(
-                            selected:
-                                filterState.quickFilter ==
-                                GradingQuickFilter.values[i],
-                            label: Text(
-                              '${GradingQuickFilter.values[i].thaiLabel} (${filterCounts[GradingQuickFilter.values[i]] ?? 0})',
-                              style: const TextStyle(
-                                fontFeatures: AppTheme.tabularFigures,
-                              ),
-                            ),
-                            onSelected: (_) =>
-                                onSelectFilter(GradingQuickFilter.values[i]),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-
-                  if (constraints.maxWidth >= 720) {
-                    return Row(
-                      children: [
-                        searchField,
-                        const SizedBox(width: 12),
-                        Expanded(child: filterStrip),
-                      ],
-                    );
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      searchField,
-                      const SizedBox(height: 8),
-                      filterStrip,
-                    ],
-                  );
-                },
-              ),
+                  onSelected: (_) =>
+                      onSelectFilter(GradingQuickFilter.values[i]),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ],
           ),
         ),

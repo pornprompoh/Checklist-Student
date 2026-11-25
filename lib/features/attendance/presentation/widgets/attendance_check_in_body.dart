@@ -7,6 +7,8 @@ import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
@@ -22,7 +24,12 @@ import 'attendance_student_row.dart';
 import 'transferred_out_attendance_section.dart';
 
 /// Interactive body of the daily check-in screen guarded by [UnsavedChangesGuard].
-class AttendanceCheckInBody extends ConsumerWidget {
+///
+/// Decluttered to 2 slim pinned rows on Desktop (`width >= 900 && height >= 520`)
+/// — Header + Underline Tabs, then Flat Class/Date + Inline Counters + single
+/// contextual CTA — scrolling only the student list independently. Hides the
+/// bottom save bar whenever the session is locked to maximize list space.
+class AttendanceCheckInBody extends ConsumerStatefulWidget {
   const AttendanceCheckInBody({
     super.key,
     required this.subjectClassId,
@@ -39,7 +46,22 @@ class AttendanceCheckInBody extends ConsumerWidget {
   final ValueChanged<String> onSwitchClass;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AttendanceCheckInBody> createState() =>
+      _AttendanceCheckInBodyState();
+}
+
+class _AttendanceCheckInBodyState extends ConsumerState<AttendanceCheckInBody> {
+  final ScrollController _studentListController = ScrollController();
+
+  @override
+  void dispose() {
+    _studentListController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subjectClassId = widget.subjectClassId;
     final state = ref.watch(
       attendanceCheckInControllerProvider(subjectClassId),
     );
@@ -81,233 +103,243 @@ class AttendanceCheckInBody extends ConsumerWidget {
       eligibleIdSet.contains,
     );
 
+    final isReadyWithStudents =
+        !enrollmentsAsync.isLoading &&
+        !state.isLoading &&
+        !enrollmentsAsync.hasError &&
+        enrollments.isNotEmpty;
+
+    final inlineSummary = isReadyWithStudents
+        ? AttendanceStatusSummaryBar(
+            presentCount: counts.present,
+            lateCount: counts.late,
+            leaveCount: counts.leave,
+            absentCount: counts.absent,
+            unmarkedCount: counts.unmarked,
+            isLocked: state.isLocked,
+            isBusy: state.isSaving,
+            canMarkAllPresent: eligibleIds.isNotEmpty,
+            onMarkAllPresent: () => controller.markAllPresent(eligibleIds),
+            onUnlockSession: () =>
+                AttendanceCheckInDialogs.confirmUnlock(context, controller),
+          )
+        : null;
+
+    final sessionHeader = AttendanceSessionHeader(
+      classOptions: widget.classOptions,
+      selectedClassId: subjectClassId,
+      selectedDate: state.selectedDate,
+      hasSavedSession: state.hasSavedSession,
+      isLocked: state.isLocked,
+      isBusy: state.isLoading || state.isSaving,
+      sessionNote: state.sessionNote,
+      inlineStatusTrailing: inlineSummary,
+      onSelectClass: (id) => AttendanceCheckInDialogs.guardAndRun(
+        context,
+        state,
+        () => widget.onSwitchClass(id),
+      ),
+      onPreviousDay: () => AttendanceCheckInDialogs.guardAndRun(
+        context,
+        state,
+        () => controller.loadDate(
+          state.selectedDate.subtract(const Duration(days: 1)),
+        ),
+      ),
+      onPickDate: () =>
+          AttendanceCheckInDialogs.pickDate(context, state, controller),
+      onNextDay: () => AttendanceCheckInDialogs.guardAndRun(
+        context,
+        state,
+        () => controller.loadDate(
+          state.selectedDate.add(const Duration(days: 1)),
+        ),
+      ),
+      onOpenHistory: () => AttendanceCheckInDialogs.openHistory(
+        context,
+        ref,
+        subjectClassId: subjectClassId,
+        state: state,
+        controller: controller,
+      ),
+      onOpenRules: () => AttendanceCheckInDialogs.guardAndRun(
+        context,
+        state,
+        () => context.go(
+          AppRoutes.teacherAttendanceRulesForClass(subjectClassId),
+        ),
+      ),
+      onEditSessionNote: isReadyWithStudents
+          ? () => AttendanceCheckInDialogs.editSessionNote(
+              context,
+              state,
+              controller,
+            )
+          : null,
+    );
+
+    final errorBanner = state.errorMessage == null
+        ? null
+        : AppFeedbackBanner(
+            type: AppFeedbackType.error,
+            message: state.errorMessage!,
+            retryLabel: state.isConflictError ? 'โหลดข้อมูลล่าสุด' : 'ลองใหม่',
+            onRetry: controller.reloadCurrentDate,
+          );
+
+    final studentListSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (activeStudents.isNotEmpty)
+          AppSurfaceCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < activeStudents.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  AttendanceStudentRow(
+                    embedded: true,
+                    enrollment: activeStudents[i],
+                    selectedDate: state.selectedDate,
+                    selectedStatus: state.draftStatuses[activeStudents[i].id],
+                    note: state.draftNotes[activeStudents[i].id] ?? '',
+                    summary: summaries[activeStudents[i].id],
+                    isLocked: state.isLocked,
+                    onStatusSelected: (status) =>
+                        controller.setStudentStatus(activeStudents[i].id, status),
+                    onEditNote: () => AttendanceCheckInDialogs.editStudentNote(
+                      context,
+                      activeStudents[i],
+                      state,
+                      controller,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        if (transferredWithHistory.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          TransferredOutAttendanceSection(
+            students: transferredWithHistory,
+            recordsByEnrollment: state.existingRecordsByEnrollment,
+          ),
+        ],
+      ],
+    );
+
     return UnsavedChangesGuard(
       hasUnsavedChanges: state.isDirty,
-      child: Column(
-        children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1020),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AttendanceSessionHeader(
-                        classOptions: classOptions,
-                        selectedClassId: subjectClassId,
-                        selectedDate: state.selectedDate,
-                        hasSavedSession: state.hasSavedSession,
-                        isLocked: state.isLocked,
-                        isBusy: state.isLoading || state.isSaving,
-                        onSelectClass: (id) =>
-                            AttendanceCheckInDialogs.guardAndRun(
-                              context,
-                              state,
-                              () => onSwitchClass(id),
-                            ),
-                        onPreviousDay: () =>
-                            AttendanceCheckInDialogs.guardAndRun(
-                              context,
-                              state,
-                              () => controller.loadDate(
-                                state.selectedDate.subtract(
-                                  const Duration(days: 1),
+      child: LayoutBuilder(
+        builder: (context, outerConstraints) {
+          final isPinnedLayout =
+              outerConstraints.maxWidth >= 900 &&
+              outerConstraints.maxHeight >= 520 &&
+              isReadyWithStudents;
+
+          return Column(
+            children: [
+              Expanded(
+                child: isPinnedLayout
+                    ? AppPageContainer.viewport(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            sessionHeader,
+                            if (errorBanner != null) ...[
+                              const SizedBox(height: 12),
+                              errorBanner,
+                            ],
+                            const SizedBox(height: 12),
+                            Expanded(
+                              child: AppSubtleScrollbar(
+                                controller: _studentListController,
+                                child: SingleChildScrollView(
+                                  controller: _studentListController,
+                                  primary: false,
+                                  padding: const EdgeInsets.only(
+                                    right: 6,
+                                    bottom: 8,
+                                  ),
+                                  child: studentListSection,
                                 ),
                               ),
                             ),
-                        onPickDate: () => AttendanceCheckInDialogs.pickDate(
-                          context,
-                          state,
-                          controller,
+                          ],
                         ),
-                        onNextDay: () => AttendanceCheckInDialogs.guardAndRun(
-                          context,
-                          state,
-                          () => controller.loadDate(
-                            state.selectedDate.add(const Duration(days: 1)),
-                          ),
-                        ),
-                        onOpenHistory: () =>
-                            AttendanceCheckInDialogs.openHistory(
-                              context,
-                              ref,
-                              subjectClassId: subjectClassId,
-                              state: state,
-                              controller: controller,
-                            ),
-                        onOpenRules: () => AttendanceCheckInDialogs.guardAndRun(
-                          context,
-                          state,
-                          () => context.go(
-                            AppRoutes.teacherAttendanceRulesForClass(
-                              subjectClassId,
-                            ),
-                          ),
+                      )
+                    : AppPageContainer.scrollable(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            sessionHeader,
+                            if (errorBanner != null) ...[
+                              const SizedBox(height: 12),
+                              errorBanner,
+                            ],
+                            const SizedBox(height: 12),
+                            if (enrollmentsAsync.isLoading || state.isLoading)
+                              const Column(
+                                children: [
+                                  SkeletonBox(height: 68),
+                                  SizedBox(height: 12),
+                                  SkeletonBox(height: 80),
+                                  SizedBox(height: 12),
+                                  SkeletonBox(height: 80),
+                                ],
+                              )
+                            else if (enrollmentsAsync.hasError)
+                              AppFeedbackBanner(
+                                type: AppFeedbackType.error,
+                                message: ThaiErrorMapper.map(
+                                  enrollmentsAsync.error!,
+                                ),
+                                onRetry: () => ref.invalidate(
+                                  classEnrollmentsProvider(subjectClassId),
+                                ),
+                              )
+                            else if (enrollments.isEmpty)
+                              AppEmptyState(
+                                icon: Icons.groups_outlined,
+                                title: 'ยังไม่มีรายชื่อนักเรียนในห้องเรียนนี้',
+                                description:
+                                    'เพิ่มรายชื่อนักเรียนในคลังรายชื่อก่อนเริ่มเช็คชื่อประจำคาบ',
+                                actionLabel: 'ไปเพิ่มรายชื่อที่คลังรายชื่อ',
+                                onAction: () =>
+                                    context.go(AppRoutes.teacherHomeroomRoster),
+                              )
+                            else
+                              studentListSection,
+                          ],
                         ),
                       ),
-                      if (state.isLocked) ...[
-                        const SizedBox(height: 12),
-                        AppFeedbackBanner(
-                          type: AppFeedbackType.warning,
-                          message:
-                              'คาบเช็คชื่อนี้ถูกล็อกเพื่อป้องกันมือลั่นแก้ทับ หากต้องการแก้ไขกรุณากดปลดล็อก',
-                          retryLabel: 'ปลดล็อก',
-                          onRetry: () => AttendanceCheckInDialogs.confirmUnlock(
-                            context,
-                            controller,
-                          ),
-                        ),
-                      ],
-                      if (state.errorMessage != null) ...[
-                        const SizedBox(height: 12),
-                        AppFeedbackBanner(
-                          type: AppFeedbackType.error,
-                          message: state.errorMessage!,
-                          retryLabel: state.isConflictError
-                              ? 'โหลดข้อมูลล่าสุด'
-                              : 'ลองใหม่',
-                          onRetry: controller.reloadCurrentDate,
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      if (enrollmentsAsync.isLoading || state.isLoading)
-                        const Column(
-                          children: [
-                            SkeletonBox(height: 68),
-                            SizedBox(height: 12),
-                            SkeletonBox(height: 80),
-                            SizedBox(height: 12),
-                            SkeletonBox(height: 80),
-                          ],
-                        )
-                      else if (enrollmentsAsync.hasError)
-                        AppFeedbackBanner(
-                          type: AppFeedbackType.error,
-                          message: ThaiErrorMapper.map(enrollmentsAsync.error!),
-                          onRetry: () => ref.invalidate(
-                            classEnrollmentsProvider(subjectClassId),
-                          ),
-                        )
-                      else if (enrollments.isEmpty)
-                        AppEmptyState(
-                          icon: Icons.groups_outlined,
-                          title: 'ยังไม่มีรายชื่อนักเรียนในห้องเรียนนี้',
-                          description:
-                              'เพิ่มรายชื่อนักเรียนในคลังรายชื่อก่อนเริ่มเช็คชื่อประจำคาบ',
-                          actionLabel: 'ไปเพิ่มรายชื่อที่คลังรายชื่อ',
-                          onAction: () =>
-                              context.go(AppRoutes.teacherHomeroomRoster),
-                        )
-                      else ...[
-                        AttendanceStatusSummaryBar(
-                          presentCount: counts.present,
-                          lateCount: counts.late,
-                          leaveCount: counts.leave,
-                          absentCount: counts.absent,
-                          unmarkedCount: counts.unmarked,
-                          sessionNote: state.sessionNote,
-                          isLocked: state.isLocked,
-                          isBusy: state.isSaving,
-                          canMarkAllPresent: eligibleIds.isNotEmpty,
-                          onMarkAllPresent: () =>
-                              controller.markAllPresent(eligibleIds),
-                          onEditSessionNote: () =>
-                              AttendanceCheckInDialogs.editSessionNote(
-                                context,
-                                state,
-                                controller,
-                              ),
-                          onUnlockSession: () =>
-                              AttendanceCheckInDialogs.confirmUnlock(
-                                context,
-                                controller,
-                              ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (activeStudents.isNotEmpty)
-                          AppSurfaceCard(
-                            padding: EdgeInsets.zero,
-                            child: Column(
-                              children: [
-                                for (
-                                  var i = 0;
-                                  i < activeStudents.length;
-                                  i++
-                                ) ...[
-                                  if (i > 0) const Divider(height: 1),
-                                  AttendanceStudentRow(
-                                    embedded: true,
-                                    enrollment: activeStudents[i],
-                                    selectedDate: state.selectedDate,
-                                    selectedStatus:
-                                        state.draftStatuses[activeStudents[i]
-                                            .id],
-                                    note:
-                                        state.draftNotes[activeStudents[i]
-                                            .id] ??
-                                        '',
-                                    summary: summaries[activeStudents[i].id],
-                                    isLocked: state.isLocked,
-                                    onStatusSelected: (status) => controller
-                                        .setStudentStatus(
-                                          activeStudents[i].id,
-                                          status,
-                                        ),
-                                    onEditNote: () =>
-                                        AttendanceCheckInDialogs
-                                            .editStudentNote(
-                                          context,
-                                          activeStudents[i],
-                                          state,
-                                          controller,
-                                        ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        if (transferredWithHistory.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          TransferredOutAttendanceSection(
-                            students: transferredWithHistory,
-                            recordsByEnrollment:
-                                state.existingRecordsByEnrollment,
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
               ),
-            ),
-          ),
-          if (activeStudents.isNotEmpty)
-            AttendanceSaveBar(
-              lockAfterSave: lockAfterSave,
-              isLocked: state.isLocked,
-              isSaving: state.isSaving,
-              canSave: hasAnyEligibleDraft,
-              onToggleLockAfterSave: onToggleLockAfterSave,
-              onSave: () async {
-                final ok = await controller.saveAttendance(
-                  lockAfterSave: lockAfterSave,
-                  eligibleEnrollmentIds: eligibleIdSet,
-                );
-                if (ok && context.mounted) {
-                  AppFeedbackBanner.showSnackBar(
-                    context,
-                    type: AppFeedbackType.success,
-                    message: lockAfterSave
-                        ? 'บันทึกและล็อกคาบเช็คชื่อเรียบร้อยแล้ว'
-                        : 'บันทึกการเช็คชื่อเรียบร้อยแล้ว',
-                  );
-                }
-              },
-            ),
-        ],
+              if (activeStudents.isNotEmpty && !state.isLocked)
+                AttendanceSaveBar(
+                  lockAfterSave: widget.lockAfterSave,
+                  isLocked: state.isLocked,
+                  isSaving: state.isSaving,
+                  canSave: hasAnyEligibleDraft,
+                  onToggleLockAfterSave: widget.onToggleLockAfterSave,
+                  onSave: () async {
+                    final ok = await controller.saveAttendance(
+                      lockAfterSave: widget.lockAfterSave,
+                      eligibleEnrollmentIds: eligibleIdSet,
+                    );
+                    if (ok && context.mounted) {
+                      AppFeedbackBanner.showSnackBar(
+                        context,
+                        type: AppFeedbackType.success,
+                        message: widget.lockAfterSave
+                            ? 'บันทึกและล็อกคาบเช็คชื่อเรียบร้อยแล้ว'
+                            : 'บันทึกการเช็คชื่อเรียบร้อยแล้ว',
+                      );
+                    }
+                  },
+                ),
+            ],
+          );
+        },
       ),
     );
   }

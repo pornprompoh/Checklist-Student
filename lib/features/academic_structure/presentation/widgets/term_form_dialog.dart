@@ -5,22 +5,29 @@ import '../../domain/entities/academic_year.dart';
 import '../../domain/entities/term.dart';
 
 /// Form payload returned by [TermFormDialog].
+///
+/// [startDate] and [endDate] are both `null` when the teacher leaves optional
+/// term dates turned off, or both non-null with `endDate >= startDate`.
 class TermFormResult {
   const TermFormResult({
     required this.academicYearId,
     required this.termLabel,
-    required this.startDate,
-    required this.endDate,
+    this.startDate,
+    this.endDate,
   });
 
   final String academicYearId;
   final String termLabel;
-  final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
 }
 
-/// Dialog for creating or editing a [Term] with Buddhist Era date pickers
-/// and `endDate >= startDate` validation.
+/// Dialog for creating or editing a [Term].
+///
+/// Term dates are hidden behind an optional toggle (`ระบุวันเปิด–ปิดเทอม (ไม่บังคับ)`)
+/// defaulted to OFF on creation so teachers can add a term in seconds, while
+/// preserving Buddhist Era date pickers and `endDate >= startDate` validation
+/// whenever enabled.
 class TermFormDialog extends StatefulWidget {
   const TermFormDialog({
     super.key,
@@ -59,6 +66,7 @@ class _TermFormDialogState extends State<TermFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _labelCtrl;
   late String _selectedYearId;
+  late bool _useCustomDates;
   late DateTime _startDate;
   late DateTime _endDate;
   String? _dateError;
@@ -69,17 +77,15 @@ class _TermFormDialogState extends State<TermFormDialog> {
   void initState() {
     super.initState();
     final existing = widget.existingTerm;
-    final today = DateTime.now();
+    final today = _dateOnly(DateTime.now());
     _selectedYearId =
         existing?.academicYearId ??
         widget.initialYearId ??
         widget.academicYears.first.id;
     _labelCtrl = TextEditingController(text: existing?.termLabel ?? '1');
-    _startDate =
-        existing?.startDate ?? DateTime(today.year, today.month, today.day);
-    _endDate =
-        existing?.endDate ??
-        DateTime(today.year, today.month, today.day).add(const Duration(days: 140));
+    _useCustomDates = existing?.hasDateRange ?? false;
+    _startDate = existing?.startDate ?? today;
+    _endDate = existing?.endDate ?? today.add(const Duration(days: 140));
   }
 
   @override
@@ -110,6 +116,10 @@ class _TermFormDialogState extends State<TermFormDialog> {
   }
 
   bool _validateDates() {
+    if (!_useCustomDates) {
+      _dateError = null;
+      return true;
+    }
     if (_dateOnly(_endDate).isBefore(_dateOnly(_startDate))) {
       _dateError = 'วันสิ้นสุดเทอมต้องไม่ก่อนวันเริ่มต้นเทอม';
       return false;
@@ -128,8 +138,8 @@ class _TermFormDialogState extends State<TermFormDialog> {
       TermFormResult(
         academicYearId: _selectedYearId,
         termLabel: _labelCtrl.text.trim(),
-        startDate: _dateOnly(_startDate),
-        endDate: _dateOnly(_endDate),
+        startDate: _useCustomDates ? _dateOnly(_startDate) : null,
+        endDate: _useCustomDates ? _dateOnly(_endDate) : null,
       ),
     );
   }
@@ -148,7 +158,7 @@ class _TermFormDialogState extends State<TermFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: _selectedYearId,
@@ -183,7 +193,8 @@ class _TermFormDialogState extends State<TermFormDialog> {
                     ChoiceChip(
                       label: Text('เทอม $preset'),
                       selected: _labelCtrl.text.trim() == preset,
-                      onSelected: (_) => setState(() => _labelCtrl.text = preset),
+                      onSelected: (_) =>
+                          setState(() => _labelCtrl.text = preset),
                     ),
                 ],
               ),
@@ -199,24 +210,54 @@ class _TermFormDialogState extends State<TermFormDialog> {
                     ? 'กรุณากรอกชื่อเทอม'
                     : null,
               ),
-              const SizedBox(height: 14),
-              _DatePickerFieldTile(
-                label: 'วันเริ่มต้นเทอม',
-                valueText: ThaiDateFormatter.formatShortDate(_startDate),
-                onTap: () => _pickDate(isStart: true),
-              ),
-              const SizedBox(height: 10),
-              _DatePickerFieldTile(
-                label: 'วันสิ้นสุดเทอม',
-                valueText: ThaiDateFormatter.formatShortDate(_endDate),
-                onTap: () => _pickDate(isStart: false),
-              ),
-              if (_dateError != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _dateError!,
-                  style: textTheme.bodySmall?.copyWith(color: colorScheme.error),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _useCustomDates,
+                title: Text(
+                  'ระบุวันเปิด–ปิดเทอม (ไม่บังคับ)',
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                subtitle: Text(
+                  'ไม่จำเป็นต้องระบุ ระบบจะเลือกเทอมล่าสุดหรือเทอมที่ปักหมุดให้อัตโนมัติ',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                onChanged: (enabled) => setState(() {
+                  _useCustomDates = enabled;
+                  if (!enabled) {
+                    _dateError = null;
+                  } else {
+                    _validateDates();
+                  }
+                }),
+              ),
+              if (_useCustomDates) ...[
+                const SizedBox(height: 8),
+                _DatePickerFieldTile(
+                  label: 'วันเริ่มต้นเทอม',
+                  valueText: ThaiDateFormatter.formatShortDate(_startDate),
+                  onTap: () => _pickDate(isStart: true),
+                ),
+                const SizedBox(height: 10),
+                _DatePickerFieldTile(
+                  label: 'วันสิ้นสุดเทอม',
+                  valueText: ThaiDateFormatter.formatShortDate(_endDate),
+                  onTap: () => _pickDate(isStart: false),
+                ),
+                if (_dateError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _dateError!,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

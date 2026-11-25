@@ -6,6 +6,7 @@ import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
+import '../../../academic_structure/domain/services/term_label_formatter.dart';
 
 /// Top header for [TeacherDashboardPage] built on [AppPageHeader]:
 /// greeting, Thai Buddhist Era date, tactile pill term switcher, quick
@@ -46,10 +47,42 @@ class DashboardHeaderBar extends StatelessWidget {
         'วัน${ThaiDateFormatter.weekdayThaiName(today.weekday)}ที่ '
         '${ThaiDateFormatter.formatShortDate(today)}';
 
+    final textTheme = Theme.of(context).textTheme;
     return AppPageHeader(
       title: 'สวัสดี, $teacherDisplayName',
-      subtitle: todayThaiLabel,
       actions: [
+        Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.today_rounded,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  todayThaiLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         if (terms.isNotEmpty && selectedTerm != null)
           _TermPickerPill(
             selectedTerm: selectedTerm!,
@@ -174,18 +207,17 @@ class _TermPickerPillState extends State<_TermPickerPill> {
                             fontFeatures: AppTheme.tabularFigures,
                           ),
                         ),
-                        Text(
-                          ThaiDateFormatter.formatDateRange(
-                            term.startDate,
-                            term.endDate,
+                        if (TermLabelFormatter.formatDateRangeOrNull(term)
+                            case final dateRange?)
+                          Text(
+                            dateRange,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontFeatures: AppTheme.tabularFigures,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontFeatures: AppTheme.tabularFigures,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -229,7 +261,9 @@ class _TermPickerPillState extends State<_TermPickerPill> {
                   child: Text(
                     widget.isViewingActiveTerm
                         ? '$compactLabel (ปัจจุบัน)'
-                        : '$compactLabel (ย้อนหลัง)',
+                        : widget.selectedTerm.isPastTerm()
+                        ? '$compactLabel (ย้อนหลัง)'
+                        : compactLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.labelLarge?.copyWith(

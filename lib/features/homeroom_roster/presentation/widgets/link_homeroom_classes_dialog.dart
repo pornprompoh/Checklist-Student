@@ -25,14 +25,14 @@ class LinkHomeroomClassesDialog extends StatefulWidget {
     required this.homeroomName,
     required this.subjects,
     required this.subjectClasses,
-    required this.defaultEnrolledAt,
+    this.defaultEnrolledAt,
   });
 
   final String homeroomId;
   final String homeroomName;
   final List<Subject> subjects;
   final List<SubjectClass> subjectClasses;
-  final DateTime defaultEnrolledAt;
+  final DateTime? defaultEnrolledAt;
 
   static Future<LinkHomeroomClassesResult?> show(
     BuildContext context, {
@@ -40,7 +40,7 @@ class LinkHomeroomClassesDialog extends StatefulWidget {
     required String homeroomName,
     required List<Subject> subjects,
     required List<SubjectClass> subjectClasses,
-    required DateTime defaultEnrolledAt,
+    DateTime? defaultEnrolledAt,
   }) {
     return showDialog<LinkHomeroomClassesResult>(
       context: context,
@@ -70,11 +70,8 @@ class _LinkHomeroomClassesDialogState extends State<LinkHomeroomClassesDialog> {
         .where((c) => c.homeroomId == widget.homeroomId)
         .map((c) => c.id)
         .toSet();
-    _enrolledAt = DateTime(
-      widget.defaultEnrolledAt.year,
-      widget.defaultEnrolledAt.month,
-      widget.defaultEnrolledAt.day,
-    );
+    final initial = widget.defaultEnrolledAt ?? DateTime.now();
+    _enrolledAt = DateTime(initial.year, initial.month, initial.day);
   }
 
   Future<void> _pickDate() async {

@@ -99,11 +99,8 @@ class _TeacherCodeSectionCardState
     }
   }
 
-  String _portalUrl(String code, {required bool openExternalBrowser}) {
-    final path = AppRoutes.studentPortalPath(
-      code,
-      openExternalBrowser: openExternalBrowser,
-    );
+  String _universalPortalUrl(String code) {
+    final path = AppRoutes.studentPortalPath(code, openExternalBrowser: true);
     if (!kIsWeb) {
       return path;
     }
@@ -111,22 +108,15 @@ class _TeacherCodeSectionCardState
     return '$origin$path';
   }
 
-  Future<void> _copyLink({required bool forLineGroup}) async {
+  Future<void> _copyUniversalLink() async {
     await Clipboard.setData(
-      ClipboardData(
-        text: _portalUrl(
-          widget.currentCode,
-          openExternalBrowser: forLineGroup,
-        ),
-      ),
+      ClipboardData(text: _universalPortalUrl(widget.currentCode)),
     );
     if (!mounted) return;
     AppFeedbackBanner.showSnackBar(
       context,
       type: AppFeedbackType.success,
-      message: forLineGroup
-          ? 'คัดลอกลิงก์ Student Portal สำหรับกลุ่ม LINE (?openExternalBrowser=1) เรียบร้อยแล้ว'
-          : 'คัดลอกลิงก์ Student Portal เรียบร้อยแล้ว',
+      message: 'คัดลอกลิงก์พอร์ทัลนักเรียนแล้ว',
     );
   }
 
@@ -188,8 +178,6 @@ class _TeacherCodeSectionCardState
 
     return AppSurfaceCard(
       title: 'รหัสครูและลิงก์ Student Portal',
-      subtitle:
-          'แชร์ลิงก์นี้ให้นักเรียนตรวจสอบเวลาเรียน คะแนน และเกรด (รองรับเปิดนอกเบราว์เซอร์ LINE)',
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -206,40 +194,20 @@ class _TeacherCodeSectionCardState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SelectableText(
-                  _portalUrl(widget.currentCode, openExternalBrowser: false),
+                  _universalPortalUrl(widget.currentCode),
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.tonal(
-                      onPressed: () => _copyLink(forLineGroup: true),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.open_in_browser_rounded, size: 18),
-                          SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'คัดลอกลิงก์สำหรับกลุ่ม LINE',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => _copyLink(forLineGroup: false),
-                      icon: const Icon(Icons.copy_rounded, size: 18),
-                      label: const Text('คัดลอกลิงก์'),
-                    ),
-                  ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _copyUniversalLink,
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text('คัดลอกลิงก์'),
+                  ),
                 ),
               ],
             ),

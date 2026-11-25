@@ -70,8 +70,8 @@ class AcademicStructureController extends AsyncNotifier<void> {
   Future<Term?> createTerm({
     required String academicYearId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) {
     return _run(() async {
       final teacherId = _requireTeacherId();
@@ -93,8 +93,8 @@ class AcademicStructureController extends AsyncNotifier<void> {
   Future<Term?> updateTerm({
     required String termId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) {
     return _run(() async {
       final updated = await ref

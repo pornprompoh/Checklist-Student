@@ -7,6 +7,7 @@ import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
@@ -67,89 +68,78 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
     final years = yearsAsync.asData?.value ?? const <AcademicYear>[];
     final terms = termsAsync.asData?.value ?? const <Term>[];
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1140),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DashboardHeaderBar(
-                teacherDisplayName: teacherName,
-                today: today,
-                academicYears: years,
-                terms: terms,
-                selectedTerm: selectedTerm,
-                activeTermId: activeTerm?.id,
-                isBusy: isBusy,
-                onSelectTerm: (termId) =>
-                    ref.read(selectedTermIdProvider.notifier).select(termId),
-                onRefresh: () =>
-                    ref.read(dashboardControllerProvider.notifier).refresh(),
-                onAddClass: () =>
-                    context.go(AppRoutes.teacherAcademicStructure),
+    return AppPageContainer.scrollable(
+      header: DashboardHeaderBar(
+        teacherDisplayName: teacherName,
+        today: today,
+        academicYears: years,
+        terms: terms,
+        selectedTerm: selectedTerm,
+        activeTermId: activeTerm?.id,
+        isBusy: isBusy,
+        onSelectTerm: (termId) =>
+            ref.read(selectedTermIdProvider.notifier).select(termId),
+        onRefresh: () =>
+            ref.read(dashboardControllerProvider.notifier).refresh(),
+        onAddClass: () => context.go(AppRoutes.teacherAcademicStructure),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (hasCleanupAlerts) ...[
+            const AuditLogCleanupBanner(),
+            const SizedBox(height: 16),
+          ],
+          if (yearsAsync.isLoading || termsAsync.isLoading)
+            const DashboardSkeletonView()
+          else if (yearsAsync.hasError || termsAsync.hasError)
+            AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(
+                yearsAsync.error ?? termsAsync.error!,
               ),
-              if (hasCleanupAlerts) ...[
-                const SizedBox(height: 16),
-                const AuditLogCleanupBanner(),
-              ],
-              const SizedBox(height: 16),
-              if (yearsAsync.isLoading || termsAsync.isLoading)
-                const DashboardSkeletonView()
-              else if (yearsAsync.hasError || termsAsync.hasError)
-                AppFeedbackBanner(
-                  type: AppFeedbackType.error,
-                  message: ThaiErrorMapper.map(
-                    yearsAsync.error ?? termsAsync.error!,
-                  ),
-                  onRetry: () =>
-                      ref.read(dashboardControllerProvider.notifier).refresh(),
-                )
-              else if (selectedTerm == null)
-                AppEmptyState(
-                  icon: Icons.school_outlined,
-                  title: 'ยังไม่มีภาคเรียนในระบบ',
-                  description:
-                      'เริ่มต้นสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนที่หน้าโครงสร้างสอน',
-                  actionLabel: 'ไปหน้าโครงสร้างสอน',
-                  onAction: () =>
-                      context.go(AppRoutes.teacherAcademicStructure),
-                )
-              else
-                overviewAsync.when(
-                  loading: () => const DashboardSkeletonView(),
-                  error: (error, _) => AppFeedbackBanner(
-                    type: AppFeedbackType.error,
-                    message: ThaiErrorMapper.map(error),
-                    onRetry: () => ref.invalidate(dashboardOverviewProvider),
-                  ),
-                  data: (overview) {
-                    if (overview == null || overview.classes.isEmpty) {
-                      return AppEmptyState(
-                        icon: Icons.class_outlined,
-                        title:
-                            'ยังไม่มีห้องเรียนในเทอม ${selectedTerm.termLabel}',
-                        description:
-                            'เพิ่มรายวิชาและห้องเรียนพร้อมกำหนดวันสอน เพื่อเริ่มเช็คชื่อและเก็บคะแนนได้ทันที',
-                        actionLabel: 'เพิ่มรายวิชาและห้องเรียน',
-                        actionIcon: Icons.add_rounded,
-                        onAction: () =>
-                            context.go(AppRoutes.teacherAcademicStructure),
-                      );
-                    }
-                    return _buildLoadedDashboard(
-                      context,
-                      overview: overview,
-                      filterState: filterState,
-                      isBusy: isBusy,
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
+              onRetry: () =>
+                  ref.read(dashboardControllerProvider.notifier).refresh(),
+            )
+          else if (selectedTerm == null)
+            AppEmptyState(
+              icon: Icons.school_outlined,
+              title: 'ยังไม่มีภาคเรียนในระบบ',
+              description:
+                  'เริ่มต้นสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนที่หน้าโครงสร้างสอน',
+              actionLabel: 'ไปหน้าโครงสร้างสอน',
+              onAction: () => context.go(AppRoutes.teacherAcademicStructure),
+            )
+          else
+            overviewAsync.when(
+              loading: () => const DashboardSkeletonView(),
+              error: (error, _) => AppFeedbackBanner(
+                type: AppFeedbackType.error,
+                message: ThaiErrorMapper.map(error),
+                onRetry: () => ref.invalidate(dashboardOverviewProvider),
+              ),
+              data: (overview) {
+                if (overview == null || overview.classes.isEmpty) {
+                  return AppEmptyState(
+                    icon: Icons.class_outlined,
+                    title: 'ยังไม่มีห้องเรียนในเทอม ${selectedTerm.termLabel}',
+                    description:
+                        'เพิ่มรายวิชาและห้องเรียนพร้อมกำหนดวันสอน เพื่อเริ่มเช็คชื่อและเก็บคะแนนได้ทันที',
+                    actionLabel: 'เพิ่มรายวิชาและห้องเรียน',
+                    actionIcon: Icons.add_rounded,
+                    onAction: () =>
+                        context.go(AppRoutes.teacherAcademicStructure),
+                  );
+                }
+                return _buildLoadedDashboard(
+                  context,
+                  overview: overview,
+                  filterState: filterState,
+                  isBusy: isBusy,
+                );
+              },
+            ),
+        ],
       ),
     );
   }

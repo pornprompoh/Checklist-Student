@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/typed_confirm_dialog.dart';
@@ -24,19 +26,43 @@ import 'student_form_dialog.dart';
 import 'sync_scope_choice_dialog.dart';
 
 /// Tab 2: Subject-class roster view (`subject_classes` -> `class_enrollments`)
-/// supporting mid-term additions, soft delete, renumbering, and cross-class sync.
-class SubjectClassRosterTabView extends ConsumerWidget {
+/// supporting Independent Split-Pane Scroll on Desktop (`_leftClassController`
+/// and `_rightEnrollmentController`), mid-term additions, soft delete, and sync.
+class SubjectClassRosterTabView extends ConsumerStatefulWidget {
   const SubjectClassRosterTabView({
     super.key,
     required this.term,
+    required this.isSplitPane,
     required this.isBusy,
   });
 
   final Term term;
+  final bool isSplitPane;
   final bool isBusy;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SubjectClassRosterTabView> createState() =>
+      _SubjectClassRosterTabViewState();
+}
+
+class _SubjectClassRosterTabViewState
+    extends ConsumerState<SubjectClassRosterTabView> {
+  final _leftClassController = ScrollController();
+  final _rightEnrollmentController = ScrollController();
+
+  Term get term => widget.term;
+
+  @override
+  void dispose() {
+    _leftClassController.dispose();
+    _rightEnrollmentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSplitPane = widget.isSplitPane;
+    final isBusy = widget.isBusy;
     final subjectsAsync = ref.watch(subjectsByTermProvider(term.id));
     final classesAsync = ref.watch(subjectClassesByTermProvider(term.id));
     final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
@@ -88,10 +114,298 @@ class SubjectClassRosterTabView extends ConsumerWidget {
     final enrollmentsAsync = ref.watch(
       classEnrollmentsProvider(selectedClass.id),
     );
-
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
+    final selectedSubject = subjectById[selectedClass.subjectId];
+    final selectedClassTitle =
+        '${selectedSubject?.subjectCode ?? ''} '
+        '${selectedSubject?.subjectName ?? ''} — ${selectedClass.roomName}';
+
+    final actionBar = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: linkedHomeroom != null
+                ? semantic.successContainer
+                : colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                linkedHomeroom != null
+                    ? Icons.link_rounded
+                    : Icons.link_off_rounded,
+                size: 15,
+                color: linkedHomeroom != null
+                    ? semantic.success
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  linkedHomeroom != null
+                      ? 'ผูกกับคลังกลาง: ${linkedHomeroom.name}'
+                      : 'ยังไม่ได้ผูกกับคลังกลาง',
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: linkedHomeroom != null
+                        ? semantic.success
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (linkedHomeroom != null)
+              OutlinedButton.icon(
+                onPressed: isBusy
+                    ? null
+                    : () => _syncMissingFromHomeroom(
+                        context,
+                        ref,
+                        linkedHomeroom,
+                        selectedClass,
+                      ),
+                icon: const Icon(Icons.sync_rounded, size: 18),
+                label: const Text('ดึงนักเรียนใหม่จากคลัง'),
+              ),
+            OutlinedButton.icon(
+              onPressed: isBusy || enrollmentsAsync.asData == null
+                  ? null
+                  : () => _renumber(
+                      context,
+                      ref,
+                      selectedClass,
+                      enrollmentsAsync.asData!.value,
+                    ),
+              icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
+              label: const Text('เรียงเลขที่ใหม่'),
+            ),
+            FilledButton.icon(
+              onPressed: isBusy
+                  ? null
+                  : () => _addMidTerm(
+                      context,
+                      ref,
+                      selectedClass,
+                      linkedHomeroom,
+                      enrollmentsAsync.asData?.value ?? const [],
+                    ),
+              icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+              label: const Text('ย้ายเข้ากลางเทอม'),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final enrollmentBody = enrollmentsAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonBox(height: 52),
+          SizedBox(height: 8),
+          SkeletonBox(height: 52),
+        ],
+      ),
+      error: (error, _) => AppFeedbackBanner(
+        type: AppFeedbackType.error,
+        message: ThaiErrorMapper.map(error),
+        onRetry: () =>
+            ref.invalidate(classEnrollmentsProvider(selectedClass.id)),
+      ),
+      data: (enrollments) {
+        final byId = {for (final e in enrollments) e.id: e};
+        return RosterStudentListView(
+          isBusy: isBusy,
+          fillAvailableHeight: isSplitPane,
+          scrollController: isSplitPane ? _rightEnrollmentController : null,
+          students: [
+            for (final e in enrollments)
+              RosterStudentRowData(
+                id: e.id,
+                studentNumber: e.studentNumber,
+                studentCode: e.studentCode,
+                fullName: e.fullName,
+                status: e.status,
+                enrolledAt: e.enrolledAt,
+                transferredOutAt: e.transferredOutAt,
+              ),
+          ],
+          onEdit: (row) => _editEnrollment(
+            context,
+            ref,
+            byId[row.id]!,
+            linkedHomeroom?.id,
+            siblingClassIds,
+          ),
+          onToggleTransferStatus: (row) => _toggleStatus(
+            context,
+            ref,
+            byId[row.id]!,
+            linkedHomeroom?.id,
+            siblingClassIds,
+          ),
+          onPermanentDelete: (row) => _permanentDeleteEnrollment(
+            context,
+            ref,
+            byId[row.id]!,
+            linkedHomeroom?.id,
+            siblingClassIds,
+          ),
+        );
+      },
+    );
+
+    if (isSplitPane) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 296,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'รายวิชาและห้องเรียน (${classes.length})',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: AppSubtleScrollbar(
+                      controller: _leftClassController,
+                      child: ListView.separated(
+                        controller: _leftClassController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 6),
+                        itemCount: classes.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (_, idx) {
+                          final sc = classes[idx];
+                          final sub = subjectById[sc.subjectId];
+                          final isSelected = sc.id == selectedClass.id;
+                          return Material(
+                            color: isSelected
+                                ? colorScheme.primaryContainer.withValues(
+                                    alpha: 0.65,
+                                  )
+                                : colorScheme.surfaceContainerLow,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? colorScheme.primary.withValues(alpha: 0.5)
+                                    : colorScheme.outlineVariant,
+                              ),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: isBusy
+                                  ? null
+                                  : () => ref
+                                        .read(
+                                          selectedSubjectClassIdProvider
+                                              .notifier,
+                                        )
+                                        .select(sc.id),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${sub?.subjectCode ?? ''} · ${sc.roomName}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected
+                                            ? colorScheme.onPrimaryContainer
+                                            : colorScheme.onSurface,
+                                        fontFeatures: AppTheme.tabularFigures,
+                                      ),
+                                    ),
+                                    if (sub != null)
+                                      Text(
+                                        sub.subjectName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: isSelected
+                                              ? colorScheme.onPrimaryContainer
+                                              : colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    selectedClassTitle.trim(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  actionBar,
+                  const Divider(height: 24),
+                  Expanded(child: enrollmentBody),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     return AppSurfaceCard(
       child: Column(
@@ -127,157 +441,9 @@ class SubjectClassRosterTabView extends ConsumerWidget {
                   },
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: linkedHomeroom != null
-                      ? semantic.successContainer
-                      : colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      linkedHomeroom != null
-                          ? Icons.link_rounded
-                          : Icons.link_off_rounded,
-                      size: 15,
-                      color: linkedHomeroom != null
-                          ? semantic.success
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        linkedHomeroom != null
-                            ? 'ผูกกับคลังกลาง: ${linkedHomeroom.name}'
-                            : 'ยังไม่ได้ผูกกับคลังกลาง',
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelMedium?.copyWith(
-                          color: linkedHomeroom != null
-                              ? semantic.success
-                              : colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (linkedHomeroom != null)
-                    OutlinedButton.icon(
-                      onPressed: isBusy
-                          ? null
-                          : () => _syncMissingFromHomeroom(
-                              context,
-                              ref,
-                              linkedHomeroom,
-                              selectedClass,
-                            ),
-                      icon: const Icon(Icons.sync_rounded, size: 18),
-                      label: const Text('ดึงนักเรียนใหม่จากคลัง'),
-                    ),
-                  OutlinedButton.icon(
-                    onPressed: isBusy || enrollmentsAsync.asData == null
-                        ? null
-                        : () => _renumber(
-                            context,
-                            ref,
-                            selectedClass,
-                            enrollmentsAsync.asData!.value,
-                          ),
-                    icon: const Icon(
-                      Icons.format_list_numbered_rounded,
-                      size: 18,
-                    ),
-                    label: const Text('เรียงเลขที่ใหม่'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: isBusy
-                        ? null
-                        : () => _addMidTerm(
-                            context,
-                            ref,
-                            selectedClass,
-                            linkedHomeroom,
-                            enrollmentsAsync.asData?.value ?? const [],
-                          ),
-                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-                    label: const Text('ย้ายเข้ากลางเทอม'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          actionBar,
           const Divider(height: 24),
-          enrollmentsAsync.when(
-            loading: () => const Column(
-              children: [
-                SkeletonBox(height: 52),
-                SizedBox(height: 8),
-                SkeletonBox(height: 52),
-              ],
-            ),
-            error: (error, _) => AppFeedbackBanner(
-              type: AppFeedbackType.error,
-              message: ThaiErrorMapper.map(error),
-              onRetry: () =>
-                  ref.invalidate(classEnrollmentsProvider(selectedClass.id)),
-            ),
-            data: (enrollments) {
-              final byId = {for (final e in enrollments) e.id: e};
-              return RosterStudentListView(
-                isBusy: isBusy,
-                students: [
-                  for (final e in enrollments)
-                    RosterStudentRowData(
-                      id: e.id,
-                      studentNumber: e.studentNumber,
-                      studentCode: e.studentCode,
-                      fullName: e.fullName,
-                      status: e.status,
-                      enrolledAt: e.enrolledAt,
-                      transferredOutAt: e.transferredOutAt,
-                    ),
-                ],
-                onEdit: (row) => _editEnrollment(
-                  context,
-                  ref,
-                  byId[row.id]!,
-                  linkedHomeroom?.id,
-                  siblingClassIds,
-                ),
-                onToggleTransferStatus: (row) => _toggleStatus(
-                  context,
-                  ref,
-                  byId[row.id]!,
-                  linkedHomeroom?.id,
-                  siblingClassIds,
-                ),
-                onPermanentDelete: (row) => _permanentDeleteEnrollment(
-                  context,
-                  ref,
-                  byId[row.id]!,
-                  linkedHomeroom?.id,
-                  siblingClassIds,
-                ),
-              );
-            },
-          ),
+          enrollmentBody,
         ],
       ),
     );

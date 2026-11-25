@@ -56,13 +56,19 @@ final allTermsProvider = FutureProvider<List<Term>>((ref) async {
   return ref.watch(academicStructureRepositoryProvider).fetchTerms();
 });
 
-/// Resolves the teacher's active term (pinned -> date range -> fallback).
+/// Resolves the teacher's active term (pinned -> date range -> recency fallback).
 final activeTermProvider = Provider<Term?>((ref) {
   final terms = ref.watch(allTermsProvider).asData?.value;
   if (terms == null || terms.isEmpty) {
     return null;
   }
-  return ActiveTermResolverService.resolveActiveTerm(terms);
+  final years =
+      ref.watch(academicYearsProvider).asData?.value ?? const <AcademicYear>[];
+  final yearBeById = <String, int>{for (final y in years) y.id: y.yearBe};
+  return ActiveTermResolverService.resolveActiveTerm(
+    terms,
+    yearBeByAcademicYearId: yearBeById.isEmpty ? null : yearBeById,
+  );
 });
 
 /// Stores the manually selected term ID (`null` means follow [activeTermProvider]).

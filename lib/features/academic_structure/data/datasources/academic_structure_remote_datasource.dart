@@ -82,7 +82,9 @@ class AcademicStructureRemoteDataSource {
       if (academicYearId != null) {
         query = query.eq('academic_year_id', academicYearId);
       }
-      final rows = await query.order('start_date', ascending: false);
+      final rows = await query
+          .order('start_date', ascending: false, nullsFirst: false)
+          .order('created_at', ascending: false);
       return rows.map(TermDto.fromJson).toList(growable: false);
     } catch (error) {
       throw ThaiErrorMapper.toAppException(error);
@@ -93,8 +95,8 @@ class AcademicStructureRemoteDataSource {
     required String teacherId,
     required String academicYearId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final data = await _client
@@ -119,8 +121,8 @@ class AcademicStructureRemoteDataSource {
   Future<TermDto> updateTerm({
     required String termId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final data = await _client

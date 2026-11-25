@@ -179,6 +179,120 @@ void main() {
   });
 
   testWidgets(
+    'TermFormDialog creates a term with null dates by default when optional toggle is off',
+    (tester) async {
+      final ts = DateTime(2026, 1, 1);
+      final year = AcademicYear(
+        id: 'y-1',
+        teacherId: 'teacher-1',
+        yearBe: 2569,
+        createdAt: ts,
+        updatedAt: ts,
+      );
+
+      TermFormResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  result = await TermFormDialog.show(
+                    context,
+                    academicYears: <AcademicYear>[year],
+                  );
+                },
+                child: const Text('open-new-term'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open-new-term'));
+      await tester.pumpAndSettle();
+
+      // Optional date toggle defaults to OFF; date fields are hidden.
+      expect(find.text('ระบุวันเปิด–ปิดเทอม (ไม่บังคับ)'), findsOneWidget);
+      expect(find.text('วันเริ่มต้นเทอม'), findsNothing);
+
+      await tester.tap(find.text('เทอม 2'));
+      await tester.pump();
+      await tester.tap(find.text('บันทึก'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.termLabel, '2');
+      expect(result!.startDate, isNull);
+      expect(result!.endDate, isNull);
+    },
+  );
+
+  testWidgets(
+    'TermFormDialog clears dates to null when editing a dated term and toggling switch off',
+    (tester) async {
+      final ts = DateTime(2026, 1, 1);
+      final year = AcademicYear(
+        id: 'y-1',
+        teacherId: 'teacher-1',
+        yearBe: 2569,
+        createdAt: ts,
+        updatedAt: ts,
+      );
+      final existingDatedTerm = Term(
+        id: 't-1',
+        teacherId: 'teacher-1',
+        academicYearId: 'y-1',
+        termLabel: '1',
+        startDate: DateTime(2026, 5, 16),
+        endDate: DateTime(2026, 10, 10),
+        isPinnedActive: false,
+        createdAt: ts,
+        updatedAt: ts,
+      );
+
+      TermFormResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () async {
+                  result = await TermFormDialog.show(
+                    context,
+                    academicYears: <AcademicYear>[year],
+                    existingTerm: existingDatedTerm,
+                  );
+                },
+                child: const Text('open-edit-term'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open-edit-term'));
+      await tester.pumpAndSettle();
+
+      // Existing dated term starts with date pickers visible.
+      expect(find.text('วันเริ่มต้นเทอม'), findsOneWidget);
+
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      expect(find.text('วันเริ่มต้นเทอม'), findsNothing);
+
+      await tester.tap(find.text('บันทึก'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.startDate, isNull);
+      expect(result!.endDate, isNull);
+    },
+  );
+
+  testWidgets(
     'confirmAndDeleteStructure shows impact summary and unlocks delete only on exact typed text',
     (tester) async {
       var deleteInvoked = false;
@@ -330,7 +444,26 @@ void main() {
       expect(find.text('เทอมปัจจุบัน (ปักหมุด)'), findsOneWidget);
       expect(find.text('ว31101'), findsOneWidget);
       expect(find.text('ม.4/1'), findsOneWidget);
+      expect(find.text('จัดการห้องเรียน'), findsOneWidget);
+
+      // Drill down from Subject Block into SubjectDetailView.
+      await tester.ensureVisible(find.text('จัดการห้องเรียน'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('จัดการห้องเรียน'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('กลับไปรายวิชาทั้งหมด'), findsOneWidget);
+      expect(find.text('ม.4/1'), findsOneWidget);
       expect(find.text('จ.'), findsOneWidget);
+      expect(find.text('แผนเก็บงาน'), findsOneWidget);
+
+      // Return to Subject Blocks Grid.
+      await tester.ensureVisible(find.text('กลับไปรายวิชาทั้งหมด'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('กลับไปรายวิชาทั้งหมด'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('จัดการห้องเรียน'), findsOneWidget);
     },
   );
 }

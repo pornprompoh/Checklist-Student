@@ -6,7 +6,9 @@ import '../../../../core/network/connectivity_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../domain/entities/sync_item_status.dart';
 import '../../domain/entities/sync_queue_item.dart';
@@ -28,7 +30,14 @@ class SyncQueuePage extends ConsumerStatefulWidget {
 }
 
 class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
+  final ScrollController _listScrollController = ScrollController();
   _SyncQueueFilter _filter = _SyncQueueFilter.all;
+
+  @override
+  void dispose() {
+    _listScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,121 +48,145 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
         ref.watch(connectivityStatusProvider).asData?.value ?? true;
     final controller = ref.read(syncQueueControllerProvider.notifier);
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
+    const pageHeader = AppPageHeader(title: 'สถานะการซิงค์ข้อมูลออฟไลน์');
+    final summaryHeader = SyncStatusSummaryHeader(
+      isOnline: isOnline,
+      counts: counts,
+      isSyncingNow: actionState.isSyncingNow,
+      lastSummaryMessage: actionState.lastFeedbackMessage,
+      onSyncNow: () async {
+        final summary = await controller.syncNow();
+        if (!context.mounted || summary == null) return;
+        final msg = ref
+            .read(syncQueueControllerProvider)
+            .lastFeedbackMessage;
+        if (msg != null) {
+          AppFeedbackBanner.showSnackBar(
+            context,
+            type: summary.conflictCount > 0
+                ? AppFeedbackType.warning
+                : AppFeedbackType.success,
+            message: msg,
+          );
+        }
+      },
+    );
+    final filterChips = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildFilterChip(
+          _SyncQueueFilter.all,
+          'ทั้งหมด (${counts.totalAttentionCount})',
+        ),
+        _buildFilterChip(
+          _SyncQueueFilter.conflict,
+          'ข้อมูลชนกัน (${counts.conflictCount})',
+        ),
+        _buildFilterChip(
+          _SyncQueueFilter.pending,
+          'รอซิงค์ (${counts.pendingCount + counts.syncingCount})',
+        ),
+        _buildFilterChip(
+          _SyncQueueFilter.failed,
+          'ล้มเหลว (${counts.failedCount})',
+        ),
+      ],
+    );
+    final itemsBody = itemsAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonBox(height: 96),
+          SizedBox(height: 12),
+          SkeletonBox(height: 96),
+        ],
+      ),
+      error: (error, _) => AppFeedbackBanner(
+        type: AppFeedbackType.error,
+        message: ThaiErrorMapper.map(error),
+        onRetry: () => ref.invalidate(syncQueueItemsStreamProvider),
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return const AppEmptyState(
+            icon: Icons.cloud_done_rounded,
+            title:
+                'ข้อมูลทั้งหมดซิงค์ขึ้นระบบเรียบร้อยแล้ว — ไม่มีรายการค้าง',
+            description:
+                'ข้อมูลเช็คชื่อและคะแนนล่าสุดของคุณถูกส่งขึ้นระบบครบถ้วนแล้ว',
+          );
+        }
+        final sorted = _sortAndFilter(items);
+        if (sorted.isEmpty) {
+          return const AppEmptyState(
+            icon: Icons.filter_list_off_rounded,
+            title: 'ไม่พบรายการในตัวกรองที่เลือก',
+            description:
+                'ลองสลับตัวกรองด้านบนเพื่อตรวจสอบรายการซิงค์ในสถานะอื่น',
+          );
+        }
+        return Column(
+          children: [
+            for (final item in sorted) ...[
+              SyncQueueItemCard(
+                item: item,
+                isBusy: actionState.isItemBusy(item.id),
+                isOnline: isOnline,
+                onResolveConflict: () => _openConflictDialog(context, item),
+                onRetry: () => _handleRetry(context, item.id),
+                onDiscard: () => _confirmDiscard(context, item),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isPinnedLayout =
+            constraints.maxWidth >= 900 && constraints.maxHeight >= 520;
+        if (isPinnedLayout) {
+          return AppPageContainer.viewport(
+            header: pageHeader,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                summaryHeader,
+                const SizedBox(height: 16),
+                filterChips,
+                const SizedBox(height: 16),
+                Expanded(
+                  child: AppSubtleScrollbar(
+                    controller: _listScrollController,
+                    child: SingleChildScrollView(
+                      controller: _listScrollController,
+                      primary: false,
+                      padding: const EdgeInsets.only(right: 6, bottom: 8),
+                      child: itemsBody,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return AppPageContainer.scrollable(
+          header: pageHeader,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppPageHeader(
-                title: 'สถานะการซิงค์ข้อมูลออฟไลน์',
-                subtitle:
-                    'ตรวจสอบรายการเช็คชื่อและคะแนนที่รอส่งขึ้นระบบ พร้อมเปรียบเทียบและแก้ไขกรณีข้อมูลชนกัน',
-              ),
+              summaryHeader,
               const SizedBox(height: 16),
-              SyncStatusSummaryHeader(
-                isOnline: isOnline,
-                counts: counts,
-                isSyncingNow: actionState.isSyncingNow,
-                lastSummaryMessage: actionState.lastFeedbackMessage,
-                onSyncNow: () async {
-                  final summary = await controller.syncNow();
-                  if (!context.mounted || summary == null) return;
-                  final msg = ref
-                      .read(syncQueueControllerProvider)
-                      .lastFeedbackMessage;
-                  if (msg != null) {
-                    AppFeedbackBanner.showSnackBar(
-                      context,
-                      type: summary.conflictCount > 0
-                          ? AppFeedbackType.warning
-                          : AppFeedbackType.success,
-                      message: msg,
-                    );
-                  }
-                },
-              ),
+              filterChips,
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildFilterChip(
-                    _SyncQueueFilter.all,
-                    'ทั้งหมด (${counts.totalAttentionCount})',
-                  ),
-                  _buildFilterChip(
-                    _SyncQueueFilter.conflict,
-                    'ข้อมูลชนกัน (${counts.conflictCount})',
-                  ),
-                  _buildFilterChip(
-                    _SyncQueueFilter.pending,
-                    'รอซิงค์ (${counts.pendingCount + counts.syncingCount})',
-                  ),
-                  _buildFilterChip(
-                    _SyncQueueFilter.failed,
-                    'ล้มเหลว (${counts.failedCount})',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              itemsAsync.when(
-                loading: () => const Column(
-                  children: [
-                    SkeletonBox(height: 96),
-                    SizedBox(height: 12),
-                    SkeletonBox(height: 96),
-                  ],
-                ),
-                error: (error, _) => AppFeedbackBanner(
-                  type: AppFeedbackType.error,
-                  message: ThaiErrorMapper.map(error),
-                  onRetry: () => ref.invalidate(syncQueueItemsStreamProvider),
-                ),
-                data: (items) {
-                  if (items.isEmpty) {
-                    return const AppEmptyState(
-                      icon: Icons.cloud_done_rounded,
-                      title:
-                          'ข้อมูลทั้งหมดซิงค์ขึ้นระบบเรียบร้อยแล้ว — ไม่มีรายการค้าง',
-                      description:
-                          'ข้อมูลเช็คชื่อและคะแนนล่าสุดของคุณถูกส่งขึ้นระบบครบถ้วนแล้ว',
-                    );
-                  }
-                  final sorted = _sortAndFilter(items);
-                  if (sorted.isEmpty) {
-                    return const AppEmptyState(
-                      icon: Icons.filter_list_off_rounded,
-                      title: 'ไม่พบรายการในตัวกรองที่เลือก',
-                      description:
-                          'ลองสลับตัวกรองด้านบนเพื่อตรวจสอบรายการซิงค์ในสถานะอื่น',
-                    );
-                  }
-                  return Column(
-                    children: [
-                      for (final item in sorted) ...[
-                        SyncQueueItemCard(
-                          item: item,
-                          isBusy: actionState.isItemBusy(item.id),
-                          isOnline: isOnline,
-                          onResolveConflict: () =>
-                              _openConflictDialog(context, item),
-                          onRetry: () => _handleRetry(context, item.id),
-                          onDiscard: () => _confirmDiscard(context, item),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    ],
-                  );
-                },
-              ),
+              itemsBody,
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

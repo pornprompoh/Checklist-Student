@@ -36,19 +36,26 @@ enum ClassWorkspaceTab {
   };
 }
 
-/// Compact segmented pill bar with exact concentric radii (`outer: 12`,
-/// `padding: 4` → `inner: 8`), desktop hover/focus feedback, horizontal
-/// scroll on `320px` screens, and [UnsavedChangesGuard] protection.
+/// Borderless Linear/Vercel-style underline tab bar sitting on a `1px` bottom
+/// hairline border (`outlineVariant`) with a `2px` `primary` active underline.
+///
+/// Scrolls horizontally on narrow screens (`320px`) without overflow and guards
+/// workspace switches with [UnsavedChangesGuard].
 class ClassWorkspaceBar extends ConsumerWidget {
   const ClassWorkspaceBar({
     super.key,
     required this.subjectClassId,
     required this.activeTab,
+    this.trailing,
     this.onSelectTab,
   });
 
   final String subjectClassId;
   final ClassWorkspaceTab activeTab;
+
+  /// Optional compact widget aligned on the right side of the tab bar on wide
+  /// screens (wraps cleanly below on narrow screens).
+  final Widget? trailing;
 
   /// Overrides default `GoRouter` navigation when provided.
   final ValueChanged<ClassWorkspaceTab>? onSelectTab;
@@ -76,111 +83,126 @@ class ClassWorkspaceBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final innerRadius = BorderRadius.circular(8);
 
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < ClassWorkspaceTab.values.length; i++) ...[
-              if (i > 0) const SizedBox(width: 4),
-              _WorkspaceSegment(
-                tab: ClassWorkspaceTab.values[i],
-                isSelected: ClassWorkspaceTab.values[i] == activeTab,
-                radius: innerRadius,
-                textTheme: textTheme,
-                onTap: () =>
-                    _handleSelect(context, ref, ClassWorkspaceTab.values[i]),
-              ),
-            ],
+    final tabStrip = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < ClassWorkspaceTab.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            _UnderlineTab(
+              tab: ClassWorkspaceTab.values[i],
+              isSelected: ClassWorkspaceTab.values[i] == activeTab,
+              textTheme: textTheme,
+              onTap: () =>
+                  _handleSelect(context, ref, ClassWorkspaceTab.values[i]),
+            ),
           ],
-        ),
+        ],
       ),
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+      ),
+      child: trailing == null
+          ? Align(alignment: Alignment.centerLeft, child: tabStrip)
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth >= 640) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: tabStrip),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: trailing!,
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    tabStrip,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      child: trailing!,
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 }
 
-class _WorkspaceSegment extends StatelessWidget {
-  const _WorkspaceSegment({
+class _UnderlineTab extends StatelessWidget {
+  const _UnderlineTab({
     required this.tab,
     required this.isSelected,
-    required this.radius,
     required this.textTheme,
     required this.onTap,
   });
 
   final ClassWorkspaceTab tab;
   final bool isSelected;
-  final BorderRadius radius;
   final TextTheme textTheme;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    const topRadius = BorderRadius.vertical(top: Radius.circular(8));
 
-    return AnimatedContainer(
+    return Material(
       key: ValueKey<String>('class_workspace_tab_${tab.name}'),
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        color: isSelected ? colorScheme.surface : Colors.transparent,
-        borderRadius: radius,
-        border: isSelected
-            ? Border.all(color: colorScheme.outlineVariant)
-            : null,
-        boxShadow: isSelected
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: colorScheme.shadow.withValues(alpha: 0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          borderRadius: radius,
-          mouseCursor: SystemMouseCursors.click,
-          hoverColor: colorScheme.primary.withValues(alpha: 0.07),
-          focusColor: colorScheme.primary.withValues(alpha: 0.12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isSelected ? tab.selectedIcon : tab.icon,
-                  size: 18,
-                  color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  tab.label,
-                  style: textTheme.labelLarge?.copyWith(
-                    color: isSelected
-                        ? colorScheme.onSurface
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-              ],
+      type: MaterialType.transparency,
+      borderRadius: topRadius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: topRadius,
+        mouseCursor: SystemMouseCursors.click,
+        hoverColor: colorScheme.onSurface.withValues(alpha: 0.05),
+        focusColor: colorScheme.primary.withValues(alpha: 0.10),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? colorScheme.primary : Colors.transparent,
+                width: 2,
+              ),
             ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected ? tab.selectedIcon : tab.icon,
+                size: 16,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                tab.label,
+                style: textTheme.labelLarge?.copyWith(
+                  color: isSelected
+                      ? colorScheme.onSurface
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -21,7 +21,6 @@ class AppearanceSettingsCard extends ConsumerWidget {
 
     return AppSurfaceCard(
       title: 'การแสดงผลและสิทธิ์การใช้งาน',
-      subtitle: 'เลือกโหมดสีที่สบายตาสำหรับการทำงานในห้องเรียนหรือตรวจงานตอนค่ำ',
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,13 +109,19 @@ class AppearanceSettingsCard extends ConsumerWidget {
                           : colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      canUseAi ? 'เปิดใช้งานแล้ว' : 'ปิดใช้งาน (อ่านอย่างเดียว)',
-                      style: textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: canUseAi
-                            ? semanticColors.success
-                            : colorScheme.onSurfaceVariant,
+                    Flexible(
+                      child: Text(
+                        canUseAi
+                            ? 'เปิดใช้งานแล้ว'
+                            : 'ปิดใช้งาน (อ่านอย่างเดียว)',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: canUseAi
+                              ? semanticColors.success
+                              : colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],

@@ -240,6 +240,20 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(color: cs.outlineVariant, thickness: 1),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: const WidgetStatePropertyAll<bool>(false),
+        trackVisibility: const WidgetStatePropertyAll<bool>(false),
+        interactive: true,
+        thickness: const WidgetStatePropertyAll<double>(4.0),
+        radius: const Radius.circular(999),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.dragged) ||
+              states.contains(WidgetState.hovered)) {
+            return cs.onSurface.withValues(alpha: 0.30);
+          }
+          return cs.onSurface.withValues(alpha: 0.16);
+        }),
+      ),
     );
   }
 }

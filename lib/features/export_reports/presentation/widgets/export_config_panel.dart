@@ -63,7 +63,6 @@ class ExportConfigPanel extends StatelessWidget {
 
     return AppSurfaceCard(
       title: '1. เลือกห้องเรียนและหัวข้อรายงาน',
-      subtitle: 'เลือกภาคเรียน ห้องเรียน หัวข้อ และแนวกระดาษ A4',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

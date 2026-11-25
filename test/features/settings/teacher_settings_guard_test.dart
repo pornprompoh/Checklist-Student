@@ -20,6 +20,7 @@ import 'package:checklist_student/features/student_portal/domain/entities/studen
 import 'package:checklist_student/features/student_portal/domain/repositories/student_portal_repository.dart';
 import 'package:checklist_student/features/student_portal/presentation/providers/student_portal_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -333,6 +334,61 @@ void main() {
       expect(find.text('ครูสมศรี ทดสอบ'), findsOneWidget);
       expect(find.text('เลขประจำตัวนักเรียน'), findsOneWidget);
       expect(find.text('เข้าสู่ระบบสำหรับครูผู้สอน'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'UC-032: TeacherCodeSectionCard exposes a single universal copy-link button with ?openExternalBrowser=1',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      String? copiedText;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.setData') {
+              copiedText = (call.arguments as Map)['text'] as String?;
+            }
+            return null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+
+      final profile = _seedProfile();
+      final fakeRepo = _FakeSettingsRepository(profile);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            connectivityStatusProvider.overrideWith(
+              (ref) => Stream.value(true),
+            ),
+            authStateProvider.overrideWith(
+              () => _MutableFakeAuthStateNotifier(_authenticatedState(profile)),
+            ),
+            settingsRepositoryProvider.overrideWithValue(fakeRepo),
+          ],
+          child: const ChecklistStudentApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ตั้งค่า'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('คัดลอกลิงก์สำหรับกลุ่ม LINE'), findsNothing);
+      final copyBtn = find.text('คัดลอกลิงก์');
+      expect(copyBtn, findsOneWidget);
+
+      await tester.ensureVisible(copyBtn);
+      await tester.tap(copyBtn);
+      await tester.pumpAndSettle();
+
+      expect(copiedText, contains('/student/t-8492?openExternalBrowser=1'));
+      expect(find.text('คัดลอกลิงก์พอร์ทัลนักเรียนแล้ว'), findsOneWidget);
     },
   );
 }

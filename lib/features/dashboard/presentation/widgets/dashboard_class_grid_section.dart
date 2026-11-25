@@ -7,7 +7,9 @@ import '../../domain/entities/dashboard_class_item.dart';
 import '../../domain/entities/dashboard_overview.dart';
 import 'dashboard_class_card.dart';
 
-/// Responsive 1/2/3-column classroom card grid with aligned section heading.
+/// Responsive 1/2/3-column classroom card grid where cards in the same
+/// multi-column row share identical height via [IntrinsicHeight] and aligned
+/// footer actions.
 class DashboardClassGridSection extends StatelessWidget {
   const DashboardClassGridSection({
     super.key,
@@ -33,46 +35,41 @@ class DashboardClassGridSection extends StatelessWidget {
         final columns = constraints.maxWidth >= 1020
             ? 3
             : (constraints.maxWidth >= 660 ? 2 : 1);
-        const spacing = 12.0;
-        final cardWidth =
-            (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
+        if (columns == 1) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                _buildCard(context, items[i]),
+              ],
+            ],
+          );
+        }
+
+        final rowCount = (items.length / columns).ceil();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final item in items)
-              SizedBox(
-                width: cardWidth,
-                child: DashboardClassCard(
-                  item: item,
-                  todayIsoWeekday: overview.referenceDate.weekday,
-                  isBusy: isBusy,
-                  onTogglePin: () => onTogglePin(item),
-                  onOpenAttendance: () => context.go(
-                    AppRoutes.teacherAttendanceForClass(item.subjectClassId),
-                  ),
-                  onOpenGradingTable: () => context.go(
-                    AppRoutes.teacherGradingForClass(item.subjectClassId),
-                  ),
-                  onOpenGradingPlan: () => context.go(
-                    AppRoutes.teacherGradingPlanForClass(item.subjectClassId),
-                  ),
-                  onOpenAttendanceRules: () => context.go(
-                    AppRoutes.teacherAttendanceRulesForClass(
-                      item.subjectClassId,
-                    ),
-                  ),
-                  onOpenExportReports: () => context.go(
-                    AppRoutes.teacherExportReportsForClass(item.subjectClassId),
-                  ),
-                  onOpenAuditLog: () => context.go(
-                    AppRoutes.teacherAuditLogForClass(item.subjectClassId),
-                  ),
-                  onOpenRoster: () =>
-                      context.go(AppRoutes.teacherHomeroomRoster),
+            for (var row = 0; row < rowCount; row++) ...[
+              if (row > 0) const SizedBox(height: 12),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var col = 0; col < columns; col++) ...[
+                      if (col > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: (row * columns + col) < items.length
+                            ? _buildCard(context, items[row * columns + col])
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
                 ),
               ),
+            ],
           ],
         );
       },
@@ -114,6 +111,34 @@ class DashboardClassGridSection extends StatelessWidget {
         const SizedBox(height: 12),
         grid,
       ],
+    );
+  }
+
+  Widget _buildCard(BuildContext context, DashboardClassItem item) {
+    return DashboardClassCard(
+      item: item,
+      todayIsoWeekday: overview.referenceDate.weekday,
+      isBusy: isBusy,
+      onTogglePin: () => onTogglePin(item),
+      onOpenAttendance: () => context.go(
+        AppRoutes.teacherAttendanceForClass(item.subjectClassId),
+      ),
+      onOpenGradingTable: () => context.go(
+        AppRoutes.teacherGradingForClass(item.subjectClassId),
+      ),
+      onOpenGradingPlan: () => context.go(
+        AppRoutes.teacherGradingPlanForClass(item.subjectClassId),
+      ),
+      onOpenAttendanceRules: () => context.go(
+        AppRoutes.teacherAttendanceRulesForClass(item.subjectClassId),
+      ),
+      onOpenExportReports: () => context.go(
+        AppRoutes.teacherExportReportsForClass(item.subjectClassId),
+      ),
+      onOpenAuditLog: () => context.go(
+        AppRoutes.teacherAuditLogForClass(item.subjectClassId),
+      ),
+      onOpenRoster: () => context.go(AppRoutes.teacherHomeroomRoster),
     );
   }
 }

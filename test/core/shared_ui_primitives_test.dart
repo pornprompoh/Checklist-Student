@@ -1,6 +1,8 @@
+import 'package:checklist_student/core/theme/app_scroll_behavior.dart';
 import 'package:checklist_student/core/theme/app_theme.dart';
 import 'package:checklist_student/core/widgets/app_empty_state.dart';
 import 'package:checklist_student/core/widgets/app_page_header.dart';
+import 'package:checklist_student/core/widgets/app_subtle_scrollbar.dart';
 import 'package:checklist_student/core/widgets/app_surface_card.dart';
 import 'package:checklist_student/core/widgets/class_workspace_bar.dart';
 import 'package:flutter/material.dart';
@@ -178,6 +180,66 @@ void main() {
         await tester.tap(find.text('ส่งออกรายงาน'));
         await tester.pumpAndSettle();
         expect(selected, ClassWorkspaceTab.export);
+      },
+    );
+
+    testWidgets(
+      'AppScrollBehavior hides default scrollbars and AppSubtleScrollbar configures fade-on-scroll 4px thumb',
+      (tester) async {
+        expect(
+          AppTheme.light.scrollbarTheme.thumbVisibility?.resolve(
+            const <WidgetState>{},
+          ),
+          isFalse,
+        );
+        expect(
+          AppTheme.dark.scrollbarTheme.thumbVisibility?.resolve(
+            const <WidgetState>{},
+          ),
+          isFalse,
+        );
+
+        final ctrl = ScrollController();
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            scrollBehavior: const AppScrollBehavior(),
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const Expanded(
+                    child: SingleChildScrollView(child: SizedBox(height: 600)),
+                  ),
+                  Expanded(
+                    child: AppSubtleScrollbar(
+                      controller: ctrl,
+                      child: SingleChildScrollView(
+                        controller: ctrl,
+                        primary: false,
+                        child: const SizedBox(height: 600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Only the explicit AppSubtleScrollbar creates a RawScrollbar.
+        final rawScrollbars = tester.widgetList<RawScrollbar>(
+          find.byType(RawScrollbar),
+        );
+        expect(rawScrollbars.length, 1);
+        final bar = rawScrollbars.single;
+        expect(bar.thumbVisibility, isFalse);
+        expect(bar.trackVisibility, isFalse);
+        expect(bar.thickness, 4.0);
+        expect(bar.fadeDuration, const Duration(milliseconds: 200));
+        expect(bar.timeToFade, const Duration(milliseconds: 600));
       },
     );
   });

@@ -160,8 +160,6 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
 
     return AppSurfaceCard(
       title: 'โปรไฟล์ครูและหัวเอกสารรายงาน',
-      subtitle:
-          'ข้อมูลนี้จะนำไปแสดงบนหัวรายงาน PDF/Excel และเป็นค่าเริ่มต้นของห้องสอนใหม่',
       padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,

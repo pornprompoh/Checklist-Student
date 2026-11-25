@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/app_surface_card.dart';
 import '../providers/sync_queue_providers.dart';
 
-/// Header card for `SyncQueuePage` showing live connectivity status, counts by
-/// category (`ข้อมูลชนกัน`, `รอซิงค์`, `ล้มเหลว`), last sync summary, and the
-/// manual `"ซิงค์เดี๋ยวนี้"` trigger.
+/// Flat 1-row inline summary bar for `SyncQueuePage`: live connectivity badge,
+/// compact metric chips (`ข้อมูลชนกัน`, `รอซิงค์`, `ล้มเหลว`), optional last
+/// sync summary, and the `"ซิงค์เดี๋ยวนี้"` trigger.
 class SyncStatusSummaryHeader extends StatelessWidget {
   const SyncStatusSummaryHeader({
     super.key,
@@ -36,124 +35,114 @@ class SyncStatusSummaryHeader extends StatelessWidget {
         ? 'ไม่สามารถซิงค์ได้ขณะออฟไลน์ กรุณาเชื่อมต่ออินเทอร์เน็ต'
         : (!hasRunnableItems ? 'ไม่มีรายการรอซิงค์' : 'ซิงค์รายการที่ค้างทันที');
 
-    return AppSurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 10,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isOnline
-                      ? semantic.successContainer
-                      : semantic.warningContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                      size: 16,
-                      color: isOnline ? semantic.success : semantic.warning,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelMedium?.copyWith(
-                          color: isOnline ? semantic.success : semantic.warning,
-                          fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isOnline
+                        ? semantic.successContainer
+                        : semantic.warningContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                        size: 15,
+                        color: isOnline ? semantic.success : semantic.warning,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: isOnline
+                                ? semantic.success
+                                : semantic.warning,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Tooltip(
-                message: tooltipMessage,
-                child: FilledButton.icon(
-                  onPressed: canPressSync ? onSyncNow : null,
-                  icon: isSyncingNow
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.sync_rounded, size: 18),
-                  label: Text(
-                    isSyncingNow ? 'กำลังซิงค์...' : 'ซิงค์เดี๋ยวนี้',
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final tileWidth = constraints.maxWidth >= 520
-                  ? (constraints.maxWidth - 20) / 3
-                  : constraints.maxWidth;
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _MetricTile(
-                    width: tileWidth,
-                    label: 'ข้อมูลชนกัน',
-                    count: counts.conflictCount,
-                    color: semantic.danger,
-                    containerColor: semantic.dangerContainer,
-                    icon: Icons.warning_amber_rounded,
-                  ),
-                  _MetricTile(
-                    width: tileWidth,
-                    label: 'รอซิงค์',
-                    count: counts.pendingCount + counts.syncingCount,
-                    color: semantic.warning,
-                    containerColor: semantic.warningContainer,
-                    icon: Icons.schedule_rounded,
-                  ),
-                  _MetricTile(
-                    width: tileWidth,
-                    label: 'ล้มเหลว',
-                    count: counts.failedCount,
-                    color: colorScheme.error,
-                    containerColor: colorScheme.errorContainer,
-                    icon: Icons.error_outline_rounded,
-                  ),
-                ],
-              );
-            },
-          ),
-          if (lastSummaryMessage != null &&
-              lastSummaryMessage!.trim().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'ผลการซิงค์ล่าสุด: $lastSummaryMessage',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+                _InlineMetricChip(
+                  label: 'ข้อมูลชนกัน',
+                  count: counts.conflictCount,
+                  color: semantic.danger,
+                  containerColor: semantic.dangerContainer,
+                  icon: Icons.warning_amber_rounded,
+                ),
+                _InlineMetricChip(
+                  label: 'รอซิงค์',
+                  count: counts.pendingCount + counts.syncingCount,
+                  color: semantic.warning,
+                  containerColor: semantic.warningContainer,
+                  icon: Icons.schedule_rounded,
+                ),
+                _InlineMetricChip(
+                  label: 'ล้มเหลว',
+                  count: counts.failedCount,
+                  color: colorScheme.error,
+                  containerColor: colorScheme.errorContainer,
+                  icon: Icons.error_outline_rounded,
+                ),
+              ],
+            ),
+            Tooltip(
+              message: tooltipMessage,
+              child: FilledButton.icon(
+                onPressed: canPressSync ? onSyncNow : null,
+                icon: isSyncingNow
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync_rounded, size: 18),
+                label: Text(
+                  isSyncingNow ? 'กำลังซิงค์...' : 'ซิงค์เดี๋ยวนี้',
+                ),
               ),
             ),
           ],
+        ),
+        if (lastSummaryMessage != null &&
+            lastSummaryMessage!.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'ผลการซิงค์ล่าสุด: $lastSummaryMessage',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({
-    required this.width,
+class _InlineMetricChip extends StatelessWidget {
+  const _InlineMetricChip({
     required this.label,
     required this.count,
     required this.color,
@@ -161,7 +150,6 @@ class _MetricTile extends StatelessWidget {
     required this.icon,
   });
 
-  final double width;
   final String label;
   final int count;
   final Color color;
@@ -174,45 +162,35 @@ class _MetricTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isActive = count > 0;
 
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? containerColor : colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive
-                ? color.withValues(alpha: 0.35)
-                : colorScheme.outlineVariant,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isActive ? containerColor : colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive
+              ? color.withValues(alpha: 0.35)
+              : colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: isActive ? color : colorScheme.onSurfaceVariant,
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
+          const SizedBox(width: 5),
+          Text(
+            '$label $count',
+            style: textTheme.labelMedium?.copyWith(
               color: isActive ? color : colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              fontFeatures: AppTheme.tabularFigures,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Text(
-              '$count',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontFeatures: AppTheme.tabularFigures,
-                color: isActive ? color : colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

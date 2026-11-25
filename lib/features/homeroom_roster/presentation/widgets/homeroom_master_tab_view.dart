@@ -28,21 +28,42 @@ import 'roster_import_dialog.dart';
 import 'roster_student_list_view.dart';
 import 'student_form_dialog.dart';
 
-/// Tab 1: Term-level master homeroom roster (`homerooms` -> `homeroom_students`).
-class HomeroomMasterTabView extends ConsumerWidget {
+/// Tab 1: Term-level master homeroom roster (`homerooms` -> `homeroom_students`)
+/// with Independent Split-Pane Scroll on Desktop (`_leftListController` and
+/// `_rightListController` properly disposed).
+class HomeroomMasterTabView extends ConsumerStatefulWidget {
   const HomeroomMasterTabView({
     super.key,
     required this.term,
-    required this.isDesktop,
+    required this.isSplitPane,
     required this.isBusy,
   });
 
   final Term term;
-  final bool isDesktop;
+  final bool isSplitPane;
   final bool isBusy;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeroomMasterTabView> createState() =>
+      _HomeroomMasterTabViewState();
+}
+
+class _HomeroomMasterTabViewState extends ConsumerState<HomeroomMasterTabView> {
+  final _leftListController = ScrollController();
+  final _rightListController = ScrollController();
+
+  @override
+  void dispose() {
+    _leftListController.dispose();
+    _rightListController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final term = widget.term;
+    final isSplitPane = widget.isSplitPane;
+    final isBusy = widget.isBusy;
     final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
     final subjectsAsync = ref.watch(subjectsByTermProvider(term.id));
     final classesAsync = ref.watch(subjectClassesByTermProvider(term.id));
@@ -95,6 +116,8 @@ class HomeroomMasterTabView extends ConsumerWidget {
       selectedHomeroomId: selectedHomeroom?.id,
       linkedClassCounts: linkedCounts,
       isBusy: isBusy,
+      fillAvailableHeight: isSplitPane,
+      scrollController: isSplitPane ? _leftListController : null,
       onSelect: (id) =>
           ref.read(selectedHomeroomIdProvider.notifier).select(id),
       onCreate: () => _createHomeroom(context, ref),
@@ -117,13 +140,15 @@ class HomeroomMasterTabView extends ConsumerWidget {
             subjects: subjects,
             allClassesInTerm: classes,
             isBusy: isBusy,
+            fillAvailableHeight: isSplitPane,
+            scrollController: isSplitPane ? _rightListController : null,
           );
 
-    if (isDesktop) {
+    if (isSplitPane) {
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(width: 280, child: listPanel),
+          SizedBox(width: 296, child: listPanel),
           const SizedBox(width: 16),
           Expanded(child: detailCard),
         ],
@@ -142,6 +167,8 @@ class HomeroomMasterTabView extends ConsumerWidget {
     );
   }
 
+  Term get term => widget.term;
+
   Future<void> _syncUnlinkedRooms(
     BuildContext context,
     WidgetRef ref,
@@ -152,7 +179,7 @@ class HomeroomMasterTabView extends ConsumerWidget {
         .syncUnlinkedRoomGroups(
           termId: term.id,
           groups: groups,
-          enrolledAt: term.startDate,
+          enrolledAt: term.startDate ?? DateTime.now(),
         );
     if (first != null && context.mounted) {
       AppFeedbackBanner.showSnackBar(
@@ -236,6 +263,8 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
     required this.subjects,
     required this.allClassesInTerm,
     required this.isBusy,
+    required this.fillAvailableHeight,
+    this.scrollController,
   });
 
   final Term term;
@@ -243,6 +272,8 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
   final List<Subject> subjects;
   final List<SubjectClass> allClassesInTerm;
   final bool isBusy;
+  final bool fillAvailableHeight;
+  final ScrollController? scrollController;
 
   List<String> get _linkedClassIds => allClassesInTerm
       .where((c) => c.homeroomId == homeroom.id)
@@ -258,134 +289,153 @@ class _HomeroomStudentsDetailCard extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
+    final headerContent = <Widget>[
+      Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'รายชื่อกลางห้อง ${homeroom.name}',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'ผูกอยู่ ${_linkedClassIds.length} รายวิชาในเทอมนี้',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
+              ),
+            ],
+          ),
+          FilledButton.icon(
+            onPressed: isBusy
+                ? null
+                : () => _addStudent(
+                    context,
+                    ref,
+                    studentsAsync.asData?.value ?? const [],
+                  ),
+            icon: const Icon(Icons.person_add_outlined, size: 18),
+            label: const Text('เพิ่มนักเรียน'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (canUseAi)
+            FilledButton.tonalIcon(
+              onPressed: isBusy
+                  ? null
+                  : () => _importWithAi(
+                      context,
+                      ref,
+                      studentsAsync.asData?.value ?? const [],
+                    ),
+              icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+              label: const Text('นำเข้าด้วย AI (รูป/PDF)'),
+            ),
+          FilledButton.tonalIcon(
+            onPressed: isBusy
+                ? null
+                : () => _importSpreadsheet(
+                    context,
+                    ref,
+                    studentsAsync.asData?.value ?? const [],
+                  ),
+            icon: const Icon(Icons.upload_file_outlined, size: 18),
+            label: const Text('นำเข้า Excel/CSV'),
+          ),
+          OutlinedButton.icon(
+            onPressed: isBusy ? null : () => _linkClasses(context, ref),
+            icon: const Icon(Icons.link_rounded, size: 18),
+            label: const Text('ผูกกับรายวิชา'),
+          ),
+          OutlinedButton.icon(
+            onPressed: isBusy || studentsAsync.asData == null
+                ? null
+                : () => _renumber(
+                    context,
+                    ref,
+                    studentsAsync.asData!.value,
+                  ),
+            icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
+            label: const Text('เรียงเลขที่ใหม่'),
+          ),
+        ],
+      ),
+      const Divider(height: 24),
+    ];
+
+    final studentBody = studentsAsync.when(
+      loading: () => const Column(
+        children: [
+          SkeletonBox(height: 52),
+          SizedBox(height: 8),
+          SkeletonBox(height: 52),
+        ],
+      ),
+      error: (error, _) => AppFeedbackBanner(
+        type: AppFeedbackType.error,
+        message: ThaiErrorMapper.map(error),
+        onRetry: () => ref.invalidate(homeroomStudentsProvider(homeroom.id)),
+      ),
+      data: (students) {
+        final byId = {for (final s in students) s.id: s};
+        return RosterStudentListView(
+          isBusy: isBusy,
+          fillAvailableHeight: fillAvailableHeight,
+          scrollController: scrollController,
+          students: [
+            for (final s in students)
+              RosterStudentRowData(
+                id: s.id,
+                studentNumber: s.studentNumber,
+                studentCode: s.studentCode,
+                fullName: s.fullName,
+                status: s.status,
+                transferredOutAt: s.transferredOutAt,
+              ),
+          ],
+          onEdit: (row) => _editStudent(context, ref, byId[row.id]!),
+          onToggleTransferStatus: (row) =>
+              _toggleStatus(context, ref, byId[row.id]!),
+          onPermanentDelete: (row) =>
+              _permanentDeleteStudent(context, ref, byId[row.id]!),
+        );
+      },
+    );
+
+    if (fillAvailableHeight) {
+      return Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [...headerContent, Expanded(child: studentBody)],
+        ),
+      );
+    }
+
     return AppSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'รายชื่อกลางห้อง ${homeroom.name}',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ผูกอยู่ ${_linkedClassIds.length} รายวิชาในเทอมนี้',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontFeatures: AppTheme.tabularFigures,
-                    ),
-                  ),
-                ],
-              ),
-              FilledButton.icon(
-                onPressed: isBusy
-                    ? null
-                    : () => _addStudent(
-                        context,
-                        ref,
-                        studentsAsync.asData?.value ?? const [],
-                      ),
-                icon: const Icon(Icons.person_add_outlined, size: 18),
-                label: const Text('เพิ่มนักเรียน'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (canUseAi)
-                FilledButton.tonalIcon(
-                  onPressed: isBusy
-                      ? null
-                      : () => _importWithAi(
-                          context,
-                          ref,
-                          studentsAsync.asData?.value ?? const [],
-                        ),
-                  icon: const Icon(Icons.auto_awesome_outlined, size: 18),
-                  label: const Text('นำเข้าด้วย AI (รูป/PDF)'),
-                ),
-              FilledButton.tonalIcon(
-                onPressed: isBusy
-                    ? null
-                    : () => _importSpreadsheet(
-                        context,
-                        ref,
-                        studentsAsync.asData?.value ?? const [],
-                      ),
-                icon: const Icon(Icons.upload_file_outlined, size: 18),
-                label: const Text('นำเข้า Excel/CSV'),
-              ),
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : () => _linkClasses(context, ref),
-                icon: const Icon(Icons.link_rounded, size: 18),
-                label: const Text('ผูกกับรายวิชา'),
-              ),
-              OutlinedButton.icon(
-                onPressed: isBusy || studentsAsync.asData == null
-                    ? null
-                    : () => _renumber(
-                        context,
-                        ref,
-                        studentsAsync.asData!.value,
-                      ),
-                icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
-                label: const Text('เรียงเลขที่ใหม่'),
-              ),
-            ],
-          ),
-          const Divider(height: 24),
-          studentsAsync.when(
-            loading: () => const Column(
-              children: [
-                SkeletonBox(height: 52),
-                SizedBox(height: 8),
-                SkeletonBox(height: 52),
-              ],
-            ),
-            error: (error, _) => AppFeedbackBanner(
-              type: AppFeedbackType.error,
-              message: ThaiErrorMapper.map(error),
-              onRetry: () =>
-                  ref.invalidate(homeroomStudentsProvider(homeroom.id)),
-            ),
-            data: (students) {
-              final byId = {for (final s in students) s.id: s};
-              return RosterStudentListView(
-                isBusy: isBusy,
-                students: [
-                  for (final s in students)
-                    RosterStudentRowData(
-                      id: s.id,
-                      studentNumber: s.studentNumber,
-                      studentCode: s.studentCode,
-                      fullName: s.fullName,
-                      status: s.status,
-                      transferredOutAt: s.transferredOutAt,
-                    ),
-                ],
-                onEdit: (row) => _editStudent(context, ref, byId[row.id]!),
-                onToggleTransferStatus: (row) =>
-                    _toggleStatus(context, ref, byId[row.id]!),
-                onPermanentDelete: (row) =>
-                    _permanentDeleteStudent(context, ref, byId[row.id]!),
-              );
-            },
-          ),
-        ],
+        children: [...headerContent, studentBody],
       ),
     );
   }

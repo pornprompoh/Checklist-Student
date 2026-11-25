@@ -71,15 +71,7 @@ class StorageCleanupSectionCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'ไฟล์รูปภาพ/PDF ต้นฉบับที่ใช้นำเข้ารายชื่อจะถูกเก็บไว้ในพื้นที่ส่วนตัวเพื่อตรวจสอบย้อนหลัง '
-            'แนะนำให้เคลียร์ไฟล์ของปีการศึกษาเก่าออกเพื่อประหยัดโควตา Free Tier (1 GB)',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           filesAsync.when(
             loading: () => const Column(
               children: [

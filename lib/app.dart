@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'core/theme/app_scroll_behavior.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
 import 'features/sync_queue/presentation/providers/sync_queue_providers.dart';
 
-/// Root application widget wiring [AppTheme], [themeModeProvider],
-/// [appRouterProvider], and [syncEngineAutoCoordinatorProvider].
+/// Root application widget wiring [AppTheme], [AppScrollBehavior],
+/// [themeModeProvider], [appRouterProvider], and
+/// [syncEngineAutoCoordinatorProvider].
 class ChecklistStudentApp extends ConsumerWidget {
   const ChecklistStudentApp({super.key});
 
@@ -20,6 +22,7 @@ class ChecklistStudentApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Checklist-Student',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

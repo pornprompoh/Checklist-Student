@@ -81,8 +81,8 @@ class AcademicStructureRepositoryImpl implements AcademicStructureRepository {
     required String teacherId,
     required String academicYearId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final dto = await _requireRemote().createTerm(
       teacherId: teacherId,
@@ -98,8 +98,8 @@ class AcademicStructureRepositoryImpl implements AcademicStructureRepository {
   Future<Term> updateTerm({
     required String termId,
     required String termLabel,
-    required DateTime startDate,
-    required DateTime endDate,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final dto = await _requireRemote().updateTerm(
       termId: termId,

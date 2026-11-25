@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../domain/entities/student_lifecycle_status.dart';
 
 /// Shared display model rendered by [RosterStudentListView] for both
@@ -30,7 +31,8 @@ class RosterStudentRowData {
 }
 
 /// Unified hairline-bordered student roster list supporting active/transferred-out
-/// filter, Buddhist Era dates, edit, soft-delete (transfer out), and permanent delete.
+/// filter, Buddhist Era dates, edit, soft-delete, permanent delete, and optional
+/// independent vertical scrolling inside Desktop Split-Pane layouts.
 class RosterStudentListView extends StatefulWidget {
   const RosterStudentListView({
     super.key,
@@ -39,6 +41,8 @@ class RosterStudentListView extends StatefulWidget {
     required this.onEdit,
     required this.onToggleTransferStatus,
     this.onPermanentDelete,
+    this.fillAvailableHeight = false,
+    this.scrollController,
   });
 
   final List<RosterStudentRowData> students;
@@ -46,6 +50,8 @@ class RosterStudentListView extends StatefulWidget {
   final ValueChanged<RosterStudentRowData> onEdit;
   final ValueChanged<RosterStudentRowData> onToggleTransferStatus;
   final ValueChanged<RosterStudentRowData>? onPermanentDelete;
+  final bool fillAvailableHeight;
+  final ScrollController? scrollController;
 
   @override
   State<RosterStudentListView> createState() => _RosterStudentListViewState();
@@ -66,90 +72,132 @@ class _RosterStudentListViewState extends State<RosterStudentListView> {
         ? widget.students
         : widget.students.where((s) => !s.isTransferredOut).toList();
 
+    final summaryHeader = Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          'กำลังเรียน $activeCount คน${outCount > 0 ? ' · ย้ายออก $outCount คน' : ''}',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+            fontFeatures: AppTheme.tabularFigures,
+          ),
+        ),
+        if (outCount > 0)
+          FilterChip(
+            label: const Text('แสดงนักเรียนที่ย้ายออก'),
+            selected: _showTransferredOut,
+            onSelected: (v) => setState(() => _showTransferredOut = v),
+          ),
+      ],
+    );
+
+    final Widget body;
+    if (visible.isEmpty) {
+      body = Container(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.person_outline_rounded,
+                size: 28,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'ยังไม่มีรายชื่อนักเรียนในรายการนี้',
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (widget.fillAvailableHeight) {
+      body = Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: AppSubtleScrollbar(
+          controller: widget.scrollController,
+          child: ListView.separated(
+            controller: widget.scrollController,
+            primary: false,
+            itemCount: visible.length,
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              thickness: 1,
+              color: colorScheme.outlineVariant,
+            ),
+            itemBuilder: (_, i) => _StudentRowTile(
+              item: visible[i],
+              isBusy: widget.isBusy,
+              semantic: semantic,
+              onEdit: () => widget.onEdit(visible[i]),
+              onToggleTransfer: () =>
+                  widget.onToggleTransferStatus(visible[i]),
+              onPermanentDelete: widget.onPermanentDelete == null
+                  ? null
+                  : () => widget.onPermanentDelete!(visible[i]),
+            ),
+          ),
+        ),
+      );
+    } else {
+      body = Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (var i = 0; i < visible.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: colorScheme.outlineVariant,
+                ),
+              _StudentRowTile(
+                item: visible[i],
+                isBusy: widget.isBusy,
+                semantic: semantic,
+                onEdit: () => widget.onEdit(visible[i]),
+                onToggleTransfer: () =>
+                    widget.onToggleTransferStatus(visible[i]),
+                onPermanentDelete: widget.onPermanentDelete == null
+                    ? null
+                    : () => widget.onPermanentDelete!(visible[i]),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'กำลังเรียน $activeCount คน${outCount > 0 ? ' · ย้ายออก $outCount คน' : ''}',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-                fontFeatures: AppTheme.tabularFigures,
-              ),
-            ),
-            if (outCount > 0)
-              FilterChip(
-                label: const Text('แสดงนักเรียนที่ย้ายออก'),
-                selected: _showTransferredOut,
-                onSelected: (v) => setState(() => _showTransferredOut = v),
-              ),
-          ],
-        ),
+        summaryHeader,
         const SizedBox(height: 12),
-        if (visible.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.person_outline_rounded,
-                  size: 28,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'ยังไม่มีรายชื่อนักเรียนในรายการนี้',
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (var i = 0; i < visible.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: colorScheme.outlineVariant,
-                    ),
-                  _StudentRowTile(
-                    item: visible[i],
-                    isBusy: widget.isBusy,
-                    semantic: semantic,
-                    onEdit: () => widget.onEdit(visible[i]),
-                    onToggleTransfer: () =>
-                        widget.onToggleTransferStatus(visible[i]),
-                    onPermanentDelete: widget.onPermanentDelete == null
-                        ? null
-                        : () => widget.onPermanentDelete!(visible[i]),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        if (widget.fillAvailableHeight) Expanded(child: body) else body,
       ],
     );
   }

@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
@@ -37,6 +39,8 @@ class _AttendanceRuleSettingsPageState
   final _formKey = GlobalKey<FormState>();
   final _thresholdCtrl = TextEditingController();
   final _lateRatioCtrl = TextEditingController();
+  final _formScrollController = ScrollController();
+  final _previewScrollController = ScrollController();
 
   AttendanceRuleConfig? _baseline;
   bool _enableLateConversion = false;
@@ -47,6 +51,8 @@ class _AttendanceRuleSettingsPageState
   void dispose() {
     _thresholdCtrl.dispose();
     _lateRatioCtrl.dispose();
+    _formScrollController.dispose();
+    _previewScrollController.dispose();
     super.dispose();
   }
 
@@ -142,84 +148,109 @@ class _AttendanceRuleSettingsPageState
               )
         : const <String, dynamic>{};
 
+    final pageHeader = AppPageHeader(
+      title: 'ตั้งค่าเกณฑ์เวลาเรียน (มส) รายวิชา',
+      actions: [
+        OutlinedButton.icon(
+          onPressed: () => _handleBackToCheckIn(context),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+          label: const Text('กลับหน้าเช็คชื่อ'),
+        ),
+      ],
+    );
+
     return UnsavedChangesGuard(
       hasUnsavedChanges: _isDirty,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1060),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSplitPane =
+              constraints.maxWidth >= 900 && constraints.maxHeight >= 520;
+
+          if (ruleAsync.isLoading && !_initialized) {
+            return AppPageContainer.scrollable(
+              header: pageHeader,
+              child: const AppSurfaceCard(
+                child: Column(
+                  children: [
+                    SkeletonBox(height: 48),
+                    SizedBox(height: 12),
+                    SkeletonBox(height: 48),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          if (ruleAsync.hasError && !_initialized) {
+            return AppPageContainer.scrollable(
+              header: pageHeader,
+              child: AppFeedbackBanner(
+                type: AppFeedbackType.error,
+                message: ThaiErrorMapper.map(ruleAsync.error!),
+                onRetry: () => ref.invalidate(
+                  attendanceRuleConfigProvider(widget.subjectClassId),
+                ),
+              ),
+            );
+          }
+
+          final formCard = _buildFormCard(saveState.isLoading);
+          final previewCard = draftConfig.isValid
+              ? AttendanceRulePreviewCard(
+                  summaries: Map.from(previewSummaries),
+                )
+              : const SizedBox.shrink();
+
+          if (isSplitPane) {
+            return AppPageContainer.viewport(
+              header: pageHeader,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: AppSubtleScrollbar(
+                      controller: _formScrollController,
+                      child: SingleChildScrollView(
+                        controller: _formScrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 8, bottom: 8),
+                        child: formCard,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: AppSubtleScrollbar(
+                      controller: _previewScrollController,
+                      child: SingleChildScrollView(
+                        controller: _previewScrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 8, bottom: 8),
+                        child: previewCard,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return AppPageContainer.scrollable(
+            header: pageHeader,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppPageHeader(
-                  title: 'ตั้งค่าเกณฑ์เวลาเรียน (มส) รายวิชา',
-                  subtitle:
-                      'กำหนดเกณฑ์ % ขาดเรียน และการนับสายหรือลาแยกเฉพาะห้องนี้',
-                  actions: [
-                    OutlinedButton.icon(
-                      onPressed: () => _handleBackToCheckIn(context),
-                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                      label: const Text('กลับหน้าเช็คชื่อ'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (ruleAsync.isLoading && !_initialized)
-                  const AppSurfaceCard(
-                    child: Column(
-                      children: [
-                        SkeletonBox(height: 48),
-                        SizedBox(height: 12),
-                        SkeletonBox(height: 48),
-                      ],
-                    ),
-                  )
-                else if (ruleAsync.hasError && !_initialized)
-                  AppFeedbackBanner(
-                    type: AppFeedbackType.error,
-                    message: ThaiErrorMapper.map(ruleAsync.error!),
-                    onRetry: () => ref.invalidate(
-                      attendanceRuleConfigProvider(widget.subjectClassId),
-                    ),
-                  )
-                else
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final formCard = _buildFormCard(saveState.isLoading);
-                      final previewCard = draftConfig.isValid
-                          ? AttendanceRulePreviewCard(
-                              summaries: Map.from(previewSummaries),
-                            )
-                          : const SizedBox.shrink();
-
-                      if (constraints.maxWidth >= 860) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 3, child: formCard),
-                            const SizedBox(width: 16),
-                            Expanded(flex: 2, child: previewCard),
-                          ],
-                        );
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          formCard,
-                          if (draftConfig.isValid) ...[
-                            const SizedBox(height: 16),
-                            previewCard,
-                          ],
-                        ],
-                      );
-                    },
-                  ),
+                formCard,
+                if (draftConfig.isValid) ...[
+                  const SizedBox(height: 16),
+                  previewCard,
+                ],
               ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

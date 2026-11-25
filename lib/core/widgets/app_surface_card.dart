@@ -75,7 +75,8 @@ class _AppSurfaceCardState extends State<AppSurfaceCard> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                      if (widget.subtitle != null) ...[
+                      if (widget.subtitle != null &&
+                          widget.subtitle!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           widget.subtitle!,

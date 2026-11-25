@@ -217,7 +217,6 @@ class _GradingScaleEditorCardState extends State<GradingScaleEditorCard> {
 
     return AppSurfaceCard(
       title: 'เกณฑ์ตัดเกรดและเกณฑ์งานค้าง (ร)',
-      subtitle: 'ปรับระบบเกรดและจำนวนงานค้างสำหรับแนะนำสถานะ ร',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

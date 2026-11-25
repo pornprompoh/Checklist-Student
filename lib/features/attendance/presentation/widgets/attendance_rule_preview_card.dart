@@ -33,8 +33,6 @@ class AttendanceRulePreviewCard extends StatelessWidget {
 
     return AppSurfaceCard(
       title: 'ผลกระทบในห้องนี้ (Live Preview)',
-      subtitle:
-          'คำนวณจากประวัติการเช็คชื่อทั้งหมดของห้องนี้ตามเกณฑ์ที่กำลังปรับแต่ง',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,

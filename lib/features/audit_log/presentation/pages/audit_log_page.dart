@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
@@ -37,6 +39,8 @@ class AuditLogPage extends ConsumerStatefulWidget {
 
 class _AuditLogPageState extends ConsumerState<AuditLogPage> {
   final _searchCtrl = TextEditingController();
+  final _historyScrollController = ScrollController();
+  final _cleanupScrollController = ScrollController();
   _AuditLogTab _tab = _AuditLogTab.history;
 
   @override
@@ -75,6 +79,8 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _historyScrollController.dispose();
+    _cleanupScrollController.dispose();
     super.dispose();
   }
 
@@ -151,12 +157,10 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useScrollableLayout =
-            constraints.maxHeight < 680 || constraints.maxWidth < 640;
+            constraints.maxWidth < 900 || constraints.maxHeight < 600;
 
         final headerSection = AppPageHeader(
           title: 'ประวัติการแก้ไขคะแนนและสถานะเกรด',
-          subtitle:
-              'บันทึกอัตโนมัติแบบอ่านอย่างเดียว พร้อมส่งออก CSV/JSON และล้าง Log ประจำปี',
           actions: [
             SegmentedButton<_AuditLogTab>(
               showSelectedIcon: false,
@@ -260,15 +264,27 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
                       'เมื่อมีการกรอกหรือแก้ไขคะแนนและสถานะ ร/มส ระบบจะบันทึกประวัติให้อัตโนมัติ',
                 );
               }
-              return ListView.separated(
+              final listView = ListView.separated(
+                controller: shrinkWrap ? null : _historyScrollController,
+                primary: false,
                 shrinkWrap: shrinkWrap,
                 physics: shrinkWrap
                     ? const NeverScrollableScrollPhysics()
                     : null,
+                padding: shrinkWrap
+                    ? EdgeInsets.zero
+                    : const EdgeInsets.only(right: 6, bottom: 8),
                 itemCount: filteredEntries.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, index) =>
                     AuditLogEntryTile(entry: filteredEntries[index]),
+              );
+              if (shrinkWrap) {
+                return listView;
+              }
+              return AppSubtleScrollbar(
+                controller: _historyScrollController,
+                child: listView,
               );
             },
           );
@@ -299,52 +315,46 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
               ];
 
         if (useScrollableLayout) {
-          return Align(
-            alignment: Alignment.topCenter,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    headerSection,
-                    const SizedBox(height: 16),
-                    ...bannerWidgets,
-                    if (_tab == _AuditLogTab.history) ...[
-                      filterBar,
-                      const SizedBox(height: 12),
-                      buildHistoryBody(shrinkWrap: true),
-                    ] else
-                      cleanupBody,
-                  ],
-                ),
-              ),
+          return AppPageContainer.scrollable(
+            header: headerSection,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...bannerWidgets,
+                if (_tab == _AuditLogTab.history) ...[
+                  filterBar,
+                  const SizedBox(height: 12),
+                  buildHistoryBody(shrinkWrap: true),
+                ] else
+                  cleanupBody,
+              ],
             ),
           );
         }
 
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  headerSection,
-                  const SizedBox(height: 16),
-                  ...bannerWidgets,
-                  if (_tab == _AuditLogTab.history) ...[
-                    filterBar,
-                    const SizedBox(height: 12),
-                    Expanded(child: buildHistoryBody(shrinkWrap: false)),
-                  ] else
-                    Expanded(child: SingleChildScrollView(child: cleanupBody)),
-                ],
-              ),
-            ),
+        return AppPageContainer.viewport(
+          header: headerSection,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...bannerWidgets,
+              if (_tab == _AuditLogTab.history) ...[
+                filterBar,
+                const SizedBox(height: 12),
+                Expanded(child: buildHistoryBody(shrinkWrap: false)),
+              ] else
+                Expanded(
+                  child: AppSubtleScrollbar(
+                    controller: _cleanupScrollController,
+                    child: SingleChildScrollView(
+                      controller: _cleanupScrollController,
+                      primary: false,
+                      padding: const EdgeInsets.only(right: 6, bottom: 8),
+                      child: cleanupBody,
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },

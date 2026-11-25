@@ -39,7 +39,11 @@ class AppPageHeader extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: (isCompact ? textTheme.titleLarge : textTheme.headlineSmall)
-                  ?.copyWith(color: colorScheme.onSurface),
+                  ?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                  ),
             ),
             if (subtitle != null && subtitle!.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -49,6 +53,7 @@ class AppPageHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
                 ),
               ),
             ],
@@ -82,7 +87,7 @@ class AppPageHeader extends StatelessWidget {
           );
         } else {
           mainArea = Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(flex: 3, child: headingRow),
               const SizedBox(width: 16),

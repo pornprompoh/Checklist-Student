@@ -134,13 +134,6 @@ class _ExportDocumentHeaderCardState extends State<ExportDocumentHeaderCard> {
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            'แก้ไขเฉพาะเอกสารใบนี้เท่านั้น ไม่เขียนทับข้อมูลโปรไฟล์ครูในระบบ',
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
           const SizedBox(height: 12),
           TextField(
             controller: _titleCtrl,

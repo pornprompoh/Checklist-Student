@@ -4,7 +4,6 @@ import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/app_page_header.dart';
-import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/score_category.dart';
@@ -74,8 +73,6 @@ class GradingPlanHeader extends StatelessWidget {
       children: [
         AppPageHeader(
           title: 'ออกแบบแผนเก็บงานและเกณฑ์ตัดเกรด',
-          subtitle:
-              'กำหนดหมวดคะแนน ชิ้นงานบังคับส่ง เกณฑ์ตัดเกรด และสิทธิ์มองเห็นนักเรียน',
           actions: [
             if (validClassId != null) ...[
               OutlinedButton.icon(
@@ -103,93 +100,89 @@ class GradingPlanHeader extends StatelessWidget {
                 ),
         ),
         const SizedBox(height: 12),
-        AppSurfaceCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        if (classOptions.isNotEmpty)
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (classOptions.isNotEmpty)
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: DropdownButtonFormField<String>(
-                        key: ValueKey<String?>(validClassId),
-                        initialValue: validClassId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'ห้องเรียนที่กำลังจัดการแผน',
-                          isDense: true,
-                        ),
-                        items: [
-                          for (final option in classOptions)
-                            DropdownMenuItem<String>(
-                              value: option.subjectClassId,
-                              child: Text(
-                                '${option.displayLabel} (${option.termGroupLabel})',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null && value != validClassId) {
-                            onSelectClass(value);
-                          }
-                        },
-                      ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey<String?>(validClassId),
+                  initialValue: validClassId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'ห้องเรียน',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    if (validClassId != null)
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _PlanStatPill(
-                            icon: Icons.calculate_outlined,
-                            label:
-                                'คะแนนเต็มรวม ${_calculator.formatExactScore(totalMaxScore)}',
-                            background: colorScheme.primaryContainer,
-                            foreground: colorScheme.onPrimaryContainer,
-                          ),
-                          _PlanStatPill(
-                            icon: Icons.folder_outlined,
-                            label: '${categories.length} หมวด',
-                            background: colorScheme.surfaceContainer,
-                            foreground: colorScheme.onSurface,
-                          ),
-                          _PlanStatPill(
-                            icon: Icons.assignment_outlined,
-                            label:
-                                '${assignments.length} ชิ้นงาน (บังคับส่ง $mandatoryCount)',
-                            background: colorScheme.surfaceContainer,
-                            foreground: colorScheme.onSurface,
-                          ),
-                          if (overMaxAssignmentCount > 0)
-                            _PlanStatPill(
-                              icon: Icons.warning_amber_rounded,
-                              label: 'เกินเต็ม $overMaxAssignmentCount งาน',
-                              background: semantic.dangerContainer,
-                              foreground: semantic.danger,
-                            ),
-                        ],
+                  ),
+                  items: [
+                    for (final option in classOptions)
+                      DropdownMenuItem<String>(
+                        value: option.subjectClassId,
+                        child: Text(
+                          '${option.displayLabel} (${option.termGroupLabel})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null && value != validClassId) {
+                      onSelectClass(value);
+                    }
+                  },
+                ),
+              ),
+              if (validClassId != null)
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _PlanStatPill(
+                      icon: Icons.calculate_outlined,
+                      label:
+                          'คะแนนเต็มรวม ${_calculator.formatExactScore(totalMaxScore)}',
+                      background: colorScheme.primaryContainer,
+                      foreground: colorScheme.onPrimaryContainer,
+                    ),
+                    _PlanStatPill(
+                      icon: Icons.folder_outlined,
+                      label: '${categories.length} หมวด',
+                      background: colorScheme.surfaceContainer,
+                      foreground: colorScheme.onSurface,
+                    ),
+                    _PlanStatPill(
+                      icon: Icons.assignment_outlined,
+                      label:
+                          '${assignments.length} ชิ้นงาน (บังคับส่ง $mandatoryCount)',
+                      background: colorScheme.surfaceContainer,
+                      foreground: colorScheme.onSurface,
+                    ),
+                    if (overMaxAssignmentCount > 0)
+                      _PlanStatPill(
+                        icon: Icons.warning_amber_rounded,
+                        label: 'เกินเต็ม $overMaxAssignmentCount งาน',
+                        background: semantic.dangerContainer,
+                        foreground: semantic.danger,
                       ),
                   ],
                 ),
-              if (validClassId != null && overMaxAssignmentCount > 0) ...[
-                const SizedBox(height: 12),
-                AppFeedbackBanner(
-                  type: AppFeedbackType.warning,
-                  message:
-                      'พบคะแนนนักเรียนสูงกว่าคะแนนเต็มใน $overMaxAssignmentCount ชิ้นงาน '
-                      '(รวม $overMaxStudentEntries รายการ) กรุณาตรวจสอบและปรับแก้ในตารางคะแนน',
-                ),
-              ],
             ],
           ),
-        ),
+        if (validClassId != null && overMaxAssignmentCount > 0) ...[
+          const SizedBox(height: 10),
+          AppFeedbackBanner(
+            type: AppFeedbackType.warning,
+            message:
+                'พบคะแนนนักเรียนสูงกว่าคะแนนเต็มใน $overMaxAssignmentCount ชิ้นงาน '
+                '(รวม $overMaxStudentEntries รายการ) กรุณาตรวจสอบและปรับแก้ในตารางคะแนน',
+          ),
+        ],
       ],
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/submission_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/student_score.dart';
@@ -243,21 +244,24 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
                         ),
                       ),
                       Expanded(
-                        child: Scrollbar(
+                        child: AppSubtleScrollbar(
                           controller: _bodyHorizontalCtrl,
-                          thumbVisibility: true,
                           notificationPredicate: (n) => n.depth == 0,
                           child: SingleChildScrollView(
                             controller: _bodyHorizontalCtrl,
                             scrollDirection: Axis.horizontal,
                             child: SizedBox(
                               width: totalRightWidth,
-                              child: ListView.builder(
+                              child: AppSubtleScrollbar(
                                 controller: _rightVerticalCtrl,
-                                itemCount: widget.rows.length,
-                                itemExtent: _rowHeight,
-                                itemBuilder: (context, rowIndex) =>
-                                    _buildScoreRow(context, rowIndex),
+                                child: ListView.builder(
+                                  controller: _rightVerticalCtrl,
+                                  primary: false,
+                                  itemCount: widget.rows.length,
+                                  itemExtent: _rowHeight,
+                                  itemBuilder: (context, rowIndex) =>
+                                      _buildScoreRow(context, rowIndex),
+                                ),
                               ),
                             ),
                           ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../domain/entities/academic_year.dart';
 import '../../domain/entities/delete_impact_summary.dart';
@@ -36,46 +37,28 @@ class AcademicStructurePage extends ConsumerWidget {
       }
     });
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const AppPageHeader(
-                title: 'โครงสร้างปีการศึกษาและรายวิชา',
-                subtitle:
-                    'จัดการปีการศึกษา (พ.ศ.) → เทอม → รายวิชา → ห้องเรียนที่สอน และปักหมุดเทอมปัจจุบัน',
+    return AppPageContainer.scrollable(
+      header: const AppPageHeader(title: 'โครงสร้างปีการศึกษาและรายวิชา'),
+      child: yearsAsync.isLoading || termsAsync.isLoading
+          ? const StructureSkeletonView()
+          : yearsAsync.hasError || termsAsync.hasError
+          ? AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(
+                yearsAsync.error ?? termsAsync.error!,
               ),
-              const SizedBox(height: 20),
-              if (yearsAsync.isLoading || termsAsync.isLoading)
-                const StructureSkeletonView()
-              else if (yearsAsync.hasError || termsAsync.hasError)
-                AppFeedbackBanner(
-                  type: AppFeedbackType.error,
-                  message: ThaiErrorMapper.map(
-                    yearsAsync.error ?? termsAsync.error!,
-                  ),
-                  onRetry: () {
-                    ref.invalidate(academicYearsProvider);
-                    ref.invalidate(allTermsProvider);
-                  },
-                )
-              else
-                _buildContent(
-                  context: context,
-                  ref: ref,
-                  academicYears: yearsAsync.asData?.value ?? const [],
-                  terms: termsAsync.asData?.value ?? const [],
-                  isBusy: isBusy,
-                ),
-            ],
-          ),
-        ),
-      ),
+              onRetry: () {
+                ref.invalidate(academicYearsProvider);
+                ref.invalidate(allTermsProvider);
+              },
+            )
+          : _buildContent(
+              context: context,
+              ref: ref,
+              academicYears: yearsAsync.asData?.value ?? const [],
+              terms: termsAsync.asData?.value ?? const [],
+              isBusy: isBusy,
+            ),
     );
   }
 

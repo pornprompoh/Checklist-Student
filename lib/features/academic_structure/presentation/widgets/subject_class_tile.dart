@@ -16,6 +16,7 @@ class SubjectClassTile extends StatelessWidget {
     required this.onDelete,
     this.onOpenAttendance,
     this.onOpenGrading,
+    this.onOpenGradingPlan,
   });
 
   final SubjectClass subjectClass;
@@ -25,6 +26,7 @@ class SubjectClassTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onOpenAttendance;
   final VoidCallback? onOpenGrading;
+  final VoidCallback? onOpenGradingPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +162,9 @@ class SubjectClassTile extends StatelessWidget {
                       ),
                   ],
                 ),
-              if (onOpenAttendance != null || onOpenGrading != null)
+              if (onOpenAttendance != null ||
+                  onOpenGrading != null ||
+                  onOpenGradingPlan != null)
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -190,6 +194,19 @@ class SubjectClassTile extends StatelessWidget {
                         onPressed: isBusy ? null : onOpenGrading,
                         icon: const Icon(Icons.table_chart_outlined, size: 15),
                         label: const Text('ตารางคะแนน'),
+                      ),
+                    if (onOpenGradingPlan != null)
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                        ),
+                        onPressed: isBusy ? null : onOpenGradingPlan,
+                        icon: const Icon(Icons.assignment_outlined, size: 15),
+                        label: const Text('แผนเก็บงาน'),
                       ),
                   ],
                 ),

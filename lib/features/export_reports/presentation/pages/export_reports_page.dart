@@ -6,7 +6,9 @@ import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_subtle_scrollbar.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
@@ -36,11 +38,20 @@ class ExportReportsPage extends ConsumerStatefulWidget {
 class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
   _MobileExportTab _mobileTab = _MobileExportTab.config;
   bool _appliedInitialClass = false;
+  final ScrollController _configScrollController = ScrollController();
+  final ScrollController _previewScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _scheduleApplyInitialClass();
+  }
+
+  @override
+  void dispose() {
+    _configScrollController.dispose();
+    _previewScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -110,12 +121,14 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
       configState.selectedClassId,
     );
 
+    const baseHeader = AppPageHeader(title: 'ส่งออกรายงานและเอกสาร ปพ.5');
+
     if ((yearsAsync.isLoading ||
             termsAsync.isLoading ||
             allClassesAsync.isLoading) &&
         allClasses.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
+      return const AppPageContainer.scrollable(
+        header: baseHeader,
         child: Column(
           children: [
             SkeletonBox(height: 80),
@@ -129,8 +142,8 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     final loadError =
         yearsAsync.error ?? termsAsync.error ?? allClassesAsync.error;
     if (loadError != null && allClasses.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(20),
+      return AppPageContainer.scrollable(
+        header: baseHeader,
         child: AppFeedbackBanner(
           type: AppFeedbackType.error,
           message: ThaiErrorMapper.map(loadError),
@@ -145,35 +158,18 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     }
 
     if (terms.isEmpty || allClasses.isEmpty) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const AppPageHeader(
-                  title: 'ส่งออกรายงานและเอกสาร ปพ.5',
-                  subtitle:
-                      'เลือกหัวข้อรายงาน ปรับหัวเอกสารเฉพาะใบ สลับแนวกระดาษ A4 และตรวจสอบตัวอย่างก่อนส่งออก',
-                ),
-                const SizedBox(height: 20),
-                AppEmptyState(
-                  icon: Icons.description_outlined,
-                  title: 'ยังไม่มีห้องเรียนสำหรับส่งออกรายงาน',
-                  description:
-                      'กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มสร้างเอกสาร ปพ.5',
-                  actionLabel: 'ไปหน้าโครงสร้างสอน',
-                  actionIcon: Icons.account_tree_outlined,
-                  onAction: () => GoRouter.maybeOf(
-                    context,
-                  )?.go(AppRoutes.teacherAcademicStructure),
-                ),
-              ],
-            ),
-          ),
+      return AppPageContainer.scrollable(
+        header: baseHeader,
+        child: AppEmptyState(
+          icon: Icons.description_outlined,
+          title: 'ยังไม่มีห้องเรียนสำหรับส่งออกรายงาน',
+          description:
+              'กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มสร้างเอกสาร ปพ.5',
+          actionLabel: 'ไปหน้าโครงสร้างสอน',
+          actionIcon: Icons.account_tree_outlined,
+          onAction: () => GoRouter.maybeOf(
+            context,
+          )?.go(AppRoutes.teacherAcademicStructure),
         ),
       );
     }
@@ -202,147 +198,155 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
               )
         : null;
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1320),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppPageHeader(
-                title: 'ส่งออกรายงานและเอกสาร ปพ.5',
-                subtitle:
-                    'เลือกหัวข้อรายงาน ปรับหัวเอกสารเฉพาะใบ สลับแนวกระดาษ A4 และตรวจสอบตัวอย่างก่อนส่งออก',
-                bottom: effectiveClassOption == null
-                    ? null
-                    : ClassWorkspaceBar(
-                        subjectClassId: effectiveClassOption.subjectClassId,
-                        activeTab: ClassWorkspaceTab.export,
-                      ),
-              ),
-              const SizedBox(height: 20),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final configColumn = Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ExportConfigPanel(
-                        academicYears: years,
-                        terms: terms,
-                        selectedTermId: activeTermId,
-                        classOptionsInTerm: classesInTerm,
-                        selectedClassId: effectiveClassOption?.subjectClassId,
-                        options: configState.options,
-                        orientationDecision: bundle?.orientationDecision,
-                        onSelectTerm: (termId) {
-                          ref
-                              .read(selectedTermIdProvider.notifier)
-                              .select(termId);
-                          controller.selectClass(null);
-                        },
-                        onSelectClass: controller.selectClass,
-                        onToggleSection: (section) {
-                          final ok = controller.toggleSection(section);
-                          if (!ok) {
-                            AppFeedbackBanner.showSnackBar(
-                              context,
-                              type: AppFeedbackType.warning,
-                              message:
-                                  'ต้องเลือกหัวข้อรายงานอย่างน้อย 1 หัวข้อ',
-                            );
-                          }
-                        },
-                        onSelectOrientationMode: controller.setOrientationMode,
-                        onToggleTransferredOut:
-                            controller.setIncludeTransferredOut,
-                        onToggleSignatureLines:
-                            controller.setIncludeSignatureLines,
-                      ),
-                      if (effectiveHeader != null) ...[
-                        const SizedBox(height: 16),
-                        ExportDocumentHeaderCard(
-                          header: effectiveHeader,
-                          hasCustomOverride: configState.headerOverride != null,
-                          previewXlsxFilename: controller.buildPreviewFilename(
-                            header: effectiveHeader,
-                            extension: 'xlsx',
-                          ),
-                          previewPdfFilename: controller.buildPreviewFilename(
-                            header: effectiveHeader,
-                            extension: 'pdf',
-                          ),
-                          previewDocxFilename: controller.buildPreviewFilename(
-                            header: effectiveHeader,
-                            extension: 'docx',
-                          ),
-                          onHeaderChanged: controller.updateHeader,
-                          onResetToProfile:
-                              controller.resetHeaderToProfileDefaults,
-                        ),
-                      ],
-                    ],
-                  );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSplitPane =
+            constraints.maxWidth >= 960 && constraints.maxHeight >= 580;
 
-                  final previewSection = _buildPreviewSection(
+        final pageHeader = AppPageHeader(
+          title: 'ส่งออกรายงานและเอกสาร ปพ.5',
+          bottom: effectiveClassOption == null
+              ? null
+              : ClassWorkspaceBar(
+                  subjectClassId: effectiveClassOption.subjectClassId,
+                  activeTab: ClassWorkspaceTab.export,
+                ),
+        );
+
+        final configColumn = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ExportConfigPanel(
+              academicYears: years,
+              terms: terms,
+              selectedTermId: activeTermId,
+              classOptionsInTerm: classesInTerm,
+              selectedClassId: effectiveClassOption?.subjectClassId,
+              options: configState.options,
+              orientationDecision: bundle?.orientationDecision,
+              onSelectTerm: (termId) {
+                ref.read(selectedTermIdProvider.notifier).select(termId);
+                controller.selectClass(null);
+              },
+              onSelectClass: controller.selectClass,
+              onToggleSection: (section) {
+                final ok = controller.toggleSection(section);
+                if (!ok) {
+                  AppFeedbackBanner.showSnackBar(
+                    context,
+                    type: AppFeedbackType.warning,
+                    message: 'ต้องเลือกหัวข้อรายงานอย่างน้อย 1 หัวข้อ',
+                  );
+                }
+              },
+              onSelectOrientationMode: controller.setOrientationMode,
+              onToggleTransferredOut: controller.setIncludeTransferredOut,
+              onToggleSignatureLines: controller.setIncludeSignatureLines,
+            ),
+            if (effectiveHeader != null) ...[
+              const SizedBox(height: 16),
+              ExportDocumentHeaderCard(
+                header: effectiveHeader,
+                hasCustomOverride: configState.headerOverride != null,
+                previewXlsxFilename: controller.buildPreviewFilename(
+                  header: effectiveHeader,
+                  extension: 'xlsx',
+                ),
+                previewPdfFilename: controller.buildPreviewFilename(
+                  header: effectiveHeader,
+                  extension: 'pdf',
+                ),
+                previewDocxFilename: controller.buildPreviewFilename(
+                  header: effectiveHeader,
+                  extension: 'docx',
+                ),
+                onHeaderChanged: controller.updateHeader,
+                onResetToProfile: controller.resetHeaderToProfileDefaults,
+              ),
+            ],
+          ],
+        );
+
+        if (isSplitPane) {
+          final leftWidth = constraints.maxWidth >= 1160 ? 400.0 : 368.0;
+          return AppPageContainer.viewport(
+            header: pageHeader,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: leftWidth,
+                  child: AppSubtleScrollbar(
+                    controller: _configScrollController,
+                    child: SingleChildScrollView(
+                      controller: _configScrollController,
+                      primary: false,
+                      padding: const EdgeInsets.only(right: 10, bottom: 8),
+                      child: configColumn,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPreviewSection(
                     context,
                     effectiveClassOption: effectiveClassOption,
                     rawAsync: rawAsync,
                     bundle: bundle,
-                  );
+                    isSplitPane: true,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
-                  if (constraints.maxWidth >= 1040) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 390, child: configColumn),
-                        const SizedBox(width: 20),
-                        Expanded(child: previewSection),
-                      ],
-                    );
-                  }
+        final previewSection = _buildPreviewSection(
+          context,
+          effectiveClassOption: effectiveClassOption,
+          rawAsync: rawAsync,
+          bundle: bundle,
+          isSplitPane: false,
+        );
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SegmentedButton<_MobileExportTab>(
-                        showSelectedIcon: false,
-                        segments: const <ButtonSegment<_MobileExportTab>>[
-                          ButtonSegment(
-                            value: _MobileExportTab.config,
-                            label: Text(
-                              'ตั้งค่าเอกสาร',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                          ButtonSegment(
-                            value: _MobileExportTab.preview,
-                            label: Text(
-                              'ตัวอย่างก่อนส่งออก (Preview)',
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                        selected: <_MobileExportTab>{_mobileTab},
-                        onSelectionChanged: (sel) =>
-                            setState(() => _mobileTab = sel.first),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_mobileTab == _MobileExportTab.config)
-                        configColumn
-                      else
-                        previewSection,
-                    ],
-                  );
-                },
+        return AppPageContainer.scrollable(
+          header: pageHeader,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SegmentedButton<_MobileExportTab>(
+                showSelectedIcon: false,
+                segments: const <ButtonSegment<_MobileExportTab>>[
+                  ButtonSegment(
+                    value: _MobileExportTab.config,
+                    label: Text(
+                      'ตั้งค่าเอกสาร',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  ButtonSegment(
+                    value: _MobileExportTab.preview,
+                    label: Text(
+                      'ตัวอย่างก่อนส่งออก (Preview)',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+                selected: <_MobileExportTab>{_mobileTab},
+                onSelectionChanged: (sel) =>
+                    setState(() => _mobileTab = sel.first),
               ),
+              const SizedBox(height: 16),
+              if (_mobileTab == _MobileExportTab.config)
+                configColumn
+              else
+                previewSection,
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -365,29 +369,41 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     required CopyPlanSourceClassOption? effectiveClassOption,
     required AsyncValue<ExportRawClassData>? rawAsync,
     required ExportReportBundle? bundle,
+    required bool isSplitPane,
   }) {
+    Widget wrapSplitFallback(Widget child) {
+      if (!isSplitPane) return child;
+      return SingleChildScrollView(primary: false, child: child);
+    }
+
     if (effectiveClassOption == null) {
-      return const AppEmptyState(
-        icon: Icons.class_outlined,
-        title: 'ไม่พบห้องเรียนในภาคเรียนที่เลือก',
-        description: 'กรุณาเลือกภาคเรียนอื่นจากแผงตั้งค่าด้านซ้าย',
+      return wrapSplitFallback(
+        const AppEmptyState(
+          icon: Icons.class_outlined,
+          title: 'ไม่พบห้องเรียนในภาคเรียนที่เลือก',
+          description: 'กรุณาเลือกภาคเรียนอื่นจากแผงตั้งค่าด้านซ้าย',
+        ),
       );
     }
     if (rawAsync == null || (rawAsync.isLoading && bundle == null)) {
-      return const Column(
-        children: [
-          SkeletonBox(height: 60),
-          SizedBox(height: 12),
-          SkeletonBox(height: 420),
-        ],
+      return wrapSplitFallback(
+        const Column(
+          children: [
+            SkeletonBox(height: 60),
+            SizedBox(height: 12),
+            SkeletonBox(height: 420),
+          ],
+        ),
       );
     }
     if (rawAsync.hasError && bundle == null) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.error,
-        message: ThaiErrorMapper.map(rawAsync.error!),
-        onRetry: () => ref.invalidate(
-          exportRawClassDataProvider(effectiveClassOption.subjectClassId),
+      return wrapSplitFallback(
+        AppFeedbackBanner(
+          type: AppFeedbackType.error,
+          message: ThaiErrorMapper.map(rawAsync.error!),
+          onRetry: () => ref.invalidate(
+            exportRawClassDataProvider(effectiveClassOption.subjectClassId),
+          ),
         ),
       );
     }
@@ -399,6 +415,8 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
 
     return ExportPreviewCanvas(
       bundle: bundle,
+      pinActionBar: isSplitPane,
+      previewScrollController: isSplitPane ? _previewScrollController : null,
       isExportingExcel: configState.isExportingExcel,
       isExportingPdf: configState.isExportingPdf,
       isExportingDocx: configState.isExportingDocx,

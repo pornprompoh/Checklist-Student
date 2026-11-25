@@ -182,15 +182,31 @@ void main() {
       );
     });
 
-    testWidgets('AcademicStructurePage renders without overflow across 6 viewports', (
-      tester,
-    ) async {
-      await pumpAcross6Viewports(
-        tester,
-        fixtures: fixtures,
-        builder: () => const AcademicStructurePage(),
-      );
-    });
+    testWidgets(
+      'AcademicStructurePage (Subject Blocks Grid + Detail Drill-Down) across 6 viewports',
+      (tester) async {
+        await pumpAcross6Viewports(
+          tester,
+          fixtures: fixtures,
+          builder: () => const AcademicStructurePage(),
+          afterPump: (tester, vp) async {
+            final manageBtn = find.text('จัดการห้องเรียน');
+            if (manageBtn.evaluate().isNotEmpty) {
+              await tester.ensureVisible(manageBtn.first);
+              await tester.pumpAndSettle();
+              await tester.tap(manageBtn.first);
+              await tester.pumpAndSettle();
+              expect(find.text('กลับไปรายวิชาทั้งหมด'), findsOneWidget);
+              expect(tester.takeException(), isNull);
+              await tester.ensureVisible(find.text('กลับไปรายวิชาทั้งหมด'));
+              await tester.pumpAndSettle();
+              await tester.tap(find.text('กลับไปรายวิชาทั้งหมด'));
+              await tester.pumpAndSettle();
+            }
+          },
+        );
+      },
+    );
 
     testWidgets('HomeroomRosterPage (both tabs) renders without overflow across 6 viewports', (
       tester,

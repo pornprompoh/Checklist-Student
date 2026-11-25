@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_page_container.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/subject.dart';
@@ -80,41 +82,30 @@ class _AttendanceCheckInPageState extends ConsumerState<AttendanceCheckInPage> {
 
     if (activeClassId == null &&
         (subjectsAsync.isLoading || classesAsync.isLoading)) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1040),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: const [
-                AppSurfaceCard(child: SkeletonBox(height: 64)),
-                SizedBox(height: 12),
-                AppSurfaceCard(child: SkeletonBox(height: 180)),
-              ],
-            ),
-          ),
+      return const AppPageContainer.scrollable(
+        header: AppPageHeader(title: 'เช็คชื่อรายวัน'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppSurfaceCard(child: SkeletonBox(height: 64)),
+            SizedBox(height: 12),
+            AppSurfaceCard(child: SkeletonBox(height: 180)),
+          ],
         ),
       );
     }
 
     if (activeClassId == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: AppEmptyState(
-              icon: Icons.fact_check_outlined,
-              title: 'ยังไม่ได้เลือกหรือยังไม่มีห้องเรียนในเทอมนี้',
-              description:
-                  'เลือกห้องเรียนจากหน้าหลัก หรือเพิ่มรายวิชาและห้องเรียนก่อนเริ่มเช็คชื่อ',
-              actionLabel: 'กลับหน้าหลัก',
-              actionIcon: Icons.home_outlined,
-              onAction: () => context.go(AppRoutes.teacherDashboard),
-            ),
-          ),
+      return AppPageContainer.scrollable(
+        header: const AppPageHeader(title: 'เช็คชื่อรายวัน'),
+        child: AppEmptyState(
+          icon: Icons.fact_check_outlined,
+          title: 'ยังไม่ได้เลือกหรือยังไม่มีห้องเรียนในเทอมนี้',
+          description:
+              'เลือกห้องเรียนจากหน้าหลัก หรือเพิ่มรายวิชาและห้องเรียนก่อนเริ่มเช็คชื่อ',
+          actionLabel: 'กลับหน้าหลัก',
+          actionIcon: Icons.home_outlined,
+          onAction: () => context.go(AppRoutes.teacherDashboard),
         ),
       );
     }

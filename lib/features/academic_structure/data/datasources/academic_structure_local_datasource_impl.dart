@@ -165,17 +165,21 @@ class AcademicStructureLocalDataSourceImpl
     'updated_at': y.updatedAt.toUtc().toIso8601String(),
   };
 
-  Map<String, dynamic> _termToJson(Term t) => <String, dynamic>{
-    'id': t.id,
-    'teacher_id': t.teacherId,
-    'academic_year_id': t.academicYearId,
-    'term_label': t.termLabel,
-    'start_date': ThaiDateFormatter.toIsoDate(t.startDate),
-    'end_date': ThaiDateFormatter.toIsoDate(t.endDate),
-    'is_pinned_active': t.isPinnedActive,
-    'created_at': t.createdAt.toUtc().toIso8601String(),
-    'updated_at': t.updatedAt.toUtc().toIso8601String(),
-  };
+  Map<String, dynamic> _termToJson(Term t) {
+    final start = t.startDate;
+    final end = t.endDate;
+    return <String, dynamic>{
+      'id': t.id,
+      'teacher_id': t.teacherId,
+      'academic_year_id': t.academicYearId,
+      'term_label': t.termLabel,
+      'start_date': start == null ? null : ThaiDateFormatter.toIsoDate(start),
+      'end_date': end == null ? null : ThaiDateFormatter.toIsoDate(end),
+      'is_pinned_active': t.isPinnedActive,
+      'created_at': t.createdAt.toUtc().toIso8601String(),
+      'updated_at': t.updatedAt.toUtc().toIso8601String(),
+    };
+  }
 
   Map<String, dynamic> _subjectToJson(Subject s) => <String, dynamic>{
     'id': s.id,
