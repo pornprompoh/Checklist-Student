@@ -1,0 +1,225 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_container.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_surface_card.dart';
+import '../../../../core/widgets/skeleton_box.dart';
+import '../../../../core/widgets/unsaved_changes_guard.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../providers/teacher_settings_controller.dart';
+import '../widgets/appearance_settings_card.dart';
+import '../widgets/storage_cleanup_section_card.dart';
+import '../widgets/teacher_code_section_card.dart';
+import '../widgets/teacher_profile_form_card.dart';
+
+/// Teacher profile, short-code, and appearance settings page (`/teacher/settings`).
+///
+/// Wrapped in [UnsavedChangesGuard] to protect unsaved profile and teacher-code edits.
+class TeacherSettingsPage extends ConsumerStatefulWidget {
+  const TeacherSettingsPage({super.key});
+
+  @override
+  ConsumerState<TeacherSettingsPage> createState() =>
+      _TeacherSettingsPageState();
+}
+
+class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
+  bool _hasUnsavedProfileChanges = false;
+  bool _hasUnsavedCodeChanges = false;
+
+  bool get _hasAnyUnsavedChanges =>
+      _hasUnsavedProfileChanges || _hasUnsavedCodeChanges;
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final controllerState = ref.watch(teacherSettingsControllerProvider);
+    final profile = authState.profile;
+
+    ref.listen<AsyncValue<void>>(teacherSettingsControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (next.hasError && previous?.error != next.error) {
+        AppFeedbackBanner.showErrorSnackBar(context, next.error!);
+      }
+    });
+
+    return UnsavedChangesGuard(
+      hasUnsavedChanges: _hasAnyUnsavedChanges,
+      child: AppPageContainer.scrollable(
+        header: const AppPageHeader(title: 'โปรไฟล์และการตั้งค่าครู'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (authState.errorMessage != null) ...[
+              AppFeedbackBanner(
+                type: AppFeedbackType.error,
+                message: authState.errorMessage!,
+                onRetry: () =>
+                    ref.read(authStateProvider.notifier).refreshProfile(),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (controllerState.hasError) ...[
+              AppFeedbackBanner(
+                type: AppFeedbackType.error,
+                message: ThaiErrorMapper.map(controllerState.error!),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (authState.isLoading)
+              const _SettingsSkeletonView()
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isTwoColumn =
+                      MediaQuery.sizeOf(context).width >= 1040 &&
+                      constraints.maxWidth >= 820;
+
+                  final primaryColumn = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (profile == null)
+                        AppFeedbackBanner(
+                          type: AppFeedbackType.warning,
+                          message:
+                              'ไม่พบข้อมูลโปรไฟล์ครูในตาราง teachers กรุณาตรวจสอบ Trigger สร้างบัญชีครูหรือสิทธิ์ฐานข้อมูลแล้วกดลองใหม่',
+                          onRetry: () => ref
+                              .read(authStateProvider.notifier)
+                              .refreshProfile(),
+                        )
+                      else
+                        TeacherProfileFormCard(
+                          profile: profile,
+                          isSaving: controllerState.isLoading,
+                          onDirtyChanged: (dirty) {
+                            if (_hasUnsavedProfileChanges != dirty) {
+                              setState(() => _hasUnsavedProfileChanges = dirty);
+                            }
+                          },
+                          onSave: (update) async {
+                            final ok = await ref
+                                .read(
+                                  teacherSettingsControllerProvider.notifier,
+                                )
+                                .saveProfile(update);
+                            if (ok && context.mounted) {
+                              AppFeedbackBanner.showSnackBar(
+                                context,
+                                type: AppFeedbackType.success,
+                                message: 'บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว',
+                              );
+                            }
+                            return ok;
+                          },
+                        ),
+                      const SizedBox(height: 16),
+                      StorageCleanupSectionCard(canUseAi: authState.canUseAi),
+                    ],
+                  );
+
+                  final secondaryColumn = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (profile != null) ...[
+                        TeacherCodeSectionCard(
+                          currentCode: profile.teacherCode,
+                          isSaving: controllerState.isLoading,
+                          onDirtyChanged: (dirty) {
+                            if (_hasUnsavedCodeChanges != dirty) {
+                              setState(() => _hasUnsavedCodeChanges = dirty);
+                            }
+                          },
+                          onChangeCode: (newCode) async {
+                            final ok = await ref
+                                .read(
+                                  teacherSettingsControllerProvider.notifier,
+                                )
+                                .changeTeacherCode(newCode);
+                            if (ok && context.mounted) {
+                              AppFeedbackBanner.showSnackBar(
+                                context,
+                                type: AppFeedbackType.success,
+                                message:
+                                    'เปลี่ยนรหัสครูเรียบร้อยแล้ว ลิงก์เดิมจะ Redirect อัตโนมัติ',
+                              );
+                            }
+                            return ok;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      AppearanceSettingsCard(canUseAi: authState.canUseAi),
+                    ],
+                  );
+
+                  if (isTwoColumn) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 7, child: primaryColumn),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 5, child: secondaryColumn),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      primaryColumn,
+                      const SizedBox(height: 16),
+                      secondaryColumn,
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSkeletonView extends StatelessWidget {
+  const _SettingsSkeletonView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        AppSurfaceCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox.line(width: 200, height: 18),
+              SizedBox(height: 16),
+              SkeletonBox(height: 48),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+            ],
+          ),
+        ),
+        SizedBox(height: 16),
+        AppSurfaceCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox.line(width: 220, height: 18),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

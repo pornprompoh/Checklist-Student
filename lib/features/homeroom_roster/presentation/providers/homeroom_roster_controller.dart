@@ -1,0 +1,450 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/errors/app_exception.dart';
+import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
+import '../../../attendance/presentation/providers/attendance_providers.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../domain/entities/class_enrollment.dart';
+import '../../domain/entities/homeroom.dart';
+import '../../domain/entities/homeroom_student.dart';
+import '../../domain/entities/student_lifecycle_status.dart';
+import '../../domain/services/roster_renumber_service.dart';
+import '../../domain/services/unlinked_room_sync_service.dart';
+import 'homeroom_roster_providers.dart';
+
+/// Controller orchestrating all homeroom master roster and class enrollment
+/// mutations, cross-class sync, soft deletes, and renumbering.
+class HomeroomRosterController extends AsyncNotifier<void> {
+  @override
+  void build() {}
+
+  String _requireTeacherId() {
+    final userId = ref.read(authStateProvider).userId;
+    if (userId == null) {
+      throw const AuthException('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+    }
+    return userId;
+  }
+
+  Future<T?> _run<T>(Future<T> Function() action) async {
+    state = const AsyncLoading<void>();
+    try {
+      final result = await action();
+      if (ref.mounted) {
+        state = const AsyncData<void>(null);
+      }
+      return result;
+    } catch (error, stackTrace) {
+      if (ref.mounted) {
+        state = AsyncError<void>(
+          ThaiErrorMapper.toAppException(error),
+          stackTrace,
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<Homeroom?> createHomeroom({
+    required String termId,
+    required String name,
+  }) {
+    return _run(() async {
+      final teacherId = _requireTeacherId();
+      final created = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .createHomeroom(teacherId: teacherId, termId: termId, name: name);
+      ref.invalidate(homeroomsByTermProvider(termId));
+      ref.read(selectedHomeroomIdProvider.notifier).select(created.id);
+      return created;
+    });
+  }
+
+  Future<Homeroom?> renameHomeroom({
+    required String termId,
+    required String homeroomId,
+    required String name,
+  }) {
+    return _run(() async {
+      final updated = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .renameHomeroom(homeroomId: homeroomId, name: name);
+      ref.invalidate(homeroomsByTermProvider(termId));
+      return updated;
+    });
+  }
+
+  Future<bool> deleteHomeroom({
+    required String termId,
+    required String homeroomId,
+  }) async {
+    final ok = await _run(() async {
+      await ref
+          .read(homeroomRosterRepositoryProvider)
+          .deleteHomeroom(homeroomId);
+      if (ref.read(selectedHomeroomIdProvider) == homeroomId) {
+        ref.read(selectedHomeroomIdProvider.notifier).select(null);
+      }
+      ref.invalidate(homeroomsByTermProvider(termId));
+      ref.invalidate(subjectClassesByTermProvider(termId));
+      return true;
+    });
+    return ok ?? false;
+  }
+
+  Future<Homeroom?> syncUnlinkedRoomGroups({
+    required String termId,
+    required List<UnlinkedRoomGroup> groups,
+    required DateTime enrolledAt,
+  }) {
+    return _run<Homeroom?>(() async {
+      final teacherId = _requireTeacherId();
+      final firstSynced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .syncUnlinkedRoomGroups(
+            teacherId: teacherId,
+            termId: termId,
+            groups: groups,
+            enrolledAt: enrolledAt,
+          );
+      ref.invalidate(homeroomsByTermProvider(termId));
+      ref.invalidate(subjectClassesByTermProvider(termId));
+      for (final group in groups) {
+        for (final classId in group.subjectClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
+      if (firstSynced != null) {
+        ref.read(selectedHomeroomIdProvider.notifier).select(firstSynced.id);
+      }
+      return firstSynced;
+    });
+  }
+
+  Future<HomeroomStudent?> addHomeroomStudent({
+    required String homeroomId,
+    required String studentCode,
+    required int studentNumber,
+    required String prefix,
+    required String firstName,
+    required String lastName,
+    bool autoEnrollLinkedClasses = false,
+    DateTime? enrolledAt,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final teacherId = _requireTeacherId();
+      final created = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .addHomeroomStudent(
+            teacherId: teacherId,
+            homeroomId: homeroomId,
+            studentCode: studentCode,
+            studentNumber: studentNumber,
+            prefix: prefix,
+            firstName: firstName,
+            lastName: lastName,
+            autoEnrollLinkedClasses: autoEnrollLinkedClasses,
+            enrolledAt: enrolledAt,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      if (autoEnrollLinkedClasses) {
+        for (final classId in linkedClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
+      return created;
+    });
+  }
+
+  Future<int?> updateHomeroomStudent({
+    required String homeroomId,
+    required String homeroomStudentId,
+    required String studentCode,
+    required int studentNumber,
+    required String prefix,
+    required String firstName,
+    required String lastName,
+    required bool syncLinkedClasses,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final teacherId = _requireTeacherId();
+      final synced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .updateHomeroomStudent(
+            homeroomStudentId: homeroomStudentId,
+            teacherId: teacherId,
+            studentCode: studentCode,
+            studentNumber: studentNumber,
+            prefix: prefix,
+            firstName: firstName,
+            lastName: lastName,
+            syncLinkedClasses: syncLinkedClasses,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      for (final classId in linkedClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return synced;
+    });
+  }
+
+  Future<int?> setHomeroomStudentStatus({
+    required String homeroomId,
+    required String homeroomStudentId,
+    required StudentLifecycleStatus status,
+    DateTime? transferredOutAt,
+    required bool syncLinkedClasses,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final synced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .setHomeroomStudentStatus(
+            homeroomStudentId: homeroomStudentId,
+            status: status,
+            transferredOutAt: transferredOutAt,
+            syncLinkedClasses: syncLinkedClasses,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      for (final classId in linkedClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return synced;
+    });
+  }
+
+  Future<int?> permanentlyDeleteHomeroomStudent({
+    required String homeroomId,
+    required String homeroomStudentId,
+    required bool deleteFromLinkedClasses,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final deletedClasses = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .permanentlyDeleteHomeroomStudent(
+            homeroomStudentId: homeroomStudentId,
+            deleteFromLinkedClasses: deleteFromLinkedClasses,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      for (final classId in linkedClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+        ref.invalidate(attendanceSessionsProvider(classId));
+        ref.invalidate(attendanceClassRecordsProvider(classId));
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return deletedClasses;
+    });
+  }
+
+  Future<int?> renumberHomeroomStudents({
+    required String homeroomId,
+    required List<RenumberAssignment> assignments,
+    required bool syncLinkedClasses,
+    List<String> linkedClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final synced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .renumberHomeroomStudents(
+            assignments: assignments,
+            syncLinkedClasses: syncLinkedClasses,
+          );
+      ref.invalidate(homeroomStudentsProvider(homeroomId));
+      for (final classId in linkedClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return synced;
+    });
+  }
+
+  Future<int?> linkHomeroomToSubjectClasses({
+    required String termId,
+    required String homeroomId,
+    required List<String> subjectClassIds,
+    required DateTime enrolledAt,
+  }) {
+    return _run(() async {
+      final teacherId = _requireTeacherId();
+      final inserted = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .linkHomeroomToSubjectClasses(
+            teacherId: teacherId,
+            homeroomId: homeroomId,
+            subjectClassIds: subjectClassIds,
+            enrolledAt: enrolledAt,
+          );
+      ref.invalidate(subjectClassesByTermProvider(termId));
+      for (final classId in subjectClassIds) {
+        ref.invalidate(classEnrollmentsProvider(classId));
+      }
+      return inserted;
+    });
+  }
+
+  Future<ClassEnrollment?> addClassEnrollmentMidTerm({
+    required String subjectClassId,
+    String? addToHomeroomId,
+    required String studentCode,
+    required int studentNumber,
+    required String prefix,
+    required String firstName,
+    required String lastName,
+    required DateTime enrolledAt,
+  }) {
+    return _run(() async {
+      final teacherId = _requireTeacherId();
+      final created = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .addClassEnrollmentMidTerm(
+            teacherId: teacherId,
+            subjectClassId: subjectClassId,
+            addToHomeroomId: addToHomeroomId,
+            studentCode: studentCode,
+            studentNumber: studentNumber,
+            prefix: prefix,
+            firstName: firstName,
+            lastName: lastName,
+            enrolledAt: enrolledAt,
+          );
+      ref.invalidate(classEnrollmentsProvider(subjectClassId));
+      if (addToHomeroomId != null) {
+        ref.invalidate(homeroomStudentsProvider(addToHomeroomId));
+      }
+      return created;
+    });
+  }
+
+  Future<int?> updateClassEnrollment({
+    required ClassEnrollment existing,
+    required String studentCode,
+    required int studentNumber,
+    required String prefix,
+    required String firstName,
+    required String lastName,
+    required DateTime enrolledAt,
+    required bool syncToHomeroomAndAllClasses,
+    String? linkedHomeroomId,
+    List<String> siblingClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final synced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .updateClassEnrollment(
+            existing: existing,
+            studentCode: studentCode,
+            studentNumber: studentNumber,
+            prefix: prefix,
+            firstName: firstName,
+            lastName: lastName,
+            enrolledAt: enrolledAt,
+            syncToHomeroomAndAllClasses: syncToHomeroomAndAllClasses,
+          );
+      ref.invalidate(classEnrollmentsProvider(existing.subjectClassId));
+      if (syncToHomeroomAndAllClasses) {
+        if (linkedHomeroomId != null) {
+          ref.invalidate(homeroomStudentsProvider(linkedHomeroomId));
+        }
+        for (final classId in siblingClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return synced;
+    });
+  }
+
+  Future<int?> setClassEnrollmentStatus({
+    required ClassEnrollment existing,
+    required StudentLifecycleStatus status,
+    DateTime? transferredOutAt,
+    required bool syncToHomeroomAndAllClasses,
+    String? linkedHomeroomId,
+    List<String> siblingClassIds = const <String>[],
+  }) {
+    return _run(() async {
+      final synced = await ref
+          .read(homeroomRosterRepositoryProvider)
+          .setClassEnrollmentStatus(
+            existing: existing,
+            status: status,
+            transferredOutAt: transferredOutAt,
+            syncToHomeroomAndAllClasses: syncToHomeroomAndAllClasses,
+          );
+      ref.invalidate(classEnrollmentsProvider(existing.subjectClassId));
+      if (syncToHomeroomAndAllClasses) {
+        if (linkedHomeroomId != null) {
+          ref.invalidate(homeroomStudentsProvider(linkedHomeroomId));
+        }
+        for (final classId in siblingClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+        }
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return synced;
+    });
+  }
+
+  Future<bool> permanentlyDeleteClassEnrollment({
+    required ClassEnrollment existing,
+    required bool alsoDeleteFromHomeroom,
+    String? linkedHomeroomId,
+    List<String> siblingClassIds = const <String>[],
+  }) async {
+    final ok = await _run(() async {
+      await ref
+          .read(homeroomRosterRepositoryProvider)
+          .permanentlyDeleteClassEnrollment(
+            enrollmentId: existing.id,
+            homeroomStudentId: existing.homeroomStudentId,
+            alsoDeleteFromHomeroom: alsoDeleteFromHomeroom,
+          );
+      ref.invalidate(classEnrollmentsProvider(existing.subjectClassId));
+      ref.invalidate(attendanceSessionsProvider(existing.subjectClassId));
+      ref.invalidate(attendanceClassRecordsProvider(existing.subjectClassId));
+      if (alsoDeleteFromHomeroom) {
+        if (linkedHomeroomId != null) {
+          ref.invalidate(homeroomStudentsProvider(linkedHomeroomId));
+        }
+        for (final classId in siblingClassIds) {
+          ref.invalidate(classEnrollmentsProvider(classId));
+          ref.invalidate(attendanceSessionsProvider(classId));
+          ref.invalidate(attendanceClassRecordsProvider(classId));
+        }
+      }
+      ref.invalidate(dashboardOverviewProvider);
+      return true;
+    });
+    return ok ?? false;
+  }
+
+  Future<bool> renumberClassEnrollments({
+    required String subjectClassId,
+    required List<ClassEnrollment> currentEnrollments,
+    required List<RenumberAssignment> assignments,
+  }) async {
+    final ok = await _run(() async {
+      await ref
+          .read(homeroomRosterRepositoryProvider)
+          .renumberClassEnrollments(
+            currentEnrollments: currentEnrollments,
+            assignments: assignments,
+          );
+      ref.invalidate(classEnrollmentsProvider(subjectClassId));
+      return true;
+    });
+    return ok ?? false;
+  }
+}
+
+final homeroomRosterControllerProvider =
+    AsyncNotifierProvider<HomeroomRosterController, void>(
+      HomeroomRosterController.new,
+    );

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ระบบเช็คชื่อ ตรวจงาน ตัดเกรด ปพ.5 และพอร์ทัลนักเรียนแบบ Offline-First สำหรับครูไทย">
+
+  <!-- Theme color (Indigo Slate Light / Dark) -->
+  <meta name="theme-color" content="#3B5BDB" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121318" media="(prefers-color-scheme: dark)">
+
+  <!-- Android / iOS PWA meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Checklist">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon & Manifest -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+
+  <title>Checklist-Student — ระบบเช็คชื่อและตัดเกรดสำหรับครู</title>
+
+  <style>
+    :root {
+      --splash-bg: #F8F9FF;
+      --splash-fg: #1B1B21;
+      --splash-muted: #5B5D6B;
+      --splash-accent: #3B5BDB;
+      --splash-ring: rgba(59, 91, 219, 0.18);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --splash-bg: #121318;
+        --splash-fg: #E4E2EC;
+        --splash-muted: #A4A6B8;
+        --splash-accent: #748FFC;
+        --splash-ring: rgba(116, 143, 252, 0.22);
+      }
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: var(--splash-bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+    }
+    #app-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      text-align: center;
+      background-color: var(--splash-bg);
+      color: var(--splash-fg);
+      transition: opacity 220ms ease-out;
+    }
+    #app-splash.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .splash-logo {
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(59, 91, 219, 0.18);
+    }
+    .splash-spinner {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 3px solid var(--splash-ring);
+      border-top-color: var(--splash-accent);
+      animation: splash-spin 0.85s linear infinite;
+    }
+    .splash-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0;
+    }
+    .splash-subtitle {
+      font-size: 13px;
+      color: var(--splash-muted);
+      margin: 0;
+    }
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app-splash" role="status" aria-live="polite" aria-label="กำลังเปิด Checklist-Student">
+    <img class="splash-logo" src="icons/Icon-192.png" alt="Checklist-Student" width="68" height="68">
+    <div class="splash-spinner" aria-hidden="true"></div>
+    <p class="splash-title">กำลังเปิด Checklist-Student...</p>
+    <p class="splash-subtitle">ระบบเช็คชื่อ ตรวจงาน และตัดเกรดสำหรับครู</p>
+  </div>
+
+  <script>
+    (function () {
+      function dismissSplash() {
+        var el = document.getElementById('app-splash');
+        if (!el || el.classList.contains('is-hidden')) return;
+        el.classList.add('is-hidden');
+        window.setTimeout(function () {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 260);
+      }
+      window.addEventListener('flutter-first-frame', dismissSplash, { once: true });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
