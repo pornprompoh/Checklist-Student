@@ -98,6 +98,7 @@ class _HighlightRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: colorScheme.surface,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Icon(icon, size: 19, color: colorScheme.primary),
         ),

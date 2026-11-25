@@ -81,13 +81,20 @@ class DashboardHeaderBar extends StatelessWidget {
             ),
           ),
           onPressed: isBusy ? null : onRefresh,
-          icon: Icon(
-            Icons.refresh_rounded,
-            size: 20,
-            color: isBusy
-                ? colorScheme.onSurfaceVariant
-                : colorScheme.onSurface,
-          ),
+          icon: isBusy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colorScheme.primary,
+                  ),
+                )
+              : Icon(
+                  Icons.refresh_rounded,
+                  size: 20,
+                  color: colorScheme.onSurface,
+                ),
         ),
       ],
     );
@@ -163,7 +170,9 @@ class _TermPickerPillState extends State<_TermPickerPill> {
                           _formatTermHeadline(term),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelLarge,
+                          style: textTheme.labelLarge?.copyWith(
+                            fontFeatures: AppTheme.tabularFigures,
+                          ),
                         ),
                         Text(
                           ThaiDateFormatter.formatDateRange(
@@ -174,6 +183,7 @@ class _TermPickerPillState extends State<_TermPickerPill> {
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
+                            fontFeatures: AppTheme.tabularFigures,
                           ),
                         ),
                       ],

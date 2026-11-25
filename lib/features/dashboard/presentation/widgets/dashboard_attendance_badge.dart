@@ -86,6 +86,11 @@ class DashboardTodayStatusStrip extends StatelessWidget {
               ? semantic.warningContainer.withValues(alpha: 0.65)
               : colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: teachesToday
+                ? semantic.warning.withValues(alpha: 0.35)
+                : colorScheme.outlineVariant,
+          ),
         ),
         child: Row(
           children: [
@@ -124,6 +129,7 @@ class DashboardTodayStatusStrip extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

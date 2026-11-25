@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_providers.dart';
 
 /// Quick filter chips (`ทั้งหมด`, `สอนวันนี้`, `ปักหมุด`) and compact search
@@ -27,22 +28,28 @@ class DashboardFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: 12,
+      runSpacing: 8,
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Wrap(
           spacing: 8,
-          runSpacing: 6,
+          runSpacing: 8,
           children: [
             ChoiceChip(
-              label: Text('ทั้งหมด ($totalClassesCount)'),
+              label: Text(
+                'ทั้งหมด ($totalClassesCount)',
+                style: const TextStyle(fontFeatures: AppTheme.tabularFigures),
+              ),
               selected: filterState.mode == DashboardFilterMode.all,
               onSelected: (_) => onModeChanged(DashboardFilterMode.all),
             ),
             ChoiceChip(
-              label: Text('สอนวันนี้ ($todayClassesCount)'),
+              label: Text(
+                'สอนวันนี้ ($todayClassesCount)',
+                style: const TextStyle(fontFeatures: AppTheme.tabularFigures),
+              ),
               selected: filterState.mode == DashboardFilterMode.today,
               onSelected: (_) => onModeChanged(DashboardFilterMode.today),
             ),

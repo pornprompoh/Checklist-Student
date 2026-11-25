@@ -64,6 +64,8 @@ class DashboardSummaryMetrics extends StatelessWidget {
         final itemWidth =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
+        final isCompact = itemWidth < 165;
+
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
@@ -71,7 +73,7 @@ class DashboardSummaryMetrics extends StatelessWidget {
             for (final item in cards)
               SizedBox(
                 width: itemWidth,
-                child: _KpiTile(item: item),
+                child: _KpiTile(item: item, compact: isCompact),
               ),
           ],
         );
@@ -99,29 +101,35 @@ class _KpiItem {
 }
 
 class _KpiTile extends StatelessWidget {
-  const _KpiTile({required this.item});
+  const _KpiTile({required this.item, this.compact = false});
 
   final _KpiItem item;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final iconBoxSize = compact ? 32.0 : 36.0;
 
     return AppSurfaceCard(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(compact ? 10 : 12),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: iconBoxSize,
+            height: iconBoxSize,
             decoration: BoxDecoration(
               color: item.container,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(item.icon, size: 19, color: item.accent),
+            child: Icon(
+              item.icon,
+              size: compact ? 17 : 19,
+              color: item.accent,
+            ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: compact ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

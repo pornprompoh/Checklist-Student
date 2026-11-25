@@ -130,6 +130,14 @@ class TeacherLoginPage extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด',
+                style: IconButton.styleFrom(
+                  backgroundColor: colorScheme.surfaceContainerLow,
+                  side: BorderSide(color: colorScheme.outlineVariant),
+                  minimumSize: const Size(40, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 onPressed: () => ref
                     .read(themeModeProvider.notifier)
                     .toggleTheme(
@@ -137,6 +145,7 @@ class TeacherLoginPage extends ConsumerWidget {
                     ),
                 icon: Icon(
                   isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  size: 20,
                 ),
               ),
             ],
@@ -182,7 +191,7 @@ class TeacherLoginPage extends ConsumerWidget {
           ),
           const Divider(height: 32),
           Text(
-            'สำหรับนักเรียน',
+            'สำหรับนักเรียนตรวจสอบเวลาเรียนและคะแนน',
             textAlign: TextAlign.center,
             style: textTheme.labelMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
@@ -194,7 +203,7 @@ class TeacherLoginPage extends ConsumerWidget {
                 GoRouter.maybeOf(context)?.go(AppRoutes.studentPortalRoot),
             icon: const Icon(Icons.person_search_rounded, size: 18),
             label: const Text(
-              'คุณเป็นนักเรียนใช่ไหม? เข้าพอร์ทัลนักเรียน',
+              'เข้าพอร์ทัลนักเรียน (Student Portal)',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

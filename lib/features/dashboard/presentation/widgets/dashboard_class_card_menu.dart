@@ -59,50 +59,58 @@ class DashboardClassCardMenu extends StatelessWidget {
         const PopupMenuItem(
           value: _ClassCardMenuAction.gradingPlan,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.assignment_outlined),
+            leading: Icon(Icons.assignment_outlined, size: 18),
             title: Text('ออกแบบแผนเก็บงาน'),
           ),
         ),
         const PopupMenuItem(
           value: _ClassCardMenuAction.attendanceRules,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.tune_rounded),
+            leading: Icon(Icons.tune_rounded, size: 18),
             title: Text('ตั้งค่าเกณฑ์ มส'),
           ),
         ),
         const PopupMenuItem(
           value: _ClassCardMenuAction.exportReports,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.file_download_outlined),
+            leading: Icon(Icons.file_download_outlined, size: 18),
             title: Text('ส่งออกรายงาน ปพ.5'),
           ),
         ),
         const PopupMenuItem(
           value: _ClassCardMenuAction.auditLog,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.history_rounded),
+            leading: Icon(Icons.history_rounded, size: 18),
             title: Text('ประวัติคะแนน'),
           ),
         ),
         const PopupMenuItem(
           value: _ClassCardMenuAction.roster,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.groups_outlined),
+            leading: Icon(Icons.groups_outlined, size: 18),
             title: Text('คลังรายชื่อ'),
           ),
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
+          enabled: !isBusy,
           value: _ClassCardMenuAction.togglePin,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
             leading: Icon(
               isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+              size: 18,
             ),
             title: Text(isPinned ? 'เลิกปักหมุด' : 'ปักหมุดห้องนี้'),
           ),

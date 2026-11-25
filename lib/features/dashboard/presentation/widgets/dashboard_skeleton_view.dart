@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 
-/// Skeleton placeholder matching the compact KPI strip and classroom grid.
+/// Skeleton placeholder matching the compact KPI strip and 1/2/3-column
+/// classroom card grid to prevent layout jumps during initial load.
 class DashboardSkeletonView extends StatelessWidget {
   const DashboardSkeletonView({super.key});
 
@@ -29,7 +30,7 @@ class DashboardSkeletonView extends StatelessWidget {
                       padding: EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          SkeletonBox(width: 36, height: 36),
+                          SkeletonBox(width: 32, height: 32),
                           SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -50,21 +51,40 @@ class DashboardSkeletonView extends StatelessWidget {
           },
         ),
         const SizedBox(height: 20),
-        for (var i = 0; i < 2; i++) ...[
-          const AppSurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 1020
+                ? 3
+                : (constraints.maxWidth >= 660 ? 2 : 1);
+            const spacing = 12.0;
+            final width =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
               children: [
-                SkeletonBox.line(width: 112, height: 16),
-                SizedBox(height: 8),
-                SkeletonBox.line(width: 176, height: 20),
-                SizedBox(height: 16),
-                SkeletonBox(height: 40),
+                for (var i = 0; i < columns; i++)
+                  SizedBox(
+                    width: width,
+                    child: const AppSurfaceCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonBox.line(width: 96, height: 16),
+                          SizedBox(height: 8),
+                          SkeletonBox.line(width: 168, height: 20),
+                          SizedBox(height: 12),
+                          SkeletonBox(height: 44),
+                          SizedBox(height: 12),
+                          SkeletonBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
+            );
+          },
+        ),
       ],
     );
   }
