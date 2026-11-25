@@ -169,41 +169,29 @@ class _TermSubjectsSectionState extends ConsumerState<TermSubjectsSection> {
                 fontFeatures: AppTheme.tabularFigures,
               ),
             ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (subjects.length >= 4 || _searchQuery.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 240),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'ค้นหารหัสวิชา ชื่อวิชา หรือห้อง...',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                        suffixIcon: _searchQuery.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'ล้างคำค้นหา',
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                              ),
-                      ),
-                    ),
+            if (subjects.length >= 4 || _searchQuery.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'ค้นหารหัสวิชา ชื่อวิชา หรือห้อง...',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'ล้างคำค้นหา',
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                          ),
                   ),
-                FilledButton.icon(
-                  onPressed: isBusy ? null : () => _addSubject(context),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('เพิ่มรายวิชา'),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
         const SizedBox(height: 12),

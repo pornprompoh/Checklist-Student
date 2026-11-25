@@ -92,7 +92,7 @@ class AuditLogFilterBar extends StatelessWidget {
               ),
             ),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 260, minWidth: 0),
+              constraints: const BoxConstraints(maxWidth: 340, minWidth: 0),
               child: DropdownButtonFormField<String?>(
                 key: ValueKey<String?>('class_$validClassId'),
                 initialValue: validClassId,

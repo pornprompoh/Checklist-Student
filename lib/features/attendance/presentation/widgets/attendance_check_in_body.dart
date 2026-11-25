@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/app_page_container.dart';
@@ -109,6 +110,36 @@ class _AttendanceCheckInBodyState extends ConsumerState<AttendanceCheckInBody> {
         !enrollmentsAsync.hasError &&
         enrollments.isNotEmpty;
 
+    final semantic = AppSemanticColors.of(context);
+    final Widget? headerPrimaryAction = !isReadyWithStudents
+        ? null
+        : state.isLocked
+        ? FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              backgroundColor: semantic.warningContainer,
+              foregroundColor: semantic.warning,
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            onPressed: state.isSaving
+                ? null
+                : () =>
+                      AttendanceCheckInDialogs.confirmUnlock(context, controller),
+            icon: const Icon(Icons.lock_open_rounded, size: 17),
+            label: const Text('ปลดล็อก'),
+          )
+        : FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            onPressed: (state.isSaving || eligibleIds.isEmpty)
+                ? null
+                : () => controller.markAllPresent(eligibleIds),
+            icon: const Icon(Icons.done_all_rounded, size: 17),
+            label: const Text('มาทั้งหมด'),
+          );
+
     final inlineSummary = isReadyWithStudents
         ? AttendanceStatusSummaryBar(
             presentCount: counts.present,
@@ -116,12 +147,6 @@ class _AttendanceCheckInBodyState extends ConsumerState<AttendanceCheckInBody> {
             leaveCount: counts.leave,
             absentCount: counts.absent,
             unmarkedCount: counts.unmarked,
-            isLocked: state.isLocked,
-            isBusy: state.isSaving,
-            canMarkAllPresent: eligibleIds.isNotEmpty,
-            onMarkAllPresent: () => controller.markAllPresent(eligibleIds),
-            onUnlockSession: () =>
-                AttendanceCheckInDialogs.confirmUnlock(context, controller),
           )
         : null;
 
@@ -133,6 +158,7 @@ class _AttendanceCheckInBodyState extends ConsumerState<AttendanceCheckInBody> {
       isLocked: state.isLocked,
       isBusy: state.isLoading || state.isSaving,
       sessionNote: state.sessionNote,
+      primaryAction: headerPrimaryAction,
       inlineStatusTrailing: inlineSummary,
       onSelectClass: (id) => AttendanceCheckInDialogs.guardAndRun(
         context,

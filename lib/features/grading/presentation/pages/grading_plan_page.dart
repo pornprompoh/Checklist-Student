@@ -152,7 +152,7 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     required bool isSplitPane,
   }) {
     const fallbackHeader = AppPageHeader(
-      title: 'ออกแบบแผนเก็บงานและเกณฑ์ตัดเกรด',
+      title: 'แผนเก็บงานและเกณฑ์ตัดเกรด',
     );
     if (classOptionsAsync.isLoading && options.isEmpty) {
       return const AppPageContainer.scrollable(

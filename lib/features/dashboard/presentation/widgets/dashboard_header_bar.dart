@@ -44,45 +44,23 @@ class DashboardHeaderBar extends StatelessWidget {
     final isViewingActiveTerm =
         selectedTerm != null && selectedTerm!.id == activeTermId;
     final todayThaiLabel =
-        'วัน${ThaiDateFormatter.weekdayThaiName(today.weekday)}ที่ '
+        '·  ${ThaiDateFormatter.weekdayThaiName(today.weekday, short: true)} '
         '${ThaiDateFormatter.formatShortDate(today)}';
 
     final textTheme = Theme.of(context).textTheme;
     return AppPageHeader(
       title: 'สวัสดี, $teacherDisplayName',
-      actions: [
-        Container(
-          height: 42,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.today_rounded,
-                size: 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  todayThaiLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: AppTheme.tabularFigures,
-                  ),
-                ),
-              ),
-            ],
-          ),
+      titleMeta: Text(
+        todayThaiLabel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+          fontFeatures: AppTheme.tabularFigures,
         ),
+      ),
+      actions: [
         if (terms.isNotEmpty && selectedTerm != null)
           _TermPickerPill(
             selectedTerm: selectedTerm!,
@@ -94,7 +72,7 @@ class DashboardHeaderBar extends StatelessWidget {
             onSelectTerm: onSelectTerm,
           ),
         if (onAddClass != null)
-          FilledButton.tonalIcon(
+          FilledButton.icon(
             onPressed: onAddClass,
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text(
@@ -104,7 +82,7 @@ class DashboardHeaderBar extends StatelessWidget {
             ),
           ),
         IconButton(
-          tooltip: 'รีเฟรชข้อมูลหน้าหลัก',
+          tooltip: 'รีเฟรชข้อมูล',
           style: IconButton.styleFrom(
             backgroundColor: colorScheme.surface,
             side: BorderSide(color: colorScheme.outlineVariant),

@@ -4,15 +4,19 @@ import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/class_selector_dropdown.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/score_category.dart';
 import '../../domain/services/score_calculator_service.dart';
 import '../providers/grading_providers.dart';
 
+enum _PlanOverflowAction { copyPlan }
+
 /// Top workspace header for [GradingPlanPage]:
-/// [AppPageHeader] with 1 primary CTA (`+ เพิ่มชิ้นงาน`), [ClassWorkspaceBar],
-/// class switcher, and compact exact-decimal plan summary strip.
+/// - Row 1 ([AppPageHeader]): title + `[+ เพิ่มหมวด]` + `[+ เพิ่มชิ้นงาน]` + `⋯`
+/// - Row 2 ([ClassWorkspaceBar]): 4 underline tabs + readable class dropdown flush right
+/// - Row 3 (Slim Summary Strip): compact exact-decimal plan stat pills
 class GradingPlanHeader extends StatelessWidget {
   const GradingPlanHeader({
     super.key,
@@ -67,28 +71,56 @@ class GradingPlanHeader extends StatelessWidget {
         ? selectedClassId
         : null;
 
+    final selectorOptions = [
+      for (final option in classOptions)
+        ClassSelectorOption(
+          id: option.subjectClassId,
+          label: '${option.displayLabel} (${option.termGroupLabel})',
+        ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         AppPageHeader(
-          title: 'ออกแบบแผนเก็บงานและเกณฑ์ตัดเกรด',
+          title: 'แผนเก็บงานและเกณฑ์ตัดเกรด',
           actions: [
             if (validClassId != null) ...[
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : onCopyPlan,
-                icon: const Icon(Icons.copy_all_rounded, size: 18),
-                label: const Text('คัดลอกแผนและเกณฑ์'),
-              ),
               FilledButton.tonalIcon(
                 onPressed: isBusy ? null : onAddCategory,
                 icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-                label: const Text('เพิ่มหมวดคะแนน'),
+                label: const Text('เพิ่มหมวด'),
               ),
               FilledButton.icon(
                 onPressed: isBusy ? null : onAddAssignment,
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('เพิ่มชิ้นงาน'),
+              ),
+              PopupMenuButton<_PlanOverflowAction>(
+                tooltip: 'ตัวเลือกเพิ่มเติม',
+                enabled: !isBusy,
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                onSelected: (action) {
+                  switch (action) {
+                    case _PlanOverflowAction.copyPlan:
+                      onCopyPlan();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _PlanOverflowAction.copyPlan,
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.copy_all_rounded, size: 18),
+                      title: Text('คัดลอกแผนและเกณฑ์'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ],
@@ -97,83 +129,53 @@ class GradingPlanHeader extends StatelessWidget {
               : ClassWorkspaceBar(
                   subjectClassId: validClassId,
                   activeTab: ClassWorkspaceTab.plan,
+                  trailing: selectorOptions.isEmpty
+                      ? null
+                      : ClassSelectorDropdown(
+                          options: selectorOptions,
+                          selectedId: validClassId,
+                          enabled: !isBusy,
+                          onSelected: onSelectClass,
+                        ),
                 ),
         ),
-        const SizedBox(height: 12),
-        if (classOptions.isNotEmpty)
+        if (validClassId != null) ...[
+          const SizedBox(height: 10),
           Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            alignment: WrapAlignment.spaceBetween,
+            spacing: 6,
+            runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 340),
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey<String?>(validClassId),
-                  initialValue: validClassId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'ห้องเรียน',
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  items: [
-                    for (final option in classOptions)
-                      DropdownMenuItem<String>(
-                        value: option.subjectClassId,
-                        child: Text(
-                          '${option.displayLabel} (${option.termGroupLabel})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null && value != validClassId) {
-                      onSelectClass(value);
-                    }
-                  },
-                ),
+              _PlanStatPill(
+                icon: Icons.calculate_outlined,
+                label:
+                    'คะแนนเต็มรวม ${_calculator.formatExactScore(totalMaxScore)}',
+                background: colorScheme.primaryContainer,
+                foreground: colorScheme.onPrimaryContainer,
               ),
-              if (validClassId != null)
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _PlanStatPill(
-                      icon: Icons.calculate_outlined,
-                      label:
-                          'คะแนนเต็มรวม ${_calculator.formatExactScore(totalMaxScore)}',
-                      background: colorScheme.primaryContainer,
-                      foreground: colorScheme.onPrimaryContainer,
-                    ),
-                    _PlanStatPill(
-                      icon: Icons.folder_outlined,
-                      label: '${categories.length} หมวด',
-                      background: colorScheme.surfaceContainer,
-                      foreground: colorScheme.onSurface,
-                    ),
-                    _PlanStatPill(
-                      icon: Icons.assignment_outlined,
-                      label:
-                          '${assignments.length} ชิ้นงาน (บังคับส่ง $mandatoryCount)',
-                      background: colorScheme.surfaceContainer,
-                      foreground: colorScheme.onSurface,
-                    ),
-                    if (overMaxAssignmentCount > 0)
-                      _PlanStatPill(
-                        icon: Icons.warning_amber_rounded,
-                        label: 'เกินเต็ม $overMaxAssignmentCount งาน',
-                        background: semantic.dangerContainer,
-                        foreground: semantic.danger,
-                      ),
-                  ],
+              _PlanStatPill(
+                icon: Icons.folder_outlined,
+                label: '${categories.length} หมวด',
+                background: colorScheme.surfaceContainer,
+                foreground: colorScheme.onSurface,
+              ),
+              _PlanStatPill(
+                icon: Icons.assignment_outlined,
+                label:
+                    '${assignments.length} ชิ้นงาน (บังคับส่ง $mandatoryCount)',
+                background: colorScheme.surfaceContainer,
+                foreground: colorScheme.onSurface,
+              ),
+              if (overMaxAssignmentCount > 0)
+                _PlanStatPill(
+                  icon: Icons.warning_amber_rounded,
+                  label: 'เกินเต็ม $overMaxAssignmentCount งาน',
+                  background: semantic.dangerContainer,
+                  foreground: semantic.danger,
                 ),
             ],
           ),
+        ],
         if (validClassId != null && overMaxAssignmentCount > 0) ...[
           const SizedBox(height: 10),
           AppFeedbackBanner(

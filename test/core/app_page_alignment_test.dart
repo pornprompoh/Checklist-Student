@@ -220,5 +220,172 @@ void main() {
         }
       },
     );
+
+    testWidgets(
+      'Step 8.1.13 — AppPageHeader keeps actions on a single row and flush with container right edge on 1280px Desktop',
+      (tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        tester.view.physicalSize = const Size(1280, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        // Case 1: Single overflow button (⋯) must sit flush right — never float around 65%.
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: AppPageContainer.scrollable(
+                header: AppPageHeader(
+                  title: 'เช็คชื่อรายวัน',
+                  actions: [
+                    IconButton(
+                      key: const ValueKey<String>('single_more_btn'),
+                      onPressed: () {},
+                      icon: const Icon(Icons.more_horiz_rounded),
+                    ),
+                  ],
+                ),
+                child: const SizedBox(
+                  key: ValueKey<String>('body_box_single'),
+                  height: 120,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final singleHeaderRect = tester.getRect(find.byType(AppPageHeader));
+        final singleBodyRect = tester.getRect(
+          find.byKey(const ValueKey<String>('body_box_single')),
+        );
+        final singleBtnRect = tester.getRect(
+          find.byKey(const ValueKey<String>('single_more_btn')),
+        );
+
+        expect(
+          singleHeaderRect.right,
+          closeTo(singleBodyRect.right, 0.5),
+          reason: 'Header right edge must match body right edge exactly',
+        );
+        expect(
+          singleBtnRect.right,
+          closeTo(singleHeaderRect.right, 1.0),
+          reason: 'Single ⋯ button must sit flush with right edge of container',
+        );
+
+        // Case 2: 3 Dashboard-style actions + inline titleMeta must stay on 1 row and flush right.
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: AppPageContainer.scrollable(
+                header: AppPageHeader(
+                  title: 'สวัสดี, Pornprom',
+                  titleMeta: const Text('·  พ. 25 พ.ย. 2569'),
+                  actions: [
+                    OutlinedButton(
+                      key: const ValueKey<String>('action_term'),
+                      onPressed: () {},
+                      child: const Text('เทอม 1/2569'),
+                    ),
+                    FilledButton.icon(
+                      key: const ValueKey<String>('action_add'),
+                      onPressed: () {},
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('เพิ่มวิชา/ห้อง'),
+                    ),
+                    IconButton(
+                      key: const ValueKey<String>('action_refresh'),
+                      onPressed: () {},
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                  ],
+                ),
+                child: const SizedBox(
+                  key: ValueKey<String>('body_box_multi'),
+                  height: 120,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final multiHeaderRect = tester.getRect(find.byType(AppPageHeader));
+        final multiBodyRect = tester.getRect(
+          find.byKey(const ValueKey<String>('body_box_multi')),
+        );
+        final termRect = tester.getRect(
+          find.byKey(const ValueKey<String>('action_term')),
+        );
+        final addRect = tester.getRect(
+          find.byKey(const ValueKey<String>('action_add')),
+        );
+        final refreshRect = tester.getRect(
+          find.byKey(const ValueKey<String>('action_refresh')),
+        );
+
+        expect(
+          (addRect.center.dy - termRect.center.dy).abs(),
+          lessThanOrEqualTo(2.0),
+          reason: 'Action buttons must remain on a single horizontal row',
+        );
+        expect(
+          (refreshRect.center.dy - termRect.center.dy).abs(),
+          lessThanOrEqualTo(2.0),
+          reason: 'Refresh icon must align vertically on the same single row',
+        );
+        expect(
+          multiHeaderRect.right,
+          closeTo(multiBodyRect.right, 0.5),
+          reason: 'Header and body right edges must match identically',
+        );
+        expect(
+          refreshRect.right,
+          closeTo(multiHeaderRect.right, 1.0),
+          reason: 'Rightmost action must be flush against container right edge',
+        );
+
+        // Case 3: Verify exact right-edge match on ultra-wide 1600px in both modes.
+        tester.view.physicalSize = const Size(1600, 900);
+        for (final fullBleed in const <bool>[false, true]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light,
+              home: Scaffold(
+                body: AppPageContainer.viewport(
+                  fullBleedWidth: fullBleed,
+                  header: AppPageHeader(
+                    title: 'ทดสอบขอบขวา',
+                    actions: [
+                      FilledButton(
+                        key: const ValueKey<String>('wide_cta'),
+                        onPressed: () {},
+                        child: const Text('ดำเนินการ'),
+                      ),
+                    ],
+                  ),
+                  child: const SizedBox.expand(
+                    key: ValueKey<String>('wide_body'),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final hRect = tester.getRect(find.byType(AppPageHeader));
+          final bRect = tester.getRect(
+            find.byKey(const ValueKey<String>('wide_body')),
+          );
+          final ctaRect = tester.getRect(
+            find.byKey(const ValueKey<String>('wide_cta')),
+          );
+          expect(hRect.right, closeTo(bRect.right, 0.5));
+          expect(ctaRect.right, closeTo(hRect.right, 1.0));
+        }
+      },
+    );
   });
 }

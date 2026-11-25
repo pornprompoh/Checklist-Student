@@ -205,6 +205,70 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
 
         final pageHeader = AppPageHeader(
           title: 'ส่งออกรายงานและเอกสาร ปพ.5',
+          actions: [
+            if (bundle != null) ...[
+              Tooltip(
+                message: 'ส่งออก PDF (Sarabun)',
+                child: FilledButton.icon(
+                  onPressed: configState.isExportingPdf
+                      ? null
+                      : () => _handleExportAction(
+                          context,
+                          label: 'PDF',
+                          action: () => controller.exportToPdf(bundle),
+                        ),
+                  icon: configState.isExportingPdf
+                      ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined, size: 17),
+                  label: const Text('ส่งออก PDF'),
+                ),
+              ),
+              Tooltip(
+                message: 'ส่งออก Excel (.xlsx)',
+                child: OutlinedButton.icon(
+                  onPressed: configState.isExportingExcel
+                      ? null
+                      : () => _handleExportAction(
+                          context,
+                          label: 'Excel',
+                          action: () => controller.exportToExcel(bundle),
+                        ),
+                  icon: configState.isExportingExcel
+                      ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.table_view_outlined, size: 17),
+                  label: const Text('Excel'),
+                ),
+              ),
+              Tooltip(
+                message: 'ส่งออก Word (.docx)',
+                child: OutlinedButton.icon(
+                  onPressed: configState.isExportingDocx
+                      ? null
+                      : () => _handleExportAction(
+                          context,
+                          label: 'Word',
+                          action: () => controller.exportToDocx(bundle),
+                        ),
+                  icon: configState.isExportingDocx
+                      ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.description_outlined, size: 17),
+                  label: const Text('Word'),
+                ),
+              ),
+            ],
+          ],
           bottom: effectiveClassOption == null
               ? null
               : ClassWorkspaceBar(
@@ -416,6 +480,7 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     return ExportPreviewCanvas(
       bundle: bundle,
       pinActionBar: isSplitPane,
+      showExportActions: false,
       previewScrollController: isSplitPane ? _previewScrollController : null,
       isExportingExcel: configState.isExportingExcel,
       isExportingPdf: configState.isExportingPdf,

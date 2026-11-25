@@ -558,8 +558,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(container.read(unsavedChangesStateProvider), isTrue);
 
-        // Open CopyPlanDialog -> verify past-year class option and replace warning
-        await tester.ensureVisible(find.text('คัดลอกแผนและเกณฑ์'));
+        // Open CopyPlanDialog via header ⋯ menu -> verify past-year class option and replace warning
+        await tester.ensureVisible(find.byTooltip('ตัวเลือกเพิ่มเติม'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('ตัวเลือกเพิ่มเติม'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('คัดลอกแผนและเกณฑ์'));
         await tester.pumpAndSettle();

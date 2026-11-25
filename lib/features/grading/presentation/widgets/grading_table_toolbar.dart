@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/class_selector_dropdown.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 import '../providers/grading_filter_provider.dart';
 import '../providers/grading_providers.dart';
@@ -16,10 +17,10 @@ enum _TableOverflowAction {
   toggleTransferredOut,
 }
 
-/// Compact, uncluttered toolbar for [GradingTablePage]:
-/// - Workspace bar (`เช็คชื่อ · ตารางคะแนน · แผนเก็บงาน · ส่งออกรายงาน`)
-/// - Row 1: Class Switcher + Segmented `พรีวิว / แก้ไข` toggle + Save status + `⋯`
-/// - Row 2: Search input + horizontally scrollable quick filter chips
+/// Balanced toolbar for [GradingTablePage]:
+/// - Row 1 ([AppPageHeader]): title + save status + `พรีวิว / แก้ไข` toggle + `⋯`
+/// - Row 2 ([ClassWorkspaceBar]): 4 underline tabs + readable class selector flush right
+/// - Row 3 (Slim Filter Strip): search field + horizontally scrollable filter chips
 class GradingTableToolbar extends StatelessWidget {
   const GradingTableToolbar({
     super.key,
@@ -71,134 +72,113 @@ class GradingTableToolbar extends StatelessWidget {
         ? selectedClassId
         : null;
 
+    final selectorOptions = [
+      for (final option in classOptions)
+        ClassSelectorOption(
+          id: option.subjectClassId,
+          label:
+              '${option.displayLabel} (${option.termLabel}/${option.academicYearBe})',
+        ),
+    ];
+
+    final searchField = TextField(
+      controller: searchController,
+      onChanged: onSearchChanged,
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'ค้นหาชื่อ, รหัส, เลขที่...',
+        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+        suffixIcon: filterState.searchQuery.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'ล้างคำค้นหา',
+                onPressed: () {
+                  searchController.clear();
+                  onSearchChanged('');
+                },
+                icon: const Icon(Icons.close_rounded, size: 16),
+              ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    );
+
+    final filterChipsRow = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < GradingQuickFilter.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 6),
+            FilterChip(
+              selected: filterState.quickFilter == GradingQuickFilter.values[i],
+              label: Text(
+                '${GradingQuickFilter.values[i].thaiLabel} (${filterCounts[GradingQuickFilter.values[i]] ?? 0})',
+                style: const TextStyle(fontFeatures: AppTheme.tabularFigures),
+              ),
+              onSelected: (_) => onSelectFilter(GradingQuickFilter.values[i]),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ],
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         AppPageHeader(
-          title: 'ตารางคะแนนและเกรด',
+          title: 'ตารางคะแนน',
+          actions: [
+            SaveStatusIndicator(
+              status: saveStatus,
+              lastSavedAt: lastSavedAt,
+              onRetry: onRetrySave,
+              onReloadLatest: onReloadLatest,
+            ),
+            _ModeSegmentedToggle(
+              isEditMode: isEditMode,
+              onToggle: onToggleEditMode,
+            ),
+            _buildOverflowMenu(context),
+          ],
           bottom: validClassId == null
               ? null
               : ClassWorkspaceBar(
                   subjectClassId: validClassId,
                   activeTab: ClassWorkspaceTab.grading,
-                ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.spaceBetween,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280),
-                  child: DropdownButtonFormField<String>(
-                    key: ValueKey<String?>(validClassId),
-                    initialValue: validClassId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'ห้องเรียน',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: [
-                      for (final option in classOptions)
-                        DropdownMenuItem<String>(
-                          value: option.subjectClassId,
-                          child: Text(
-                            '${option.displayLabel} (${option.termLabel}/${option.academicYearBe})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                  trailing: selectorOptions.isEmpty
+                      ? null
+                      : ClassSelectorDropdown(
+                          options: selectorOptions,
+                          selectedId: validClassId,
+                          onSelected: onSelectClass,
                         ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null && value != validClassId) {
-                        onSelectClass(value);
-                      }
-                    },
-                  ),
                 ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'ค้นหาชื่อ, รหัส, เลขที่...',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                      suffixIcon: filterState.searchQuery.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'ล้างคำค้นหา',
-                              onPressed: () {
-                                searchController.clear();
-                                onSearchChanged('');
-                              },
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                            ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SaveStatusIndicator(
-                  status: saveStatus,
-                  lastSavedAt: lastSavedAt,
-                  onRetry: onRetrySave,
-                  onReloadLatest: onReloadLatest,
-                ),
-                _ModeSegmentedToggle(
-                  isEditMode: isEditMode,
-                  onToggle: onToggleEditMode,
-                ),
-                _buildOverflowMenu(context),
-              ],
-            ),
-          ],
         ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < GradingQuickFilter.values.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                FilterChip(
-                  selected:
-                      filterState.quickFilter == GradingQuickFilter.values[i],
-                  label: Text(
-                    '${GradingQuickFilter.values[i].thaiLabel} (${filterCounts[GradingQuickFilter.values[i]] ?? 0})',
-                    style: const TextStyle(
-                      fontFeatures: AppTheme.tabularFigures,
-                    ),
-                  ),
-                  onSelected: (_) =>
-                      onSelectFilter(GradingQuickFilter.values[i]),
-                  visualDensity: VisualDensity.compact,
-                ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 720) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(width: 220, child: searchField),
+                  const SizedBox(width: 10),
+                  Expanded(child: filterChipsRow),
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                searchField,
+                const SizedBox(height: 8),
+                filterChipsRow,
               ],
-            ],
-          ),
+            );
+          },
         ),
       ],
     );
@@ -224,8 +204,9 @@ class GradingTableToolbar extends StatelessWidget {
         const PopupMenuItem(
           value: _TableOverflowAction.planPage,
           child: ListTile(
+            dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.assignment_outlined),
+            leading: Icon(Icons.assignment_outlined, size: 18),
             title: Text('ออกแบบแผนงาน / เกณฑ์'),
           ),
         ),
@@ -233,8 +214,9 @@ class GradingTableToolbar extends StatelessWidget {
           const PopupMenuItem(
             value: _TableOverflowAction.auditLog,
             child: ListTile(
+              dense: true,
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.history_rounded),
+              leading: Icon(Icons.history_rounded, size: 18),
               title: Text('ประวัติคะแนน'),
             ),
           ),
@@ -242,8 +224,9 @@ class GradingTableToolbar extends StatelessWidget {
           const PopupMenuItem(
             value: _TableOverflowAction.exportReports,
             child: ListTile(
+              dense: true,
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.file_download_outlined),
+              leading: Icon(Icons.file_download_outlined, size: 18),
               title: Text('ส่งออกรายงาน'),
             ),
           ),
@@ -252,11 +235,13 @@ class GradingTableToolbar extends StatelessWidget {
           PopupMenuItem(
             value: _TableOverflowAction.toggleTransferredOut,
             child: ListTile(
+              dense: true,
               contentPadding: EdgeInsets.zero,
               leading: Icon(
                 filterState.showTransferredOut
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
+                size: 18,
               ),
               title: Text(
                 filterState.showTransferredOut

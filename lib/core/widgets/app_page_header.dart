@@ -1,21 +1,32 @@
 import 'package:flutter/material.dart';
 
-/// Standard page header: title + short description on the left and a wrapping
-/// action bar on the right. Stacks cleanly below `640px` using the closed
-/// spacing scale (`4, 8, 12, 16`).
+/// Standard page header: title (+ optional inline [titleMeta]) on the left and
+/// a single-row right-aligned action bar on wide screens (`>= 720px`).
+///
+/// Uses `Expanded` for the title side and `MainAxisSize.min` for actions so
+/// buttons stay on one row and always sit flush against the right edge of the
+/// container — even when only a single icon button (`⋯`) is present.
+/// Stacks vertically below `720px` so narrow screens (`320px–640px`) never
+/// overflow.
 class AppPageHeader extends StatelessWidget {
   const AppPageHeader({
     super.key,
     required this.title,
+    this.titleMeta,
     this.subtitle,
     this.leading,
     this.actions = const <Widget>[],
     this.bottom,
   });
 
-  static const double compactBreakpoint = 640;
+  static const double compactBreakpoint = 720;
 
   final String title;
+
+  /// Optional subtle inline metadata placed beside [title] (e.g. today's Thai
+  /// date on Dashboard) without adding a second row or competing with [actions].
+  final Widget? titleMeta;
+
   final String? subtitle;
   final Widget? leading;
   final List<Widget> actions;
@@ -30,21 +41,32 @@ class AppPageHeader extends StatelessWidget {
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < compactBreakpoint;
 
+        final titleText = Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: (isCompact ? textTheme.titleLarge : textTheme.headlineSmall)
+              ?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
+        );
+
+        final Widget titleHeadline = titleMeta == null
+            ? titleText
+            : Wrap(
+                spacing: 10,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [titleText, titleMeta!],
+              );
+
         final titleBlock = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: (isCompact ? textTheme.titleLarge : textTheme.headlineSmall)
-                  ?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                  ),
-            ),
+            titleHeadline,
             if (subtitle != null && subtitle!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
@@ -68,14 +90,6 @@ class AppPageHeader extends StatelessWidget {
           ],
         );
 
-        final actionWrap = Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: isCompact ? WrapAlignment.start : WrapAlignment.end,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: actions,
-        );
-
         final Widget mainArea;
         if (actions.isEmpty) {
           mainArea = headingRow;
@@ -83,15 +97,34 @@ class AppPageHeader extends StatelessWidget {
           mainArea = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
-            children: [headingRow, const SizedBox(height: 12), actionWrap],
+            children: [
+              headingRow,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: actions,
+              ),
+            ],
           );
         } else {
           mainArea = Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(flex: 3, child: headingRow),
+              Expanded(child: headingRow),
               const SizedBox(width: 16),
-              Flexible(flex: 2, child: actionWrap),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < actions.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    actions[i],
+                  ],
+                ],
+              ),
             ],
           );
         }
@@ -102,7 +135,7 @@ class AppPageHeader extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
-          children: [mainArea, const SizedBox(height: 16), bottom!],
+          children: [mainArea, const SizedBox(height: 12), bottom!],
         );
       },
     );

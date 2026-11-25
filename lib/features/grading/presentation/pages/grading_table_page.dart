@@ -186,7 +186,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
         classOptionsAsync.asData?.value ?? const <CopyPlanSourceClassOption>[];
     final classId = _resolveEffectiveClassId(options);
 
-    const baseHeader = AppPageHeader(title: 'ตารางคะแนนและเกรด');
+    const baseHeader = AppPageHeader(title: 'ตารางคะแนน');
 
     if (classOptionsAsync.isLoading && options.isEmpty) {
       return const AppPageContainer.scrollable(

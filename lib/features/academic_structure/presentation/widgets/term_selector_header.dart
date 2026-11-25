@@ -6,8 +6,11 @@ import '../../domain/entities/academic_year.dart';
 import '../../domain/entities/term.dart';
 import '../../domain/services/term_label_formatter.dart';
 
-/// Flat 1-row control bar for switching terms, showing active status, pinning
-/// the active term, and accessing structural actions (`⋯` menu).
+/// Clean 1-row inline term switcher + unified pin-status toggle control.
+///
+/// Expands the term dropdown up to `500px` on Desktop so full Buddhist Era
+/// date ranges never truncate prematurely, and merges the active-pin badge and
+/// pin/unpin button into a single cohesive toggle directly beside the dropdown.
 class TermSelectorHeader extends StatelessWidget {
   const TermSelectorHeader({
     super.key,
@@ -17,12 +20,7 @@ class TermSelectorHeader extends StatelessWidget {
     required this.activeTerm,
     required this.isBusy,
     required this.onSelectTerm,
-    required this.onAddYear,
-    required this.onAddTerm,
     required this.onTogglePinTerm,
-    required this.onEditTerm,
-    required this.onDeleteTerm,
-    required this.onDeleteYear,
   });
 
   final List<AcademicYear> academicYears;
@@ -31,12 +29,7 @@ class TermSelectorHeader extends StatelessWidget {
   final Term? activeTerm;
   final bool isBusy;
   final ValueChanged<String> onSelectTerm;
-  final VoidCallback onAddYear;
-  final VoidCallback onAddTerm;
   final VoidCallback onTogglePinTerm;
-  final VoidCallback onEditTerm;
-  final VoidCallback onDeleteTerm;
-  final VoidCallback onDeleteYear;
 
   Map<String, AcademicYear> get _yearById => <String, AcademicYear>{
     for (final year in academicYears) year.id: year,
@@ -55,224 +48,205 @@ class TermSelectorHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
     final years = _yearById;
-    final selectedYear = years[selectedTerm.academicYearId];
 
     final bool isPinned = selectedTerm.isPinnedActive;
     final bool isActiveAuto = !isPinned && activeTerm?.id == selectedTerm.id;
-    final bool isPast = selectedTerm.isPastTerm();
-    final (String badgeText, Color badgeBg, Color badgeFg, IconData badgeIcon) =
-        isPinned
-        ? (
-            'เทอมปัจจุบัน (ปักหมุด)',
-            semantic.successContainer,
-            semantic.success,
-            Icons.push_pin_rounded,
-          )
-        : isActiveAuto
-        ? (
-            selectedTerm.hasDateRange
-                ? 'เทอมปัจจุบัน (ตามช่วงวันที่)'
-                : 'เทอมปัจจุบัน (อัตโนมัติ)',
-            colorScheme.primaryContainer,
-            colorScheme.onPrimaryContainer,
-            Icons.event_available_rounded,
-          )
-        : isPast
-        ? (
-            'เทอมย้อนหลัง (ยังแก้ไขได้)',
-            semantic.warningContainer,
-            semantic.warning,
-            Icons.history_rounded,
-          )
-        : (
-            'เทอมอื่น (ยังแก้ไขได้)',
-            colorScheme.surfaceContainer,
-            colorScheme.onSurfaceVariant,
-            Icons.calendar_today_outlined,
-          );
+    final bool isPast = !isPinned && !isActiveAuto && selectedTerm.isPastTerm();
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 8,
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
-              child: DropdownButtonFormField<String>(
-                key: ValueKey<String>(selectedTerm.id),
-                initialValue: selectedTerm.id,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'ปีการศึกษาและเทอม',
-                  prefixIcon: Icon(Icons.calendar_today_outlined, size: 18),
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
+    final termDropdown = DropdownButtonFormField<String>(
+      key: ValueKey<String>(selectedTerm.id),
+      initialValue: selectedTerm.id,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'ปีการศึกษาและเทอม',
+        prefixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+      items: [
+        for (final term in terms)
+          DropdownMenuItem<String>(
+            value: term.id,
+            child: Text(
+              _termDisplayLabel(term, years),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodyMedium?.copyWith(
+                fontFeatures: AppTheme.tabularFigures,
+              ),
+            ),
+          ),
+      ],
+      onChanged: isBusy
+          ? null
+          : (value) {
+              if (value != null) onSelectTerm(value);
+            },
+    );
+
+    final Widget pinToggleControl = isPinned
+        ? Tooltip(
+            message: 'คลิกเพื่อปลดหมุดและใช้วันที่อัตโนมัติ',
+            child: Material(
+              color: semantic.successContainer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: semantic.success.withValues(alpha: 0.35),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: isBusy ? null : onTogglePinTerm,
+                mouseCursor: isBusy
+                    ? MouseCursor.defer
+                    : SystemMouseCursors.click,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.push_pin_rounded,
+                        size: 16,
+                        color: semantic.success,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'เทอมปัจจุบัน (ปักหมุด)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: semantic.success,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.close_rounded,
+                        size: 15,
+                        color: semantic.success,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          )
+        : Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
                 ),
-                items: [
-                  for (final term in terms)
-                    DropdownMenuItem<String>(
-                      value: term.id,
-                      child: Text(
-                        _termDisplayLabel(term, years),
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontFeatures: AppTheme.tabularFigures,
-                        ),
-                      ),
-                    ),
-                ],
-                onChanged: isBusy
-                    ? null
-                    : (value) {
-                        if (value != null) onSelectTerm(value);
-                      },
+                onPressed: isBusy ? null : onTogglePinTerm,
+                icon: const Icon(Icons.push_pin_outlined, size: 16),
+                label: const Text('ปักหมุดเป็นเทอมปัจจุบัน'),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: badgeBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(badgeIcon, size: 15, color: badgeFg),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      badgeText,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelMedium?.copyWith(
-                        color: badgeFg,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              if (isActiveAuto)
+                _StatusMetaTag(
+                  icon: Icons.event_available_rounded,
+                  label: selectedTerm.hasDateRange
+                      ? 'เทอมปัจจุบัน (ตามช่วงวันที่)'
+                      : 'เทอมปัจจุบัน (อัตโนมัติ)',
+                  background: colorScheme.primaryContainer,
+                  foreground: colorScheme.onPrimaryContainer,
+                )
+              else if (isPast)
+                _StatusMetaTag(
+                  icon: Icons.history_rounded,
+                  label: 'เทอมย้อนหลัง',
+                  background: semantic.warningContainer,
+                  foreground: semantic.warning,
+                ),
+            ],
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 680) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 320,
+                    maxWidth: 500,
                   ),
-                ],
+                  child: termDropdown,
+                ),
               ),
-            ),
-          ],
-        ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
+              const SizedBox(width: 12),
+              pinToggleControl,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FilledButton.tonalIcon(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(0, 38),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              onPressed: isBusy ? null : onTogglePinTerm,
-              icon: Icon(
-                isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                size: 16,
-              ),
-              label: Text(
-                isPinned ? 'ปลดหมุด' : 'ปักหมุดเป็นเทอมปัจจุบัน',
-              ),
-            ),
-            PopupMenuButton<String>(
-              tooltip: 'จัดการปีการศึกษาและเทอม',
-              enabled: !isBusy,
-              icon: Icon(
-                Icons.more_horiz_rounded,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              onSelected: (value) {
-                switch (value) {
-                  case 'add_year':
-                    onAddYear();
-                  case 'add_term':
-                    onAddTerm();
-                  case 'edit_term':
-                    onEditTerm();
-                  case 'delete_term':
-                    onDeleteTerm();
-                  case 'delete_year':
-                    onDeleteYear();
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem<String>(
-                  value: 'add_year',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.calendar_month_outlined, size: 18),
-                    title: Text('เพิ่มปีการศึกษา'),
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'add_term',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.add_circle_outline_rounded, size: 18),
-                    title: Text('เพิ่มเทอม'),
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'edit_term',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.edit_outlined, size: 18),
-                    title: Text('แก้ไขเทอม'),
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem<String>(
-                  value: 'delete_term',
-                  child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: semantic.danger,
-                    ),
-                    title: Text(
-                      'ลบเทอมนี้',
-                      style: TextStyle(color: semantic.danger),
-                    ),
-                  ),
-                ),
-                if (selectedYear != null)
-                  PopupMenuItem<String>(
-                    value: 'delete_year',
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.delete_forever_outlined,
-                        size: 18,
-                        color: semantic.danger,
-                      ),
-                      title: Text(
-                        'ลบปีการศึกษา ${selectedYear.yearBe}',
-                        style: TextStyle(color: semantic.danger),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            termDropdown,
+            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerLeft, child: pinToggleControl),
           ],
-        ),
-      ],
+        );
+      },
+    );
+  }
+}
+
+class _StatusMetaTag extends StatelessWidget {
+  const _StatusMetaTag({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: foreground),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/class_selector_dropdown.dart';
 import '../../../../core/widgets/class_workspace_bar.dart';
 
 /// Option model for switching between subject-classes within the active term.
@@ -15,9 +16,13 @@ class AttendanceClassOption {
 
 enum _AttendanceMenuAction { history, rules, sessionNote }
 
-/// Minimal top header for the Attendance Check-In page:
-/// [AppPageHeader] with secondary actions tucked into a `⋯` menu + borderless
-/// pinned [ClassWorkspaceBar], followed by a flat class & date selector row.
+/// Top header for the Attendance Check-In page:
+/// - Row 1 ([AppPageHeader]): title + contextual action (`ปลดล็อก`/`มาทั้งหมด`)
+///   + `⋯` menu flush right
+/// - Row 2 ([ClassWorkspaceBar]): 4 underline tabs on left + readable class
+///   dropdown flush right
+/// - Row 3 (Slim Context Strip): date stepper on left + summary counter pills
+///   flush right
 class AttendanceSessionHeader extends StatelessWidget {
   const AttendanceSessionHeader({
     super.key,
@@ -28,6 +33,7 @@ class AttendanceSessionHeader extends StatelessWidget {
     required this.isLocked,
     required this.isBusy,
     this.sessionNote = '',
+    this.primaryAction,
     required this.onSelectClass,
     required this.onPreviousDay,
     required this.onPickDate,
@@ -45,6 +51,11 @@ class AttendanceSessionHeader extends StatelessWidget {
   final bool isLocked;
   final bool isBusy;
   final String sessionNote;
+
+  /// Contextual primary action (`ปลดล็อก` when locked, `มาทั้งหมด` when unlocked)
+  /// positioned beside `⋯` flush right in [AppPageHeader].
+  final Widget? primaryAction;
+
   final ValueChanged<String> onSelectClass;
   final VoidCallback onPreviousDay;
   final VoidCallback onPickDate;
@@ -53,8 +64,7 @@ class AttendanceSessionHeader extends StatelessWidget {
   final VoidCallback onOpenRules;
   final VoidCallback? onEditSessionNote;
 
-  /// Optional inline status counters + single contextual CTA placed on the
-  /// same flat control row on wide viewports.
+  /// Inline status counter pills placed opposite the date stepper on Row 3.
   final Widget? inlineStatusTrailing;
 
   @override
@@ -65,6 +75,11 @@ class AttendanceSessionHeader extends StatelessWidget {
         '${ThaiDateFormatter.weekdayThaiName(selectedDate.weekday, short: true)} '
         '${ThaiDateFormatter.formatShortDate(selectedDate)}';
 
+    final selectorOptions = [
+      for (final opt in classOptions)
+        ClassSelectorOption(id: opt.id, label: opt.label),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -72,6 +87,7 @@ class AttendanceSessionHeader extends StatelessWidget {
         AppPageHeader(
           title: 'เช็คชื่อรายวัน',
           actions: [
+            ?primaryAction,
             PopupMenuButton<_AttendanceMenuAction>(
               tooltip: 'ตัวเลือกเพิ่มเติม',
               enabled: !isBusy,
@@ -133,65 +149,29 @@ class AttendanceSessionHeader extends StatelessWidget {
           bottom: ClassWorkspaceBar(
             subjectClassId: selectedClassId,
             activeTab: ClassWorkspaceTab.attendance,
+            trailing: selectorOptions.isEmpty
+                ? null
+                : ClassSelectorDropdown(
+                    options: selectorOptions,
+                    selectedId: selectedClassId,
+                    enabled: !isBusy,
+                    onSelected: onSelectClass,
+                  ),
           ),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
-          runSpacing: 10,
+          runSpacing: 8,
           alignment: WrapAlignment.spaceBetween,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (classOptions.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    child: DropdownButtonFormField<String>(
-                      key: ValueKey<String>(selectedClassId),
-                      initialValue:
-                          classOptions.any((opt) => opt.id == selectedClassId)
-                          ? selectedClassId
-                          : classOptions.first.id,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'ห้องเรียน',
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      items: [
-                        for (final opt in classOptions)
-                          DropdownMenuItem<String>(
-                            value: opt.id,
-                            child: Text(
-                              opt.label,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: isBusy
-                          ? null
-                          : (id) {
-                              if (id != null && id != selectedClassId) {
-                                onSelectClass(id);
-                              }
-                            },
-                    ),
-                  ),
-                _DateStepperPill(
-                  dateLabel: dateLabel,
-                  isBusy: isBusy,
-                  onPreviousDay: onPreviousDay,
-                  onPickDate: onPickDate,
-                  onNextDay: onNextDay,
-                ),
-              ],
+            _DateStepperPill(
+              dateLabel: dateLabel,
+              isBusy: isBusy,
+              onPreviousDay: onPreviousDay,
+              onPickDate: onPickDate,
+              onNextDay: onNextDay,
             ),
             ?inlineStatusTrailing,
           ],

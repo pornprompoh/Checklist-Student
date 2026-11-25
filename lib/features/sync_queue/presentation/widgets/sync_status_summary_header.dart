@@ -5,124 +5,85 @@ import '../../../../core/theme/app_theme.dart';
 import '../providers/sync_queue_providers.dart';
 
 /// Flat 1-row inline summary bar for `SyncQueuePage`: live connectivity badge,
-/// compact metric chips (`ข้อมูลชนกัน`, `รอซิงค์`, `ล้มเหลว`), optional last
-/// sync summary, and the `"ซิงค์เดี๋ยวนี้"` trigger.
+/// compact metric chips (`ข้อมูลชนกัน`, `รอซิงค์`, `ล้มเหลว`), and optional
+/// last sync feedback.
 class SyncStatusSummaryHeader extends StatelessWidget {
   const SyncStatusSummaryHeader({
     super.key,
     required this.isOnline,
     required this.counts,
-    required this.isSyncingNow,
     this.lastSummaryMessage,
-    required this.onSyncNow,
   });
 
   final bool isOnline;
   final SyncQueueStatusCounts counts;
-  final bool isSyncingNow;
   final String? lastSummaryMessage;
-  final VoidCallback onSyncNow;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
-    final hasRunnableItems = (counts.pendingCount + counts.failedCount) > 0;
-    final canPressSync = isOnline && !isSyncingNow && hasRunnableItems;
-
-    final tooltipMessage = !isOnline
-        ? 'ไม่สามารถซิงค์ได้ขณะออฟไลน์ กรุณาเชื่อมต่ออินเทอร์เน็ต'
-        : (!hasRunnableItems ? 'ไม่มีรายการรอซิงค์' : 'ซิงค์รายการที่ค้างทันที');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         Wrap(
-          spacing: 10,
+          spacing: 8,
           runSpacing: 8,
-          alignment: WrapAlignment.spaceBetween,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isOnline
-                        ? semantic.successContainer
-                        : semantic.warningContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                        size: 15,
-                        color: isOnline ? semantic.success : semantic.warning,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.labelMedium?.copyWith(
-                            color: isOnline
-                                ? semantic.success
-                                : semantic.warning,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _InlineMetricChip(
-                  label: 'ข้อมูลชนกัน',
-                  count: counts.conflictCount,
-                  color: semantic.danger,
-                  containerColor: semantic.dangerContainer,
-                  icon: Icons.warning_amber_rounded,
-                ),
-                _InlineMetricChip(
-                  label: 'รอซิงค์',
-                  count: counts.pendingCount + counts.syncingCount,
-                  color: semantic.warning,
-                  containerColor: semantic.warningContainer,
-                  icon: Icons.schedule_rounded,
-                ),
-                _InlineMetricChip(
-                  label: 'ล้มเหลว',
-                  count: counts.failedCount,
-                  color: colorScheme.error,
-                  containerColor: colorScheme.errorContainer,
-                  icon: Icons.error_outline_rounded,
-                ),
-              ],
-            ),
-            Tooltip(
-              message: tooltipMessage,
-              child: FilledButton.icon(
-                onPressed: canPressSync ? onSyncNow : null,
-                icon: isSyncingNow
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync_rounded, size: 18),
-                label: Text(
-                  isSyncingNow ? 'กำลังซิงค์...' : 'ซิงค์เดี๋ยวนี้',
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? semantic.successContainer
+                    : semantic.warningContainer,
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                    size: 15,
+                    color: isOnline ? semantic.success : semantic.warning,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      isOnline ? 'ออนไลน์พร้อมซิงค์' : 'กำลังออฟไลน์',
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelMedium?.copyWith(
+                        color: isOnline ? semantic.success : semantic.warning,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _InlineMetricChip(
+              label: 'ข้อมูลชนกัน',
+              count: counts.conflictCount,
+              color: semantic.danger,
+              containerColor: semantic.dangerContainer,
+              icon: Icons.warning_amber_rounded,
+            ),
+            _InlineMetricChip(
+              label: 'รอซิงค์',
+              count: counts.pendingCount + counts.syncingCount,
+              color: semantic.warning,
+              containerColor: semantic.warningContainer,
+              icon: Icons.schedule_rounded,
+            ),
+            _InlineMetricChip(
+              label: 'ล้มเหลว',
+              count: counts.failedCount,
+              color: colorScheme.error,
+              containerColor: colorScheme.errorContainer,
+              icon: Icons.error_outline_rounded,
             ),
           ],
         ),

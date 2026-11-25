@@ -4,11 +4,10 @@ import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Compact flat inline attendance summary counters (`มา / สาย / ลา / ขาด`) +
-/// single contextual action (`ปลดล็อก` when locked, `มาทั้งหมด` when unlocked).
+/// Compact flat inline attendance summary counters (`มา / สาย / ลา / ขาด`).
 ///
-/// Renders with zero outer card framing so it sits seamlessly on the same
-/// flat control row as the class/date picker.
+/// Sits on the right side of the slim date context strip directly opposite the
+/// date stepper, with zero outer card chrome.
 class AttendanceStatusSummaryBar extends StatelessWidget {
   const AttendanceStatusSummaryBar({
     super.key,
@@ -17,11 +16,6 @@ class AttendanceStatusSummaryBar extends StatelessWidget {
     required this.leaveCount,
     required this.absentCount,
     required this.unmarkedCount,
-    required this.isLocked,
-    required this.isBusy,
-    required this.canMarkAllPresent,
-    required this.onMarkAllPresent,
-    required this.onUnlockSession,
   });
 
   final int presentCount;
@@ -29,11 +23,6 @@ class AttendanceStatusSummaryBar extends StatelessWidget {
   final int leaveCount;
   final int absentCount;
   final int unmarkedCount;
-  final bool isLocked;
-  final bool isBusy;
-  final bool canMarkAllPresent;
-  final VoidCallback onMarkAllPresent;
-  final VoidCallback onUnlockSession;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +30,8 @@ class AttendanceStatusSummaryBar extends StatelessWidget {
     final semantic = AppSemanticColors.of(context);
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 6,
+      runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _CounterPill(
@@ -71,30 +60,6 @@ class AttendanceStatusSummaryBar extends StatelessWidget {
             bg: colorScheme.surfaceContainer,
             fg: colorScheme.onSurfaceVariant,
           ),
-        if (isLocked)
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              backgroundColor: semantic.warningContainer,
-              foregroundColor: semantic.warning,
-              minimumSize: const Size(0, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
-            onPressed: isBusy ? null : onUnlockSession,
-            icon: const Icon(Icons.lock_open_rounded, size: 16),
-            label: const Text('ปลดล็อก'),
-          )
-        else
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
-            onPressed: (isBusy || !canMarkAllPresent)
-                ? null
-                : onMarkAllPresent,
-            icon: const Icon(Icons.done_all_rounded, size: 16),
-            label: const Text('มาทั้งหมด'),
-          ),
       ],
     );
   }
@@ -114,7 +79,7 @@ class _CounterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),

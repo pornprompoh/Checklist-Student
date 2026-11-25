@@ -39,8 +39,10 @@ enum ClassWorkspaceTab {
 /// Borderless Linear/Vercel-style underline tab bar sitting on a `1px` bottom
 /// hairline border (`outlineVariant`) with a `2px` `primary` active underline.
 ///
-/// Scrolls horizontally on narrow screens (`320px`) without overflow and guards
-/// workspace switches with [UnsavedChangesGuard].
+/// On Desktop (`viewport >= 900px` and available width `>= 740px`), aligns an
+/// optional [trailing] slot (such as the compact class selector dropdown) flush
+/// right on the same row. On narrower screens, places [trailing] full-width
+/// cleanly below the scrollable tab strip with zero overflow.
 class ClassWorkspaceBar extends ConsumerWidget {
   const ClassWorkspaceBar({
     super.key,
@@ -53,8 +55,8 @@ class ClassWorkspaceBar extends ConsumerWidget {
   final String subjectClassId;
   final ClassWorkspaceTab activeTab;
 
-  /// Optional compact widget aligned on the right side of the tab bar on wide
-  /// screens (wraps cleanly below on narrow screens).
+  /// Optional compact widget aligned flush right beside the tabs on Desktop
+  /// (stacks cleanly full-width below on narrow screens).
   final Widget? trailing;
 
   /// Overrides default `GoRouter` navigation when provided.
@@ -83,6 +85,7 @@ class ClassWorkspaceBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
 
     final tabStrip = SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -103,40 +106,58 @@ class ClassWorkspaceBar extends ConsumerWidget {
       ),
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
-      ),
-      child: trailing == null
-          ? Align(alignment: Alignment.centerLeft, child: tabStrip)
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth >= 640) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(child: tabStrip),
-                      const SizedBox(width: 12),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: trailing!,
-                      ),
-                    ],
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    tabStrip,
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 8),
-                      child: trailing!,
+    final bottomBorder = BoxDecoration(
+      border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+    );
+
+    if (trailing == null) {
+      return DecoratedBox(
+        decoration: bottomBorder,
+        child: Align(alignment: Alignment.centerLeft, child: tabStrip),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isInlineTrailing =
+            viewportWidth >= 900 && constraints.maxWidth >= 740;
+
+        if (isInlineTrailing) {
+          return DecoratedBox(
+            decoration: bottomBorder,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: tabStrip),
+                const SizedBox(width: 16),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 260,
+                      maxWidth: 360,
                     ),
-                  ],
-                );
-              },
+                    child: trailing!,
+                  ),
+                ),
+              ],
             ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: bottomBorder,
+              child: Align(alignment: Alignment.centerLeft, child: tabStrip),
+            ),
+            const SizedBox(height: 10),
+            trailing!,
+          ],
+        );
+      },
     );
   }
 }

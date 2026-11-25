@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 /// Single Source of Truth for teacher page outer padding, content max-width,
@@ -30,7 +32,8 @@ abstract final class AppPageLayout {
 
 /// Unified teacher page spatial container locking `Alignment.topLeft`,
 /// responsive outer padding (`28/20/16px`), `standardMaxWidth` (`1320px`), and
-/// consistent vertical rhythm so switching sidebar tabs never causes header jitter.
+/// identical tight width across both [header] and [child] so right edges always
+/// align cleanly in both `standardMaxWidth` and `fullBleedWidth` modes.
 class AppPageContainer extends StatelessWidget {
   /// Standard vertical scrolling page shell.
   const AppPageContainer.scrollable({
@@ -92,6 +95,13 @@ class AppPageContainer extends StatelessWidget {
         );
         final resolvedGap =
             headerGap ?? AppPageLayout.headerGapForWidth(constraints.maxWidth);
+        final availableWidth = math.max(
+          0.0,
+          constraints.maxWidth - padding.horizontal,
+        );
+        final targetWidth = fullBleedWidth
+            ? availableWidth
+            : math.min(availableWidth, maxWidth);
 
         if (_isViewport) {
           final content = Column(
@@ -101,7 +111,10 @@ class AppPageContainer extends StatelessWidget {
               Expanded(child: child),
             ],
           );
-          return Padding(padding: padding, child: _wrapWidth(content));
+          return Padding(
+            padding: padding,
+            child: _wrapWidth(content, targetWidth),
+          );
         }
 
         final content = Column(
@@ -116,22 +129,16 @@ class AppPageContainer extends StatelessWidget {
           controller: scrollController,
           primary: scrollController == null ? primary : false,
           padding: padding,
-          child: _wrapWidth(content),
+          child: _wrapWidth(content, targetWidth),
         );
       },
     );
   }
 
-  Widget _wrapWidth(Widget content) {
-    if (fullBleedWidth) {
-      return content;
-    }
+  Widget _wrapWidth(Widget content, double targetWidth) {
     return Align(
       alignment: Alignment.topLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: content,
-      ),
+      child: SizedBox(width: targetWidth, child: content),
     );
   }
 }

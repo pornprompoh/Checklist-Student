@@ -24,6 +24,7 @@ class ExportPreviewCanvas extends StatelessWidget {
     this.onExportPdf,
     this.onExportWord,
     this.pinActionBar = false,
+    this.showExportActions = true,
     this.previewScrollController,
   });
 
@@ -35,6 +36,7 @@ class ExportPreviewCanvas extends StatelessWidget {
   final VoidCallback? onExportPdf;
   final VoidCallback? onExportWord;
   final bool pinActionBar;
+  final bool showExportActions;
   final ScrollController? previewScrollController;
 
   @override
@@ -84,31 +86,32 @@ class ExportPreviewCanvas extends StatelessWidget {
             ],
           ),
         ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _ExportActionButton(
-              icon: Icons.picture_as_pdf_outlined,
-              label: 'ส่งออก PDF (Sarabun)',
-              isPrimary: true,
-              isLoading: isExportingPdf,
-              onPressed: isExportingPdf ? null : onExportPdf,
-            ),
-            _ExportActionButton(
-              icon: Icons.table_view_outlined,
-              label: 'ส่งออก Excel (.xlsx)',
-              isLoading: isExportingExcel,
-              onPressed: isExportingExcel ? null : onExportExcel,
-            ),
-            _ExportActionButton(
-              icon: Icons.description_outlined,
-              label: 'ส่งออก Word (.docx)',
-              isLoading: isExportingDocx,
-              onPressed: isExportingDocx ? null : onExportWord,
-            ),
-          ],
-        ),
+        if (showExportActions)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _ExportActionButton(
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'ส่งออก PDF (Sarabun)',
+                isPrimary: true,
+                isLoading: isExportingPdf,
+                onPressed: isExportingPdf ? null : onExportPdf,
+              ),
+              _ExportActionButton(
+                icon: Icons.table_view_outlined,
+                label: 'ส่งออก Excel (.xlsx)',
+                isLoading: isExportingExcel,
+                onPressed: isExportingExcel ? null : onExportExcel,
+              ),
+              _ExportActionButton(
+                icon: Icons.description_outlined,
+                label: 'ส่งออก Word (.docx)',
+                isLoading: isExportingDocx,
+                onPressed: isExportingDocx ? null : onExportWord,
+              ),
+            ],
+          ),
       ],
     );
 

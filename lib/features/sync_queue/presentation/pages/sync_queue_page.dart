@@ -48,28 +48,54 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
         ref.watch(connectivityStatusProvider).asData?.value ?? true;
     final controller = ref.read(syncQueueControllerProvider.notifier);
 
-    const pageHeader = AppPageHeader(title: 'สถานะการซิงค์ข้อมูลออฟไลน์');
+    final hasRunnableItems = (counts.pendingCount + counts.failedCount) > 0;
+    final canPressSync = isOnline && !actionState.isSyncingNow && hasRunnableItems;
+    final syncTooltip = !isOnline
+        ? 'ไม่สามารถซิงค์ได้ขณะออฟไลน์ กรุณาเชื่อมต่ออินเทอร์เน็ต'
+        : (!hasRunnableItems ? 'ไม่มีรายการรอซิงค์' : 'ซิงค์รายการที่ค้างทันที');
+
+    final pageHeader = AppPageHeader(
+      title: 'สถานะการซิงค์ข้อมูลออฟไลน์',
+      actions: [
+        Tooltip(
+          message: syncTooltip,
+          child: FilledButton.icon(
+            onPressed: canPressSync
+                ? () async {
+                    final summary = await controller.syncNow();
+                    if (!context.mounted || summary == null) return;
+                    final msg = ref
+                        .read(syncQueueControllerProvider)
+                        .lastFeedbackMessage;
+                    if (msg != null) {
+                      AppFeedbackBanner.showSnackBar(
+                        context,
+                        type: summary.conflictCount > 0
+                            ? AppFeedbackType.warning
+                            : AppFeedbackType.success,
+                        message: msg,
+                      );
+                    }
+                  }
+                : null,
+            icon: actionState.isSyncingNow
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync_rounded, size: 18),
+            label: Text(
+              actionState.isSyncingNow ? 'กำลังซิงค์...' : 'ซิงค์เดี๋ยวนี้',
+            ),
+          ),
+        ),
+      ],
+    );
     final summaryHeader = SyncStatusSummaryHeader(
       isOnline: isOnline,
       counts: counts,
-      isSyncingNow: actionState.isSyncingNow,
       lastSummaryMessage: actionState.lastFeedbackMessage,
-      onSyncNow: () async {
-        final summary = await controller.syncNow();
-        if (!context.mounted || summary == null) return;
-        final msg = ref
-            .read(syncQueueControllerProvider)
-            .lastFeedbackMessage;
-        if (msg != null) {
-          AppFeedbackBanner.showSnackBar(
-            context,
-            type: summary.conflictCount > 0
-                ? AppFeedbackType.warning
-                : AppFeedbackType.success,
-            message: msg,
-          );
-        }
-      },
     );
     final filterChips = Wrap(
       spacing: 8,

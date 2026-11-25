@@ -70,7 +70,7 @@ class _AttendanceCheckInPageState extends ConsumerState<AttendanceCheckInPage> {
               : '';
           return AttendanceClassOption(
             id: c.id,
-            label: '$prefixห้อง ${c.roomName}',
+            label: '$prefix${c.roomName}',
           );
         })
         .toList(growable: false);

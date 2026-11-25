@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/app_page_container.dart';
@@ -14,6 +15,7 @@ import '../providers/academic_structure_providers.dart';
 import '../widgets/academic_year_form_dialog.dart';
 import '../widgets/structural_delete_helper.dart';
 import '../widgets/structure_empty_state_card.dart';
+import '../widgets/subject_form_dialog.dart';
 import '../widgets/term_form_dialog.dart';
 import '../widgets/term_selector_header.dart';
 import '../widgets/term_subjects_section.dart';
@@ -37,8 +39,43 @@ class AcademicStructurePage extends ConsumerWidget {
       }
     });
 
+    final years = yearsAsync.asData?.value ?? const <AcademicYear>[];
+    final terms = termsAsync.asData?.value ?? const <Term>[];
+    final selectedTerm = (years.isNotEmpty && terms.isNotEmpty)
+        ? ref.watch(effectiveSelectedTermProvider)
+        : null;
+    final selectedYear = (selectedTerm != null && years.isNotEmpty)
+        ? years.firstWhere(
+            (y) => y.id == selectedTerm.academicYearId,
+            orElse: () => years.first,
+          )
+        : null;
+
+    final header = AppPageHeader(
+      title: 'โครงสร้างปีการศึกษาและรายวิชา',
+      actions: [
+        if (selectedTerm != null && selectedYear != null) ...[
+          FilledButton.icon(
+            onPressed: isBusy
+                ? null
+                : () => _addSubject(context, ref, selectedTerm),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('เพิ่มรายวิชา'),
+          ),
+          _buildStructureOverflowMenu(
+            context,
+            ref: ref,
+            academicYears: years,
+            selectedYear: selectedYear,
+            selectedTerm: selectedTerm,
+            isBusy: isBusy,
+          ),
+        ],
+      ],
+    );
+
     return AppPageContainer.scrollable(
-      header: const AppPageHeader(title: 'โครงสร้างปีการศึกษาและรายวิชา'),
+      header: header,
       child: yearsAsync.isLoading || termsAsync.isLoading
           ? const StructureSkeletonView()
           : yearsAsync.hasError || termsAsync.hasError
@@ -55,10 +92,105 @@ class AcademicStructurePage extends ConsumerWidget {
           : _buildContent(
               context: context,
               ref: ref,
-              academicYears: yearsAsync.asData?.value ?? const [],
-              terms: termsAsync.asData?.value ?? const [],
+              academicYears: years,
+              terms: terms,
+              selectedTerm: selectedTerm,
               isBusy: isBusy,
             ),
+    );
+  }
+
+  Widget _buildStructureOverflowMenu(
+    BuildContext context, {
+    required WidgetRef ref,
+    required List<AcademicYear> academicYears,
+    required AcademicYear selectedYear,
+    required Term selectedTerm,
+    required bool isBusy,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final semantic = AppSemanticColors.of(context);
+
+    return PopupMenuButton<String>(
+      tooltip: 'จัดการปีการศึกษาและเทอม',
+      enabled: !isBusy,
+      icon: Icon(Icons.more_horiz_rounded, color: colorScheme.onSurfaceVariant),
+      onSelected: (value) {
+        switch (value) {
+          case 'add_year':
+            _addYear(context, ref);
+          case 'add_term':
+            _addTerm(context, ref, academicYears, selectedYear.id);
+          case 'edit_term':
+            _editTerm(context, ref, academicYears, selectedTerm);
+          case 'delete_term':
+            _deleteTerm(context, ref, selectedTerm, selectedYear);
+          case 'delete_year':
+            _deleteYear(context, ref, selectedYear);
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'add_year',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.calendar_month_outlined, size: 18),
+            title: Text('เพิ่มปีการศึกษา'),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'add_term',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.add_circle_outline_rounded, size: 18),
+            title: Text('เพิ่มเทอม'),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'edit_term',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.edit_outlined, size: 18),
+            title: Text('แก้ไขเทอม'),
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'delete_term',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.delete_outline_rounded,
+              size: 18,
+              color: semantic.danger,
+            ),
+            title: Text(
+              'ลบเทอมนี้',
+              style: TextStyle(color: semantic.danger),
+            ),
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete_year',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.delete_forever_outlined,
+              size: 18,
+              color: semantic.danger,
+            ),
+            title: Text(
+              'ลบปีการศึกษา ${selectedYear.yearBe}',
+              style: TextStyle(color: semantic.danger),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -67,6 +199,7 @@ class AcademicStructurePage extends ConsumerWidget {
     required WidgetRef ref,
     required List<AcademicYear> academicYears,
     required List<Term> terms,
+    required Term? selectedTerm,
     required bool isBusy,
   }) {
     if (academicYears.isEmpty) {
@@ -81,7 +214,6 @@ class AcademicStructurePage extends ConsumerWidget {
       );
     }
 
-    final selectedTerm = ref.watch(effectiveSelectedTermProvider);
     final activeTerm = ref.watch(activeTermProvider);
 
     if (terms.isEmpty || selectedTerm == null) {
@@ -97,11 +229,6 @@ class AcademicStructurePage extends ConsumerWidget {
       );
     }
 
-    final selectedYear = academicYears.firstWhere(
-      (y) => y.id == selectedTerm.academicYearId,
-      orElse: () => academicYears.first,
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -113,20 +240,35 @@ class AcademicStructurePage extends ConsumerWidget {
           isBusy: isBusy,
           onSelectTerm: (id) =>
               ref.read(selectedTermIdProvider.notifier).select(id),
-          onAddYear: () => _addYear(context, ref),
-          onAddTerm: () =>
-              _addTerm(context, ref, academicYears, selectedYear.id),
           onTogglePinTerm: () => _togglePinTerm(context, ref, selectedTerm),
-          onEditTerm: () =>
-              _editTerm(context, ref, academicYears, selectedTerm),
-          onDeleteTerm: () =>
-              _deleteTerm(context, ref, selectedTerm, selectedYear),
-          onDeleteYear: () => _deleteYear(context, ref, selectedYear),
         ),
         const SizedBox(height: 20),
         TermSubjectsSection(term: selectedTerm, isBusy: isBusy),
       ],
     );
+  }
+
+  Future<void> _addSubject(
+    BuildContext context,
+    WidgetRef ref,
+    Term term,
+  ) async {
+    final result = await SubjectFormDialog.show(context);
+    if (result == null || !context.mounted) return;
+    final created = await ref
+        .read(academicStructureControllerProvider.notifier)
+        .createSubject(
+          termId: term.id,
+          subjectCode: result.subjectCode,
+          subjectName: result.subjectName,
+        );
+    if (created != null && context.mounted) {
+      AppFeedbackBanner.showSnackBar(
+        context,
+        type: AppFeedbackType.success,
+        message: 'เพิ่มรายวิชา ${created.subjectCode} เรียบร้อยแล้ว',
+      );
+    }
   }
 
   Future<void> _addYear(BuildContext context, WidgetRef ref) async {
