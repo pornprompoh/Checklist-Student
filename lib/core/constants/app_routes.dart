@@ -58,6 +58,12 @@ abstract final class AppRoutes {
     return '$teacherAuditLog?classId=$encodedClass&enrollmentId=$encodedEnrollment';
   }
 
+  /// Builds the Teacher Export Reports route pre-selecting [subjectClassId].
+  static String teacherExportReportsForClass(String subjectClassId) {
+    final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
+    return '$teacherExportReports?classId=$encodedId';
+  }
+
   /// Builds a concrete Student Portal route path for [teacherCode].
   ///
   /// When [openExternalBrowser] is `true`, appends `?openExternalBrowser=1`

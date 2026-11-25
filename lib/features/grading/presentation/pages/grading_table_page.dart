@@ -337,6 +337,8 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
                   context.go(AppRoutes.teacherGradingPlanForClass(classId)),
               onOpenAuditLog: () =>
                   context.go(AppRoutes.teacherAuditLogForClass(classId)),
+              onOpenExportReports: () =>
+                  context.go(AppRoutes.teacherExportReportsForClass(classId)),
               onToggleEditMode: controller.toggleEditMode,
               onRetrySave: controller.retryLastFailedSave,
               onReloadLatest: () => controller.reloadFromServer(classId),

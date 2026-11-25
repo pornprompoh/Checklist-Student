@@ -10,6 +10,7 @@ import '../../features/auth/domain/entities/auth_state.dart';
 import '../../features/auth/presentation/pages/teacher_login_page.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/dashboard/presentation/pages/teacher_dashboard_page.dart';
+import '../../features/export_reports/presentation/pages/export_reports_page.dart';
 import '../../features/grading/presentation/pages/grading_plan_page.dart';
 import '../../features/grading/presentation/pages/grading_table_page.dart';
 import '../../features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
@@ -105,10 +106,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.teacherExportReports,
-            builder: (context, state) => const _ModulePlaceholderView(
-              title: 'ส่งออกรายงาน PDF / Excel',
-              subtitle:
-                  'พร้อมพัฒนาต่อใน Phase 5 (รายงานเวลาเรียน คะแนน และ ปพ.5)',
+            builder: (context, state) => ExportReportsPage(
+              initialClassId: state.uri.queryParameters['classId'],
             ),
           ),
           GoRoute(

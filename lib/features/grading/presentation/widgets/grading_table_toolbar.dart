@@ -23,6 +23,7 @@ class GradingTableToolbar extends StatelessWidget {
     required this.onSelectClass,
     required this.onOpenPlanPage,
     this.onOpenAuditLog,
+    this.onOpenExportReports,
     required this.onToggleEditMode,
     required this.onRetrySave,
     required this.onReloadLatest,
@@ -43,6 +44,7 @@ class GradingTableToolbar extends StatelessWidget {
   final ValueChanged<String> onSelectClass;
   final VoidCallback onOpenPlanPage;
   final VoidCallback? onOpenAuditLog;
+  final VoidCallback? onOpenExportReports;
   final VoidCallback onToggleEditMode;
   final VoidCallback onRetrySave;
   final VoidCallback onReloadLatest;
@@ -145,6 +147,12 @@ class GradingTableToolbar extends StatelessWidget {
                         onPressed: onOpenAuditLog,
                         icon: const Icon(Icons.history_rounded, size: 17),
                         label: const Text('ประวัติคะแนน'),
+                      ),
+                    if (onOpenExportReports != null)
+                      OutlinedButton.icon(
+                        onPressed: onOpenExportReports,
+                        icon: const Icon(Icons.file_download_outlined, size: 17),
+                        label: const Text('ส่งออกรายงาน'),
                       ),
                   ],
                 ),
