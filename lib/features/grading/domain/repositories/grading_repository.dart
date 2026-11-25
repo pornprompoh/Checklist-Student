@@ -4,6 +4,7 @@ import '../entities/grade_result.dart';
 import '../entities/grading_scale_config.dart';
 import '../entities/score_category.dart';
 import '../entities/student_pin_status.dart';
+import '../entities/student_portal_visibility_config.dart';
 import '../entities/student_score.dart';
 
 /// Contract for grading persistence across score categories, assignments,
@@ -77,6 +78,14 @@ abstract interface class GradingRepository {
 
   Future<GradingScaleConfig> updateGradingScaleConfig(
     GradingScaleConfig config,
+  );
+
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  );
+
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
   );
 
   Future<CopyPlanResult> copySubjectClassPlan({

@@ -13,6 +13,7 @@ import 'package:checklist_student/features/grading/domain/entities/assignment.da
 import 'package:checklist_student/features/grading/domain/entities/grade_result.dart';
 import 'package:checklist_student/features/grading/domain/entities/grading_scale_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/score_category.dart';
+import 'package:checklist_student/features/grading/domain/entities/student_portal_visibility_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_pin_status.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_score.dart';
 import 'package:checklist_student/features/grading/domain/repositories/grading_repository.dart';
@@ -190,6 +191,20 @@ class _InMemoryPlanRepository implements GradingRepository {
       list.removeWhere((a) => a.id == assignmentId);
     }
   }
+
+  @override
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) async => StudentPortalVisibilityConfig(
+    subjectClassId: subjectClassId,
+    showScoreToStudent: true,
+    showGradeToStudent: true,
+  );
+
+  @override
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async => config;
 
   @override
   Future<List<StudentScore>> fetchStudentScoresByClass(String classId) async =>

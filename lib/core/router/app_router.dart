@@ -15,6 +15,7 @@ import '../../features/grading/presentation/pages/grading_plan_page.dart';
 import '../../features/grading/presentation/pages/grading_table_page.dart';
 import '../../features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
 import '../../features/settings/presentation/pages/teacher_settings_page.dart';
+import '../../features/student_portal/presentation/pages/student_portal_entry_page.dart';
 import '../../features/sync_queue/presentation/pages/sync_queue_page.dart';
 import '../constants/app_routes.dart';
 import '../widgets/app_shell_scaffold.dart';
@@ -122,10 +123,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: AppRoutes.studentPortalRoot,
+        builder: (context, state) => const StudentPortalEntryPage(),
+      ),
+      GoRoute(
         path: AppRoutes.studentPortalPattern,
-        builder: (context, state) => _StudentPortalPlaceholderPage(
-          teacherCode: state.pathParameters['teacherCode'] ?? '',
-          openExternalBrowser: state.uri.queryParameters['openExternalBrowser'],
+        builder: (context, state) => StudentPortalEntryPage(
+          initialTeacherCode: state.pathParameters['teacherCode'],
         ),
       ),
     ],
@@ -138,64 +142,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return router;
 });
-
-class _StudentPortalPlaceholderPage extends StatelessWidget {
-  const _StudentPortalPlaceholderPage({
-    required this.teacherCode,
-    this.openExternalBrowser,
-  });
-
-  final String teacherCode;
-  final String? openExternalBrowser;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'พอร์ทัลตรวจสอบคะแนนนักเรียน',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'รหัสครูผู้สอน: $teacherCode',
-                        style: textTheme.bodyMedium,
-                      ),
-                      if (openExternalBrowser != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          'openExternalBrowser: $openExternalBrowser',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

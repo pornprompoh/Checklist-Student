@@ -18,6 +18,7 @@ import 'package:checklist_student/features/grading/domain/entities/grade_result.
 import 'package:checklist_student/features/grading/domain/entities/grading_scale_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/score_category.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_pin_status.dart';
+import 'package:checklist_student/features/grading/domain/entities/student_portal_visibility_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_score.dart';
 import 'package:checklist_student/features/grading/domain/repositories/grading_repository.dart';
 import 'package:checklist_student/features/grading/presentation/pages/grading_table_page.dart';
@@ -106,6 +107,20 @@ class _FakeSpecialGradeGradingRepo implements GradingRepository {
   @override
   Future<StudentPinStatus> fetchStudentPinStatus(String id) async =>
       state.pinStatus;
+
+  @override
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) async => StudentPortalVisibilityConfig(
+    subjectClassId: subjectClassId,
+    showScoreToStudent: true,
+    showGradeToStudent: true,
+  );
+
+  @override
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async => config;
 
   @override
   Future<void> resetStudentPin(String id) async {

@@ -5,6 +5,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../domain/entities/grade_result.dart';
 import '../../domain/entities/grading_scale_config.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../../domain/services/grade_evaluator_service.dart';
 import '../models/grading_scale_config_dto.dart';
 import '../models/student_pin_status_dto.dart';
@@ -217,6 +218,49 @@ class GradingScoreRemoteHelper {
           .select(_scaleColumns)
           .single();
       return GradingScaleConfigDto.fromJson(row);
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) async {
+    try {
+      final row = await _client
+          .from('subject_classes')
+          .select('id, show_score_to_student, show_grade_to_student')
+          .eq('id', subjectClassId)
+          .single();
+      return StudentPortalVisibilityConfig(
+        subjectClassId: row['id'] as String? ?? subjectClassId,
+        showScoreToStudent: row['show_score_to_student'] as bool? ?? true,
+        showGradeToStudent: row['show_grade_to_student'] as bool? ?? true,
+      );
+    } catch (error) {
+      throw ThaiErrorMapper.toAppException(error);
+    }
+  }
+
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async {
+    try {
+      final row = await _client
+          .from('subject_classes')
+          .update(<String, dynamic>{
+            'show_score_to_student': config.showScoreToStudent,
+            'show_grade_to_student': config.showGradeToStudent,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', config.subjectClassId)
+          .select('id, show_score_to_student, show_grade_to_student')
+          .single();
+      return StudentPortalVisibilityConfig(
+        subjectClassId: row['id'] as String? ?? config.subjectClassId,
+        showScoreToStudent: row['show_score_to_student'] as bool? ?? true,
+        showGradeToStudent: row['show_grade_to_student'] as bool? ?? true,
+      );
     } catch (error) {
       throw ThaiErrorMapper.toAppException(error);
     }

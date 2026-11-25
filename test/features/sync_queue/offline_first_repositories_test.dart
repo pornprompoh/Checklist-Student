@@ -30,6 +30,7 @@ import 'package:checklist_student/features/grading/data/models/student_score_dto
 import 'package:checklist_student/features/grading/data/repositories/grading_repository_impl.dart';
 import 'package:checklist_student/features/grading/domain/entities/grade_result.dart';
 import 'package:checklist_student/features/grading/domain/entities/grading_scale_config.dart';
+import 'package:checklist_student/features/grading/domain/entities/student_portal_visibility_config.dart';
 import 'package:checklist_student/features/homeroom_roster/data/datasources/homeroom_roster_local_datasource_impl.dart';
 import 'package:checklist_student/features/sync_queue/data/datasources/sync_queue_local_datasource.dart';
 import 'package:checklist_student/features/sync_queue/data/datasources/sync_remote_executor_impl.dart';
@@ -246,6 +247,20 @@ class _FakeGradingRemote implements GradingRemoteDataSource {
   @override
   Future<StudentScoreDto?> fetchStudentScoreById(String scoreId) async =>
       scores[scoreId];
+
+  @override
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) async => StudentPortalVisibilityConfig(
+    subjectClassId: subjectClassId,
+    showScoreToStudent: true,
+    showGradeToStudent: true,
+  );
+
+  @override
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async => config;
 
   @override
   Future<StudentScoreDto?> fetchStudentScoreByCell({

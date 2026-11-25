@@ -11,6 +11,7 @@ import 'package:checklist_student/features/grading/domain/entities/assignment.da
 import 'package:checklist_student/features/grading/domain/entities/grade_result.dart';
 import 'package:checklist_student/features/grading/domain/entities/grading_scale_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/score_category.dart';
+import 'package:checklist_student/features/grading/domain/entities/student_portal_visibility_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_pin_status.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_score.dart';
 import 'package:checklist_student/features/grading/domain/repositories/grading_repository.dart';
@@ -79,6 +80,18 @@ class _OptimisticScoreRepo implements GradingRepository {
 
   @override
   Future<List<ScoreCategory>> fetchScoreCategories(String id) async => const [];
+  @override
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) async => StudentPortalVisibilityConfig(
+    subjectClassId: subjectClassId,
+    showScoreToStudent: true,
+    showGradeToStudent: true,
+  );
+  @override
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async => config;
   @override
   Future<ScoreCategory> createScoreCategory({
     required String teacherId,

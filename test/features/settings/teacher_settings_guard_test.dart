@@ -13,6 +13,12 @@ import 'package:checklist_student/features/settings/domain/entities/teacher_code
 import 'package:checklist_student/features/settings/domain/entities/teacher_profile_update.dart';
 import 'package:checklist_student/features/settings/domain/repositories/settings_repository.dart';
 import 'package:checklist_student/features/settings/presentation/providers/settings_providers.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/resolved_teacher_portal.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_pin_access_status.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_pin_verification_result.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_portal_summary.dart';
+import 'package:checklist_student/features/student_portal/domain/repositories/student_portal_repository.dart';
+import 'package:checklist_student/features/student_portal/presentation/providers/student_portal_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -303,6 +309,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           connectivityStatusProvider.overrideWith((ref) => Stream.value(true)),
+          studentPortalRepositoryProvider.overrideWithValue(
+            _FakePublicPortalRepo(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -320,10 +329,55 @@ void main() {
           .go('/student/t-8492?openExternalBrowser=1');
       await tester.pumpAndSettle();
 
-      expect(find.text('พอร์ทัลตรวจสอบคะแนนนักเรียน'), findsOneWidget);
-      expect(find.text('รหัสครูผู้สอน: t-8492'), findsOneWidget);
-      expect(find.text('openExternalBrowser: 1'), findsOneWidget);
+      expect(find.text('Student Portal'), findsOneWidget);
+      expect(find.text('ครูสมศรี ทดสอบ'), findsOneWidget);
+      expect(find.text('เลขประจำตัวนักเรียน'), findsOneWidget);
       expect(find.text('เข้าสู่ระบบสำหรับครูผู้สอน'), findsNothing);
     },
   );
+}
+
+class _FakePublicPortalRepo implements StudentPortalRepository {
+  @override
+  Future<ResolvedTeacherPortal> resolveTeacherCode(String teacherCode) async {
+    return ResolvedTeacherPortal(
+      found: true,
+      isRedirected: false,
+      requestedCode: teacherCode,
+      currentTeacherCode: teacherCode,
+      teacherDisplayName: 'ครูสมศรี ทดสอบ',
+      schoolName: 'โรงเรียนตัวอย่าง',
+    );
+  }
+
+  @override
+  Future<StudentPinAccessStatus> checkStudentAccess({
+    required String teacherCode,
+    required String studentCode,
+  }) async =>
+      const StudentPinAccessStatus(
+        teacherFound: true,
+        studentFound: false,
+        hasPin: false,
+        isLocked: false,
+        remainingAttempts: 5,
+      );
+
+  @override
+  Future<StudentPinVerificationResult> verifyOrSetPin({
+    required String teacherCode,
+    required String studentCode,
+    required String pin,
+    StudentPinAuthMode mode = StudentPinAuthMode.verify,
+  }) async =>
+      const StudentPinVerificationResult(success: false);
+
+  @override
+  Future<StudentPortalSummary> fetchPortalSummary({
+    required String teacherCode,
+    required String studentCode,
+    required String pin,
+    String? termId,
+  }) async =>
+      throw UnimplementedError();
 }

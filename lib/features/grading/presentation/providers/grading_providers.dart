@@ -16,6 +16,7 @@ import '../../data/repositories/grading_repository_impl.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/grading_scale_config.dart';
 import '../../domain/entities/score_category.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../../domain/entities/student_score.dart';
 import '../../domain/repositories/grading_repository.dart';
 import '../../domain/services/grade_evaluator_service.dart';
@@ -128,6 +129,16 @@ final gradingScaleConfigProvider =
       return ref
           .watch(gradingRepositoryProvider)
           .fetchGradingScaleConfig(classId);
+    });
+
+final studentPortalVisibilityProvider =
+    FutureProvider.family<StudentPortalVisibilityConfig, String>((
+      ref,
+      classId,
+    ) async {
+      return ref
+          .watch(gradingRepositoryProvider)
+          .fetchStudentPortalVisibility(classId);
     });
 
 /// Counts how many students have `score > assignment.maxScore` per assignment.

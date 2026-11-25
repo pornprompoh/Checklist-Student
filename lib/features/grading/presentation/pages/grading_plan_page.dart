@@ -11,12 +11,14 @@ import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/grading_scale_config.dart';
 import '../../domain/entities/score_category.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../providers/grading_providers.dart';
 import '../providers/plan_editor_controller.dart';
 import '../widgets/grading_plan_actions.dart';
 import '../widgets/grading_plan_categories_list.dart';
 import '../widgets/grading_plan_header.dart';
 import '../widgets/grading_scale_editor_card.dart';
+import '../widgets/student_portal_visibility_card.dart';
 
 /// Grading plan & scale designer page (`/teacher/grading/plan?classId=...`).
 ///
@@ -166,6 +168,7 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     final categoriesAsync = ref.watch(scoreCategoriesProvider(classId));
     final assignmentsAsync = ref.watch(assignmentsProvider(classId));
     final scaleAsync = ref.watch(gradingScaleConfigProvider(classId));
+    final visibilityAsync = ref.watch(studentPortalVisibilityProvider(classId));
     final overMaxCounts = ref.watch(
       overMaxScoreCountsByAssignmentProvider(classId),
     );
@@ -228,11 +231,23 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
               overMaxCounts: overMaxCounts,
               isBusy: isBusy,
             );
-            final scaleSection = _buildScaleSection(
-              context,
-              classId: classId,
-              scaleAsync: scaleAsync,
-              isBusy: isBusy,
+            final scaleSection = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildScaleSection(
+                  context,
+                  classId: classId,
+                  scaleAsync: scaleAsync,
+                  isBusy: isBusy,
+                ),
+                const SizedBox(height: 16),
+                _buildVisibilitySection(
+                  context,
+                  classId: classId,
+                  visibilityAsync: visibilityAsync,
+                  isBusy: isBusy,
+                ),
+              ],
             );
             if (constraints.maxWidth >= 980) {
               return Row(
@@ -307,5 +322,55 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
         },
       ),
     );
+  }
+
+  Widget _buildVisibilitySection(
+    BuildContext context, {
+    required String classId,
+    required AsyncValue<StudentPortalVisibilityConfig> visibilityAsync,
+    required bool isBusy,
+  }) {
+    return visibilityAsync.when(
+      loading: () => const Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: SkeletonBox(height: 110),
+        ),
+      ),
+      error: (error, _) => AppFeedbackBanner(
+        type: AppFeedbackType.error,
+        message: ThaiErrorMapper.map(error),
+        onRetry: () => ref.invalidate(studentPortalVisibilityProvider(classId)),
+      ),
+      data: (config) => StudentPortalVisibilityCard(
+        config: config,
+        isBusy: isBusy,
+        onToggleShowScore: (value) => _updateVisibility(
+          context,
+          config.copyWith(showScoreToStudent: value),
+        ),
+        onToggleShowGrade: (value) => _updateVisibility(
+          context,
+          config.copyWith(showGradeToStudent: value),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateVisibility(
+    BuildContext context,
+    StudentPortalVisibilityConfig nextConfig,
+  ) async {
+    final saved = await ref
+        .read(planEditorControllerProvider.notifier)
+        .saveStudentPortalVisibility(nextConfig);
+    if (saved != null && context.mounted) {
+      AppFeedbackBanner.showSnackBar(
+        context,
+        type: AppFeedbackType.success,
+        message: 'อัปเดตสิทธิ์การมองเห็นบน Student Portal เรียบร้อยแล้ว',
+      );
+    }
   }
 }

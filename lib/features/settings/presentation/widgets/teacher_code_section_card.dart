@@ -97,8 +97,11 @@ class _TeacherCodeSectionCardState
     }
   }
 
-  String _portalUrl(String code) {
-    final path = AppRoutes.studentPortalPath(code, openExternalBrowser: true);
+  String _portalUrl(String code, {required bool openExternalBrowser}) {
+    final path = AppRoutes.studentPortalPath(
+      code,
+      openExternalBrowser: openExternalBrowser,
+    );
     if (!kIsWeb) {
       return path;
     }
@@ -106,13 +109,22 @@ class _TeacherCodeSectionCardState
     return '$origin$path';
   }
 
-  Future<void> _copyLink() async {
-    await Clipboard.setData(ClipboardData(text: _portalUrl(widget.currentCode)));
+  Future<void> _copyLink({required bool forLineGroup}) async {
+    await Clipboard.setData(
+      ClipboardData(
+        text: _portalUrl(
+          widget.currentCode,
+          openExternalBrowser: forLineGroup,
+        ),
+      ),
+    );
     if (!mounted) return;
     AppFeedbackBanner.showSnackBar(
       context,
       type: AppFeedbackType.success,
-      message: 'คัดลอกลิงก์ Student Portal เรียบร้อยแล้ว',
+      message: forLineGroup
+          ? 'คัดลอกลิงก์ Student Portal สำหรับกลุ่ม LINE (?openExternalBrowser=1) เรียบร้อยแล้ว'
+          : 'คัดลอกลิงก์ Student Portal เรียบร้อยแล้ว',
     );
   }
 
@@ -199,40 +211,48 @@ class _TeacherCodeSectionCardState
                 color: colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final copyButton = FilledButton.tonalIcon(
-                    onPressed: _copyLink,
-                    icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: const Text('คัดลอกลิงก์'),
-                  );
-                  final urlText = SelectableText(
-                    _portalUrl(widget.currentCode),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SelectableText(
+                    _portalUrl(
+                      widget.currentCode,
+                      openExternalBrowser: false,
+                    ),
                     style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
-                  );
-                  if (constraints.maxWidth < 360) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        urlText,
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: copyButton,
-                        ),
-                      ],
-                    );
-                  }
-                  return Row(
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Expanded(child: urlText),
-                      const SizedBox(width: 8),
-                      copyButton,
+                      OutlinedButton.icon(
+                        onPressed: () => _copyLink(forLineGroup: false),
+                        icon: const Icon(Icons.copy_rounded, size: 18),
+                        label: const Text('คัดลอกลิงก์'),
+                      ),
+                      FilledButton.tonal(
+                        onPressed: () => _copyLink(forLineGroup: true),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.open_in_browser_rounded, size: 18),
+                            SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'คัดลอกลิงก์สำหรับกลุ่ม LINE',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                  );
-                },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

@@ -33,6 +33,7 @@ import 'package:checklist_student/features/grading/domain/entities/grading_scale
     hide GradingRuleTier;
 import 'package:checklist_student/features/grading/domain/entities/score_category.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_pin_status.dart';
+import 'package:checklist_student/features/grading/domain/entities/student_portal_visibility_config.dart';
 import 'package:checklist_student/features/grading/domain/entities/student_score.dart';
 import 'package:checklist_student/features/grading/presentation/providers/grading_filter_provider.dart';
 import 'package:checklist_student/features/grading/presentation/providers/grading_providers.dart';
@@ -730,6 +731,13 @@ class ResponsiveTestFixtures {
       gradingScaleConfigProvider(
         'class-1',
       ).overrideWith((ref) async => gradingScaleConfig),
+      studentPortalVisibilityProvider('class-1').overrideWith(
+        (ref) async => const StudentPortalVisibilityConfig(
+          subjectClassId: 'class-1',
+          showScoreToStudent: true,
+          showGradeToStudent: false,
+        ),
+      ),
       classPlanSummaryProvider('class-2').overrideWith(
         (ref) async => const CopyPlanSourcePreview(
           categoryCount: 2,

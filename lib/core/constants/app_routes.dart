@@ -16,8 +16,13 @@ abstract final class AppRoutes {
   static const String teacherSyncQueue = '/teacher/sync-queue';
   static const String teacherSettings = '/teacher/settings';
 
-  // Student Portal route
+  // Student Portal routes
+  static const String studentPortalRoot = '/student';
   static const String studentPortalPattern = '/student/:teacherCode';
+
+  /// Builds the Student Portal route for [teacherCode].
+  static String studentPortalForTeacher(String teacherCode) =>
+      studentPortalPath(teacherCode);
 
   /// Builds the Teacher Attendance route pre-selecting [subjectClassId].
   static String teacherAttendanceForClass(String subjectClassId) {

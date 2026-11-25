@@ -5,6 +5,7 @@ import '../../../../core/constants/submission_status.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../domain/entities/grade_result.dart';
 import '../../domain/entities/grading_scale_config.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../models/assignment_dto.dart';
 import '../models/grading_scale_config_dto.dart';
 import '../models/score_category_dto.dart';
@@ -181,6 +182,18 @@ class GradingRemoteDataSource {
     GradingScaleConfig config,
   ) {
     return _scores.updateGradingScaleConfig(config);
+  }
+
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) {
+    return _scores.fetchStudentPortalVisibility(subjectClassId);
+  }
+
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) {
+    return _scores.updateStudentPortalVisibility(config);
   }
 
   Future<CopyPlanResult> copySubjectClassPlan({

@@ -11,6 +11,7 @@ import '../../domain/entities/grade_result.dart';
 import '../../domain/entities/grading_scale_config.dart';
 import '../../domain/entities/score_category.dart';
 import '../../domain/entities/student_pin_status.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../../domain/entities/student_score.dart';
 import '../../domain/repositories/grading_repository.dart';
 import '../datasources/grading_local_datasource.dart';
@@ -289,6 +290,20 @@ class GradingRepositoryImpl implements GradingRepository {
       await _localDataSource.saveGradingScaleConfig(tid, entity);
     }
     return entity;
+  }
+
+  @override
+  Future<StudentPortalVisibilityConfig> fetchStudentPortalVisibility(
+    String subjectClassId,
+  ) {
+    return _requireRemote().fetchStudentPortalVisibility(subjectClassId);
+  }
+
+  @override
+  Future<StudentPortalVisibilityConfig> updateStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) {
+    return _requireRemote().updateStudentPortalVisibility(config);
   }
 
   @override

@@ -8,6 +8,7 @@ import '../../domain/entities/assignment.dart';
 import '../../domain/entities/grade_result.dart';
 import '../../domain/entities/grading_scale_config.dart';
 import '../../domain/entities/score_category.dart';
+import '../../domain/entities/student_portal_visibility_config.dart';
 import '../../domain/entities/student_score.dart';
 import 'grading_providers.dart';
 
@@ -254,6 +255,18 @@ class PlanEditorController extends Notifier<AsyncValue<void>> {
     });
   }
 
+  Future<StudentPortalVisibilityConfig?> saveStudentPortalVisibility(
+    StudentPortalVisibilityConfig config,
+  ) async {
+    return _run<StudentPortalVisibilityConfig>(() async {
+      final saved = await ref
+          .read(gradingRepositoryProvider)
+          .updateStudentPortalVisibility(config);
+      ref.invalidate(studentPortalVisibilityProvider(config.subjectClassId));
+      return saved;
+    });
+  }
+
   Future<CopyPlanResult?> copyPlanFromClass({
     required String sourceClassId,
     required String targetClassId,
@@ -277,7 +290,8 @@ class PlanEditorController extends Notifier<AsyncValue<void>> {
       ..invalidate(scoreCategoriesProvider(subjectClassId))
       ..invalidate(assignmentsProvider(subjectClassId))
       ..invalidate(studentScoresByClassProvider(subjectClassId))
-      ..invalidate(gradingScaleConfigProvider(subjectClassId));
+      ..invalidate(gradingScaleConfigProvider(subjectClassId))
+      ..invalidate(studentPortalVisibilityProvider(subjectClassId));
   }
 
   Future<T?> _run<T>(Future<T> Function() action) async {
