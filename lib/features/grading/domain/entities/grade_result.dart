@@ -27,6 +27,8 @@ class SpecialGradeAdvice {
     required this.recommendMs,
     required this.primaryRecommendedCode,
     required this.reasons,
+    this.assessedAssignmentsCount = 0,
+    this.totalAssignmentsCount = 0,
   });
 
   final bool recommendR;
@@ -39,7 +41,18 @@ class SpecialGradeAdvice {
   /// Thai explanation items for why a special grade is suggested.
   final List<String> reasons;
 
+  /// Number of assignments in the class plan that have at least one recorded
+  /// score/status row for an active student.
+  final int assessedAssignmentsCount;
+
+  /// Total number of assignments configured in the class plan.
+  final int totalAssignmentsCount;
+
   bool get hasRecommendation => recommendR || recommendMs;
+
+  bool get isAllAssignmentsAssessed =>
+      totalAssignmentsCount > 0 &&
+      assessedAssignmentsCount >= totalAssignmentsCount;
 }
 
 /// Complete grading evaluation output for one student enrollment in a class.

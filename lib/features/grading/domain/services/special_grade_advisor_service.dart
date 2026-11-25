@@ -11,12 +11,20 @@ class SpecialGradeAdvisorService {
 
   /// Evaluates whether `มส` and/or `ร` should be suggested for a student.
   ///
-  /// When both conditions apply, `primaryRecommendedCode` prioritizes `'มส'`
-  /// while preserving all reasons in [SpecialGradeAdvice.reasons].
+  /// - `มส` is recommended immediately whenever [attendanceSummary] exceeds the
+  ///   class `มส` threshold, independent of score entry progress.
+  /// - `ร` is recommended ONLY when every assignment in the class plan has been
+  ///   assessed (`totalAssignmentsCount > 0 && assessedAssignmentsCount >=
+  ///   totalAssignmentsCount`), preventing false positives before scores are
+  ///   entered.
+  /// - When both conditions apply, `primaryRecommendedCode` prioritizes `'มส'`
+  ///   while preserving all reasons in [SpecialGradeAdvice.reasons].
   SpecialGradeAdvice evaluateAdvice({
     required int missingMandatoryCount,
     required int missingAssignmentsCount,
     required int missingWorkThreshold,
+    required int totalAssignmentsCount,
+    required int assessedAssignmentsCount,
     StudentAttendanceSummary? attendanceSummary,
   }) {
     final reasons = <String>[];
@@ -28,18 +36,24 @@ class SpecialGradeAdvisorService {
       reasons.add('ขาดเรียนเกินเกณฑ์ มส ($pctText%)');
     }
 
+    final isAllAssessed =
+        totalAssignmentsCount > 0 &&
+        assessedAssignmentsCount >= totalAssignmentsCount;
+
     var recommendR = false;
-    if (missingMandatoryCount > 0) {
-      recommendR = true;
-      reasons.add('ค้างงานบังคับส่ง $missingMandatoryCount ชิ้น');
-    }
-    if (missingWorkThreshold > 0 &&
-        missingAssignmentsCount >= missingWorkThreshold) {
-      recommendR = true;
-      reasons.add(
-        'ค้างส่งงาน $missingAssignmentsCount ชิ้น '
-        '(เกณฑ์ $missingWorkThreshold ชิ้น)',
-      );
+    if (isAllAssessed) {
+      if (missingMandatoryCount > 0) {
+        recommendR = true;
+        reasons.add('ค้างงานบังคับส่ง $missingMandatoryCount ชิ้น');
+      }
+      if (missingWorkThreshold > 0 &&
+          missingAssignmentsCount >= missingWorkThreshold) {
+        recommendR = true;
+        reasons.add(
+          'ค้างส่งงาน $missingAssignmentsCount ชิ้น '
+          '(เกณฑ์ $missingWorkThreshold ชิ้น)',
+        );
+      }
     }
 
     final primaryRecommendedCode = recommendMs
@@ -51,6 +65,8 @@ class SpecialGradeAdvisorService {
       recommendMs: recommendMs,
       primaryRecommendedCode: primaryRecommendedCode,
       reasons: List<String>.unmodifiable(reasons),
+      assessedAssignmentsCount: assessedAssignmentsCount,
+      totalAssignmentsCount: totalAssignmentsCount,
     );
   }
 

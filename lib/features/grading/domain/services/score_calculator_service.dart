@@ -153,6 +153,43 @@ class ScoreCalculatorService {
     );
   }
 
+  /// Returns the subset of [assignments] IDs that have been assessed (at least
+  /// one [StudentScore] row recorded for any student in [activeEnrollmentIds]).
+  ///
+  /// Ignores rows belonging to transferred-out students or unknown assignments.
+  Set<String> resolveAssessedAssignmentIds({
+    required List<Assignment> assignments,
+    required List<StudentScore> classScores,
+    required Set<String> activeEnrollmentIds,
+  }) {
+    if (assignments.isEmpty ||
+        classScores.isEmpty ||
+        activeEnrollmentIds.isEmpty) {
+      return const <String>{};
+    }
+    final validAssignmentIds = <String>{
+      for (final assignment in assignments) assignment.id,
+    };
+    final assessed = <String>{};
+    for (final score in classScores) {
+      if (validAssignmentIds.contains(score.assignmentId) &&
+          activeEnrollmentIds.contains(score.enrollmentId)) {
+        assessed.add(score.assignmentId);
+      }
+    }
+    return Set<String>.unmodifiable(assessed);
+  }
+
+  /// Returns `true` only when the class has at least one configured assignment
+  /// and every configured assignment has been assessed.
+  bool areAllAssignmentsAssessed({
+    required int totalAssignmentsCount,
+    required int assessedAssignmentsCount,
+  }) {
+    return totalAssignmentsCount > 0 &&
+        assessedAssignmentsCount >= totalAssignmentsCount;
+  }
+
   /// Formats a score preserving exact decimals up to 2 places without rounding
   /// to integers (e.g. `79.99` -> `'79.99'`, `80.0` -> `'80'`, `7.50` -> `'7.5'`).
   String formatExactScore(double value) {

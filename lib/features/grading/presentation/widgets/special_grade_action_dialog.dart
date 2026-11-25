@@ -78,6 +78,37 @@ class SpecialGradeActionDialog extends StatelessWidget {
                 color: colorScheme.onSurfaceVariant,
               ),
             ),
+            if (!advice.isAllAssignmentsAssessed &&
+                advice.totalAssignmentsCount > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ระบบจะเริ่มแนะนำติด ร อัตโนมัติเมื่อกรอกคะแนนครบทุกชิ้นงานในแผน '
+                        '(กรอกแล้ว ${advice.assessedAssignmentsCount}/${advice.totalAssignmentsCount} งาน)',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (advice.reasons.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(

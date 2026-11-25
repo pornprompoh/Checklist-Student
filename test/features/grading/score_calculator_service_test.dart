@@ -231,5 +231,60 @@ void main() {
       expect(service.formatExactScore(0.0), '0');
       expect(service.formatExactScore(-2.25), '-2.25');
     });
+
+    test(
+      'resolveAssessedAssignmentIds counts only assignments with at least 1 active student score row and ignores transferred_out',
+      () {
+        final assignments = <Assignment>[
+          buildAssignment('a1', maxScore: 10),
+          buildAssignment('a2', maxScore: 10),
+          buildAssignment('a3', maxScore: 10),
+        ];
+        final scores = <StudentScore>[
+          // a1: active student scored -> assessed
+          buildScore('a1', enrollmentId: 'active-1', score: 8.5),
+          // a2: active student marked missing explicitly -> assessed
+          buildScore(
+            'a2',
+            enrollmentId: 'active-2',
+            status: SubmissionStatus.missing,
+            score: null,
+          ),
+          // a3: ONLY transferred-out student has a row -> NOT assessed!
+          buildScore('a3', enrollmentId: 'transferred-1', score: 9.0),
+          // unknown assignment -> ignored
+          buildScore('a-unknown', enrollmentId: 'active-1', score: 5.0),
+        ];
+
+        final assessed = service.resolveAssessedAssignmentIds(
+          assignments: assignments,
+          classScores: scores,
+          activeEnrollmentIds: const <String>{'active-1', 'active-2'},
+        );
+
+        expect(assessed, const <String>{'a1', 'a2'});
+        expect(
+          service.areAllAssignmentsAssessed(
+            totalAssignmentsCount: assignments.length,
+            assessedAssignmentsCount: assessed.length,
+          ),
+          isFalse,
+        );
+        expect(
+          service.areAllAssignmentsAssessed(
+            totalAssignmentsCount: 2,
+            assessedAssignmentsCount: 2,
+          ),
+          isTrue,
+        );
+        expect(
+          service.areAllAssignmentsAssessed(
+            totalAssignmentsCount: 0,
+            assessedAssignmentsCount: 0,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }

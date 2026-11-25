@@ -82,6 +82,17 @@ class ExportReportBuilderService {
           ] = score;
     }
 
+    final activeEnrollmentIds = raw.enrollments
+        .where((e) => !e.isTransferredOut)
+        .map((e) => e.id)
+        .toSet();
+    final assessedAssignmentIds = scoreCalculatorService
+        .resolveAssessedAssignmentIds(
+          assignments: assignments,
+          classScores: raw.studentScores,
+          activeEnrollmentIds: activeEnrollmentIds,
+        );
+
     final gradeResults = <String, GradeResult>{};
     for (final student in students) {
       final calc = scoreCalculatorService.calculateStudentScores(
@@ -103,6 +114,8 @@ class ExportReportBuilderService {
         missingMandatoryCount: calc.missingMandatoryCount,
         missingAssignmentsCount: calc.missingAssignmentsCount,
         missingWorkThreshold: raw.gradingScaleConfig.missingWorkThreshold,
+        totalAssignmentsCount: assignments.length,
+        assessedAssignmentsCount: assessedAssignmentIds.length,
         attendanceSummary: attendance,
       );
       gradeResults[student.id] = GradeResult(

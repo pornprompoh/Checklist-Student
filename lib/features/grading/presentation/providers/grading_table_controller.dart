@@ -263,6 +263,15 @@ class GradingTableController extends Notifier<GradingTableState> {
     final evaluator = ref.read(gradeEvaluatorServiceProvider);
     final advisor = ref.read(specialGradeAdvisorServiceProvider);
     final allScores = state.scoresByCellKey.values.toList(growable: false);
+    final activeEnrollmentIds = enrollments
+        .where((e) => !e.isTransferredOut)
+        .map((e) => e.id)
+        .toSet();
+    final assessedAssignmentIds = calculator.resolveAssessedAssignmentIds(
+      assignments: assignments,
+      classScores: allScores,
+      activeEnrollmentIds: activeEnrollmentIds,
+    );
 
     return enrollments
         .map((enrollment) {
@@ -285,6 +294,8 @@ class GradingTableController extends Notifier<GradingTableState> {
             missingMandatoryCount: calc.missingMandatoryCount,
             missingAssignmentsCount: calc.missingAssignmentsCount,
             missingWorkThreshold: scaleConfig.missingWorkThreshold,
+            totalAssignmentsCount: assignments.length,
+            assessedAssignmentsCount: assessedAssignmentIds.length,
             attendanceSummary: attendance,
           );
           return GradingTableRowData(

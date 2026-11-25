@@ -57,6 +57,8 @@ void main() {
     bool recommendMs = false,
     bool wasRResolved = false,
     bool wasMsResolved = false,
+    int assessedAssignmentsCount = 0,
+    int totalAssignmentsCount = 0,
   }) {
     return GradeResult(
       enrollmentId: 'enr-1',
@@ -78,6 +80,8 @@ void main() {
           if (recommendMs) 'ขาดเรียนเกินเกณฑ์ มส (25%)',
           if (recommendR) 'ค้างงานบังคับส่ง 1 ชิ้น',
         ],
+        assessedAssignmentsCount: assessedAssignmentsCount,
+        totalAssignmentsCount: totalAssignmentsCount,
       ),
       wasRResolved: wasRResolved,
       wasMsResolved: wasMsResolved,
@@ -337,6 +341,48 @@ void main() {
 
         expect(find.text('ยืนยันการรีเซต PIN นักเรียน'), findsOneWidget);
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'UC-020: SpecialGradeActionDialog shows assessed progress notice (X/Y งาน) when incomplete while keeping manual confirm buttons active',
+      (tester) async {
+        SpecialGradeActionDecision? decision;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () async {
+                    decision = await SpecialGradeActionDialog.show(
+                      context,
+                      studentLabel: 'เลขที่ 1 ด.ช.สมชาย ใจดี',
+                      gradeResult: buildGradeResult(
+                        recommendR: false,
+                        assessedAssignmentsCount: 2,
+                        totalAssignmentsCount: 5,
+                      ),
+                    );
+                  },
+                  child: const Text('เปิดจัดการเกรดพิเศษ'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('เปิดจัดการเกรดพิเศษ'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('กรอกแล้ว 2/5 งาน'), findsOneWidget);
+        expect(find.text('ยืนยันติด ร'), findsOneWidget);
+        expect(find.text('ยืนยันติด มส'), findsOneWidget);
+
+        await tester.tap(find.text('ยืนยันติด ร'));
+        await tester.pumpAndSettle();
+        expect(decision?.specialGradeOverride, 'ร');
       },
     );
   });
