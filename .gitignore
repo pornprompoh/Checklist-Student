@@ -47,6 +47,8 @@ app.*.map.json
 # Local environment secrets & Vercel CLI link (never commit)
 .env
 .env.local
+.env.*.local
 env.json
 .vercel/
 supabase/functions/.env
+!.env.example

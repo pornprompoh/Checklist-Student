@@ -109,14 +109,9 @@ npx vercel link
 ### วิธี B (ทางเลือก): สร้างผ่านหน้าเว็บ Vercel Dashboard
 1. เข้า [https://vercel.com/new](https://vercel.com/new) → ล็อกอินด้วย GitHub
 2. เลือก Import Repository `Checklist-Student` → ตั้งชื่อโปรเจกต์ → ยังไม่ต้องคาดหวังให้ Build รอบแรกผ่าน
-3. ⚠️ **ขั้นตอนสำคัญมาก (ห้ามข้ามเด็ดขาดเมื่อใช้วิธี B):**
-   - เข้าหน้าโปรเจกต์บน Vercel → **Settings → Git → Ignored Build Step**
-   - เลือก **Custom** แล้วใส่คำสั่ง:
-     ```bash
-     exit 0
-     ```
-   - กด **Save**
-   - *เหตุผล:* เพื่อให้ Vercel ข้าม Auto-Build จาก Git integration (ซึ่งไม่มี Flutter SDK) และปล่อยให้ **GitHub Actions** เป็นผู้ Build & Deploy Prebuilt ขึ้นแทนทุกครั้งโดยไม่ขึ้นกากบาทแดงซ้ำซ้อน
+3. ⚠️ **หมายเหตุเรื่อง Auto-Build บน Vercel:**
+   - ในไฟล์ `vercel.json` ได้ตั้ง `"git": { "deploymentEnabled": false }` ไว้ให้แล้ว เพื่อป้องกันไม่ให้ Vercel พยายามรัน `flutter` เองซ้ำซ้อนกับ GitHub Actions
+   - หากต้องการตั้งเสริมบนหน้าเว็บ Vercel ด้วย ให้ไปที่ **Settings → Git → Ignored Build Step → Custom → ใส่ `exit 0` → Save**
 4. ไปที่ **Settings → General** เพื่อคัดลอก **Project ID** (`VERCEL_PROJECT_ID`) และไปที่ **Account/Team Settings → General** เพื่อคัดลอก **Team ID / Your ID** (`VERCEL_ORG_ID`)
 
 ### 2.1 สร้าง `VERCEL_TOKEN` สำหรับ GitHub Actions
