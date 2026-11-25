@@ -5,11 +5,56 @@
   "buildCommand": "\"$HOME/flutter/bin/flutter\" build web --release --dart-define=SUPABASE_URL=\"$SUPABASE_URL\" --dart-define=SUPABASE_ANON_KEY=\"$SUPABASE_ANON_KEY\"",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|icons/|canvaskit/|sqlite3\\.wasm$|drift_worker\\.js$|flutter_bootstrap\\.js$|flutter_service_worker\\.js$|flutter\\.js$|main\\.dart\\.js$|manifest\\.json$|version\\.json$|favicon\\.png$|index\\.html$|.*\\.(?:wasm|js|mjs|css|map|json|png|jpg|jpeg|svg|ico|webp|ttf|otf|woff|woff2)$).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/(.*)\\.wasm",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/flutter_service_worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

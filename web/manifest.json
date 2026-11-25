@@ -1,35 +1,39 @@
 {
-    "name": "Checklist-Student",
-    "short_name": "Checklist-Student",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#3B5BDB",
-    "theme_color": "#3B5BDB",
-    "description": "ระบบจัดการชั้นเรียน เช็กชื่อ และให้คะแนน",
-    "orientation": "portrait-primary",
-    "prefer_related_applications": false,
-    "icons": [
-        {
-            "src": "icons/Icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-maskable-192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
-            "src": "icons/Icon-maskable-512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        }
-    ]
+  "name": "Checklist-Student — ระบบเช็คชื่อและตัดเกรด",
+  "short_name": "Checklist",
+  "lang": "th",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#3B5BDB",
+  "theme_color": "#3B5BDB",
+  "description": "ระบบเช็คชื่อ ตรวจงาน ตัดเกรด ปพ.5 และพอร์ทัลนักเรียนแบบ Offline-First สำหรับครูไทย",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/Icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/Icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/Icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/Icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
