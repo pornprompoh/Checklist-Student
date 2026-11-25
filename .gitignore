@@ -44,8 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Local environment secrets (never commit)
+# Local environment secrets & Vercel CLI link (never commit)
 .env
 .env.local
 env.json
+.vercel/
 supabase/functions/.env
