@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
 import '../../domain/entities/student_attendance_summary.dart';
 import 'attendance_risk_badge.dart';
 
-/// Responsive row for checking in one student (mobile `390px` through desktop).
-///
-/// Renders 1-tap 4-state buttons (`มา / สาย / ลา / ขาด`), note button, `มส`
-/// risk badge, and read-only states for locked sessions, mid-term future
-/// enrollments, or transferred-out students.
+/// Fast, scannable student check-in row (`320px` mobile to desktop) with
+/// tactile 4-state segmented pills (`มา / สาย / ลา / ขาด`), aligned baseline,
+/// tabular student numbers, note icon, and read-only lifecycle states.
 class AttendanceStudentRow extends StatelessWidget {
   const AttendanceStudentRow({
     super.key,
@@ -23,6 +22,7 @@ class AttendanceStudentRow extends StatelessWidget {
     required this.isLocked,
     required this.onStatusSelected,
     required this.onEditNote,
+    this.embedded = false,
   });
 
   final ClassEnrollment enrollment;
@@ -33,6 +33,10 @@ class AttendanceStudentRow extends StatelessWidget {
   final bool isLocked;
   final ValueChanged<AttendanceStatus> onStatusSelected;
   final VoidCallback onEditNote;
+
+  /// When `true`, renders borderless inside a parent [AppSurfaceCard] roster
+  /// list to avoid 40 stacked card borders.
+  final bool embedded;
 
   bool get _isNotYetEnrolled {
     final enrolled = _dateOnly(enrollment.enrolledAt);
@@ -57,127 +61,188 @@ class AttendanceStudentRow extends StatelessWidget {
     final semantic = AppSemanticColors.of(context);
     final hasNote = note.trim().isNotEmpty;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${enrollment.studentNumber}',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        enrollment.fullName,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            'รหัส ${enrollment.studentCode}',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          AttendanceRiskBadge(summary: summary),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (isEligibleForDate)
-                  IconButton(
-                    tooltip: hasNote ? 'แก้ไขหมายเหตุ' : 'เพิ่มหมายเหตุ',
-                    onPressed: isLocked ? null : onEditNote,
-                    icon: Icon(
-                      hasNote
-                          ? Icons.comment_rounded
-                          : Icons.add_comment_outlined,
-                      size: 20,
-                      color: hasNote
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (_isNotYetEnrolled)
-              _ReadOnlyLifecycleBanner(
-                icon: Icons.event_available_outlined,
-                label:
-                    'เข้าเรียนเมื่อ ${ThaiDateFormatter.formatShortDate(enrollment.enrolledAt)} (ไม่ต้องเช็คชื่อวันนี้)',
-              )
-            else if (_isAlreadyTransferredOut)
-              _ReadOnlyLifecycleBanner(
-                icon: Icons.person_off_outlined,
-                label: enrollment.transferredOutAt != null
-                    ? 'ย้ายออกเมื่อ ${ThaiDateFormatter.formatShortDate(enrollment.transferredOutAt!)}'
-                    : 'ย้ายออกแล้ว',
-              )
-            else
-              Row(
-                children: [
-                  for (var i = 0; i < AttendanceStatus.values.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    Expanded(
-                      child: _StatusTapButton(
-                        status: AttendanceStatus.values[i],
-                        selected: selectedStatus == AttendanceStatus.values[i],
-                        disabled: isLocked,
-                        semantic: semantic,
-                        onTap: () =>
-                            onStatusSelected(AttendanceStatus.values[i]),
-                      ),
-                    ),
+    final body = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 680;
+          final studentInfo = _buildStudentHeader(
+            context,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+            hasNote: hasNote,
+          );
+          final controls = _buildStatusControl(context, semantic);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isWide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(flex: 5, child: studentInfo),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 5, child: controls),
                   ],
+                )
+              else ...[
+                studentInfo,
+                const SizedBox(height: 12),
+                controls,
+              ],
+              if (hasNote && isEligibleForDate) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'หมายเหตุ: $note',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+
+    if (embedded) {
+      return body;
+    }
+    return Material(
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      child: body,
+    );
+  }
+
+  Widget _buildStudentHeader(
+    BuildContext context, {
+    required ColorScheme colorScheme,
+    required TextTheme textTheme,
+    required bool hasNote,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.75),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '${enrollment.studentNumber}',
+            style: textTheme.labelLarge?.copyWith(
+              color: colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w700,
+              fontFeatures: AppTheme.tabularFigures,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                enrollment.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'รหัส ${enrollment.studentCode}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
+                  ),
+                  AttendanceRiskBadge(summary: summary),
                 ],
               ),
-            if (hasNote && isEligibleForDate) ...[
-              const SizedBox(height: 6),
-              Text(
-                'หมายเหตุ: $note',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
             ],
-          ],
+          ),
         ),
+        if (isEligibleForDate)
+          IconButton(
+            tooltip: hasNote ? 'แก้ไขหมายเหตุ' : 'เพิ่มหมายเหตุ',
+            visualDensity: VisualDensity.compact,
+            onPressed: isLocked ? null : onEditNote,
+            icon: Icon(
+              hasNote ? Icons.comment_rounded : Icons.add_comment_outlined,
+              size: 19,
+              color: hasNote
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatusControl(BuildContext context, AppSemanticColors semantic) {
+    if (_isNotYetEnrolled) {
+      return _ReadOnlyLifecycleBanner(
+        icon: Icons.event_available_outlined,
+        label:
+            'เข้าเรียนเมื่อ ${ThaiDateFormatter.formatShortDate(enrollment.enrolledAt)} (ไม่ต้องเช็คชื่อวันนี้)',
+      );
+    }
+    if (_isAlreadyTransferredOut) {
+      return _ReadOnlyLifecycleBanner(
+        icon: Icons.person_off_outlined,
+        label: enrollment.transferredOutAt != null
+            ? 'ย้ายออกเมื่อ ${ThaiDateFormatter.formatShortDate(enrollment.transferredOutAt!)}'
+            : 'ย้ายออกแล้ว',
+      );
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < AttendanceStatus.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            Expanded(
+              child: _StatusTapPill(
+                status: AttendanceStatus.values[i],
+                selected: selectedStatus == AttendanceStatus.values[i],
+                disabled: isLocked,
+                semantic: semantic,
+                onTap: () => onStatusSelected(AttendanceStatus.values[i]),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _StatusTapButton extends StatelessWidget {
-  const _StatusTapButton({
+class _StatusTapPill extends StatelessWidget {
+  const _StatusTapPill({
     required this.status,
     required this.selected,
     required this.disabled,
@@ -200,40 +265,41 @@ class _StatusTapButton extends StatelessWidget {
       AttendanceStatus.leave => (semantic.leave, semantic.leaveContainer),
       AttendanceStatus.absent => (semantic.absent, semantic.absentContainer),
     };
-
-    final effectiveBg = selected
-        ? bg
-        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.45);
-    final effectiveFg = selected ? fg : colorScheme.onSurfaceVariant;
-    final borderColor = selected
-        ? fg
-        : colorScheme.outlineVariant.withValues(alpha: 0.8);
+    final radius = BorderRadius.circular(8);
 
     return Opacity(
-      opacity: disabled ? 0.6 : 1.0,
-      child: Material(
-        color: effectiveBg,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: disabled ? null : onTap,
-          child: Container(
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: borderColor,
-                width: selected ? 1.5 : 1,
-              ),
-            ),
-            child: Text(
-              status.thaiLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: effectiveFg,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      opacity: disabled ? 0.55 : 1.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: selected ? bg : Colors.transparent,
+          borderRadius: radius,
+          border: selected ? Border.all(color: fg, width: 1.2) : null,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: radius,
+            mouseCursor: disabled
+                ? MouseCursor.defer
+                : SystemMouseCursors.click,
+            hoverColor: fg.withValues(alpha: 0.09),
+            onTap: disabled ? null : onTap,
+            child: SizedBox(
+              height: 36,
+              child: Center(
+                child: Text(
+                  status.thaiLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: selected ? fg : colorScheme.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           ),
@@ -253,10 +319,10 @@ class _ReadOnlyLifecycleBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(10),
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [

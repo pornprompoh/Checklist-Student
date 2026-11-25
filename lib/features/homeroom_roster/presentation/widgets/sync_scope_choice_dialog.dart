@@ -52,18 +52,23 @@ class SyncScopeChoiceDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            OutlinedButton.icon(
+            OutlinedButton(
               style: OutlinedButton.styleFrom(
                 alignment: Alignment.centerLeft,
                 padding: const EdgeInsets.all(14),
               ),
               onPressed: () =>
                   Navigator.of(context).pop(RosterSyncScope.classOnly),
-              icon: const Icon(Icons.class_outlined),
-              label: const Text('อัปเดตเฉพาะวิชานี้'),
+              child: const Row(
+                children: [
+                  Icon(Icons.class_outlined, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(child: Text('อัปเดตเฉพาะวิชานี้')),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
-            FilledButton.icon(
+            FilledButton(
               style: FilledButton.styleFrom(
                 alignment: Alignment.centerLeft,
                 padding: const EdgeInsets.all(14),
@@ -71,8 +76,17 @@ class SyncScopeChoiceDialog extends StatelessWidget {
               onPressed: () => Navigator.of(
                 context,
               ).pop(RosterSyncScope.homeroomAndAllClasses),
-              icon: const Icon(Icons.sync_rounded),
-              label: const Text('อัปเดตกลับคลังหลักและซิงค์ทุกวิชาที่ผูกในเทอมนี้'),
+              child: const Row(
+                children: [
+                  Icon(Icons.sync_rounded, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'อัปเดตกลับคลังหลักและซิงค์ทุกวิชาที่ผูกในเทอมนี้',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

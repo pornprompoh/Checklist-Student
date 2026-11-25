@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
@@ -118,6 +120,7 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
     final filter = ref.watch(auditLogFilterProvider);
     final entriesAsync = ref.watch(auditLogEntriesProvider);
     final summariesAsync = ref.watch(auditLogYearSummariesProvider);
+    final cleanupAlerts = ref.watch(auditLogCleanupAlertsProvider);
     final exportedYearIds = ref.watch(exportedAuditLogYearIdsProvider);
     final years =
         ref.watch(academicYearsProvider).asData?.value ??
@@ -133,7 +136,8 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
       }
     });
 
-    final rawEntries = entriesAsync.asData?.value ?? const <ScoreAuditLogEntry>[];
+    final rawEntries =
+        entriesAsync.asData?.value ?? const <ScoreAuditLogEntry>[];
     final filteredEntries = rawEntries
         .where(filter.matchesSearch)
         .toList(growable: false);
@@ -149,29 +153,11 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
         final useScrollableLayout =
             constraints.maxHeight < 680 || constraints.maxWidth < 640;
 
-        final headerSection = Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ประวัติการแก้ไขคะแนนและสถานะเกรด',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  'บันทึกอัตโนมัติแบบอ่านอย่างเดียว พร้อมส่งออก CSV/JSON และล้าง Log ประจำปี',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+        final headerSection = AppPageHeader(
+          title: 'ประวัติการแก้ไขคะแนนและสถานะเกรด',
+          subtitle:
+              'บันทึกอัตโนมัติแบบอ่านอย่างเดียว พร้อมส่งออก CSV/JSON และล้าง Log ประจำปี',
+          actions: [
             SegmentedButton<_AuditLogTab>(
               showSelectedIcon: false,
               segments: const <ButtonSegment<_AuditLogTab>>[
@@ -256,7 +242,7 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SkeletonBox(height: 92),
-                SizedBox(height: 10),
+                SizedBox(height: 12),
                 SkeletonBox(height: 92),
               ],
             ),
@@ -267,10 +253,11 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
             ),
             data: (_) {
               if (filteredEntries.isEmpty) {
-                return const AppFeedbackBanner(
-                  type: AppFeedbackType.info,
-                  message:
-                      'ไม่พบประวัติการแก้ไขคะแนนตามตัวกรองที่เลือก — เมื่อมีการกรอก/แก้คะแนนหรือสถานะ ร/มส ระบบจะบันทึกให้อัตโนมัติ',
+                return const AppEmptyState(
+                  icon: Icons.history_rounded,
+                  title: 'ไม่พบประวัติการแก้ไขคะแนนตามตัวกรองที่เลือก',
+                  description:
+                      'เมื่อมีการกรอกหรือแก้ไขคะแนนและสถานะ ร/มส ระบบจะบันทึกประวัติให้อัตโนมัติ',
                 );
               }
               return ListView.separated(
@@ -279,7 +266,7 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
                     ? const NeverScrollableScrollPhysics()
                     : null,
                 itemCount: filteredEntries.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, index) =>
                     AuditLogEntryTile(entry: filteredEntries[index]),
               );
@@ -304,20 +291,26 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
           ),
         );
 
+        final bannerWidgets = cleanupAlerts.isEmpty
+            ? const <Widget>[]
+            : const <Widget>[
+                AuditLogCleanupBanner(showNavigationAction: false),
+                SizedBox(height: 12),
+              ];
+
         if (useScrollableLayout) {
           return Align(
             alignment: Alignment.topCenter,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     headerSection,
-                    const SizedBox(height: 12),
-                    const AuditLogCleanupBanner(showNavigationAction: false),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    ...bannerWidgets,
                     if (_tab == _AuditLogTab.history) ...[
                       filterBar,
                       const SizedBox(height: 12),
@@ -336,14 +329,13 @@ class _AuditLogPageState extends ConsumerState<AuditLogPage> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1100),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   headerSection,
-                  const SizedBox(height: 12),
-                  const AuditLogCleanupBanner(showNavigationAction: false),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  ...bannerWidgets,
                   if (_tab == _AuditLogTab.history) ...[
                     filterBar,
                     const SizedBox(height: 12),

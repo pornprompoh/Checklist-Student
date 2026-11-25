@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../domain/entities/grade_result.dart';
 
 /// Semantic grade & special-grade (`ร` / `มส`) indicator displayed in
-/// `FrozenGradeGrid` and `StudentProfileDrawer`.
-///
-/// Renders 3 distinct states clearly:
-/// 1. Confirmed `ร` / `มส` override (danger pill)
-/// 2. Advisory suggestion (`แนะนำ ร` / `แนะนำ มส` / `แนะนำ ร/มส`) with reasons tooltip
-/// 3. Resolved teacher-only history tag (`เคยแก้ ร` / `เคยแก้ มส`) with Buddhist Era date tooltip
+/// [FrozenGradeGrid] and [StudentProfileDrawer] with tabular figures.
 class SpecialGradeBadge extends StatelessWidget {
   const SpecialGradeBadge({
     super.key,
@@ -37,9 +33,8 @@ class SpecialGradeBadge extends StatelessWidget {
         label: override,
         background: semantic.dangerContainer,
         foreground: semantic.danger,
-        fontSize: compact ? 13 : 15,
-        horizontalPadding: compact ? 10 : 12,
-        verticalPadding: compact ? 3 : 5,
+        compact: compact,
+        emphasized: true,
       );
     } else {
       final subBadge = _buildSubBadge(context);
@@ -55,6 +50,7 @@ class SpecialGradeBadge extends StatelessWidget {
                 ?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colorScheme.primary,
+                  fontFeatures: AppTheme.tabularFigures,
                 ),
           ),
           if (subBadge != null) ...[
@@ -72,13 +68,12 @@ class SpecialGradeBadge extends StatelessWidget {
       content = Tooltip(message: _resolvedTooltip(), child: content);
     }
 
-    if (onTap == null) {
-      return content;
-    }
+    if (onTap == null) return content;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      mouseCursor: SystemMouseCursors.click,
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 4 : 6,
@@ -102,9 +97,8 @@ class SpecialGradeBadge extends StatelessWidget {
         label: label,
         background: semantic.warningContainer,
         foreground: semantic.warning,
-        fontSize: compact ? 9.5 : 11,
-        horizontalPadding: compact ? 5 : 8,
-        verticalPadding: compact ? 1 : 2,
+        compact: compact,
+        emphasized: false,
       );
     }
 
@@ -116,9 +110,8 @@ class SpecialGradeBadge extends StatelessWidget {
         label: label,
         background: colorScheme.secondaryContainer,
         foreground: colorScheme.onSecondaryContainer,
-        fontSize: compact ? 9.5 : 11,
-        horizontalPadding: compact ? 5 : 8,
-        verticalPadding: compact ? 1 : 2,
+        compact: compact,
+        emphasized: false,
       );
     }
     return null;
@@ -138,24 +131,27 @@ class _TagPill extends StatelessWidget {
     required this.label,
     required this.background,
     required this.foreground,
-    required this.fontSize,
-    required this.horizontalPadding,
-    required this.verticalPadding,
+    required this.compact,
+    required this.emphasized,
   });
 
   final String label;
   final Color background;
   final Color foreground;
-  final double fontSize;
-  final double horizontalPadding;
-  final double verticalPadding;
+  final bool compact;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final baseStyle = emphasized
+        ? (compact ? textTheme.labelLarge : textTheme.titleSmall)
+        : textTheme.labelSmall;
+
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
+        horizontal: emphasized ? (compact ? 10 : 12) : (compact ? 5 : 8),
+        vertical: emphasized ? (compact ? 3 : 5) : (compact ? 1 : 2),
       ),
       decoration: BoxDecoration(
         color: background,
@@ -165,10 +161,10 @@ class _TagPill extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        style: baseStyle?.copyWith(
           color: foreground,
-          fontSize: fontSize,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
       ),
     );

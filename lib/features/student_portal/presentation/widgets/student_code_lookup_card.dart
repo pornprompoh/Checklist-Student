@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/resolved_teacher_portal.dart';
 
 /// Step 1 card displaying teacher/school header, optional archived-code
@@ -46,111 +48,114 @@ class _StudentCodeLookupCardState extends State<StudentCodeLookupCard> {
     final schoolName = widget.teacher.schoolName?.trim() ?? '';
     final department = widget.teacher.department?.trim() ?? '';
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.school_rounded,
-                    color: colorScheme.onPrimaryContainer,
-                    size: 24,
-                  ),
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Icon(
+                  Icons.school_rounded,
+                  color: colorScheme.onPrimaryContainer,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.teacher.effectiveTeacherName,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (schoolName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        widget.teacher.effectiveTeacherName,
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        schoolName,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (schoolName.isNotEmpty)
-                        Text(
-                          schoolName,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      if (department.isNotEmpty)
-                        Text(
-                          department,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
                     ],
-                  ),
+                    if (department.isNotEmpty)
+                      Text(
+                        department,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            if (widget.infoMessage != null) ...[
-              const SizedBox(height: 14),
-              AppFeedbackBanner(
-                type: AppFeedbackType.info,
-                message: widget.infoMessage!,
               ),
             ],
-            const Divider(height: 28),
-            Text(
-              'ตรวจสอบเวลาเรียน งานค้าง และผลการเรียน',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'กรอกเลขประจำตัวนักเรียนเพื่อเข้าสู่ระบบด้วยรหัส PIN 6 หลัก (ไม่ต้องสมัครสมาชิก)',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
+          ),
+          if (widget.infoMessage != null) ...[
             const SizedBox(height: 14),
-            TextField(
-              controller: _studentCodeCtrl,
-              enabled: !widget.isBusy,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
-                labelText: 'เลขประจำตัวนักเรียน',
-                hintText: 'เช่น 67001',
-                prefixIcon: Icon(Icons.badge_outlined),
-              ),
-            ),
-            if (widget.errorMessage != null) ...[
-              const SizedBox(height: 12),
-              AppFeedbackBanner(
-                type: AppFeedbackType.error,
-                message: widget.errorMessage!,
-              ),
-            ],
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: widget.isBusy ? null : _submit,
-              child: widget.isBusy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('ถัดไป'),
+            AppFeedbackBanner(
+              type: AppFeedbackType.info,
+              message: widget.infoMessage!,
             ),
           ],
-        ),
+          const Divider(height: 28),
+          Text(
+            'ตรวจสอบเวลาเรียน งานค้าง และผลการเรียน',
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'กรอกเลขประจำตัวนักเรียนเพื่อเข้าสู่ระบบด้วยรหัส PIN 6 หลัก (ไม่ต้องสมัครสมาชิก)',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _studentCodeCtrl,
+            enabled: !widget.isBusy,
+            autofillHints: const <String>[AutofillHints.username],
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontFeatures: AppTheme.tabularFigures,
+            ),
+            decoration: const InputDecoration(
+              labelText: 'เลขประจำตัวนักเรียน',
+              hintText: 'เช่น 67001',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+          ),
+          if (widget.errorMessage != null) ...[
+            const SizedBox(height: 12),
+            AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: widget.errorMessage!,
+            ),
+          ],
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: widget.isBusy ? null : _submit,
+            child: widget.isBusy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('ถัดไป'),
+          ),
+        ],
       ),
     );
   }

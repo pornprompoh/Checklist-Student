@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../grading/domain/services/score_calculator_service.dart';
 import '../../domain/entities/student_portal_class_detail.dart';
 
-/// Attendance summary strip + expandable per-session Buddhist Era history inside
-/// `StudentPortalClassCard`.
+/// Zone 2 of `StudentPortalClassCard`: attendance summary pills with tabular
+/// numbers, `%` absence risk indicator, and expandable Buddhist Era history.
 class StudentPortalClassAttendanceSection extends StatelessWidget {
   const StudentPortalClassAttendanceSection({
     super.key,
@@ -47,6 +48,7 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
               'เวลาเรียน (${summary.recordedSessions}/${summary.totalEligibleSessions} คาบ)',
               style: textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
             Container(
@@ -70,6 +72,7 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
                       ? semantic.danger
                       : (isApproaching ? semantic.warning : semantic.success),
                   fontWeight: FontWeight.w700,
+                  fontFeatures: AppTheme.tabularFigures,
                 ),
               ),
             ),
@@ -103,7 +106,7 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
           ],
         ),
         if (records.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Material(
             color: colorScheme.surfaceContainerLow,
             clipBehavior: Clip.antiAlias,
@@ -113,18 +116,27 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
             ),
             child: ExpansionTile(
               dense: true,
+              shape: const Border(),
+              collapsedShape: const Border(),
               tilePadding: const EdgeInsets.symmetric(horizontal: 12),
               childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
               title: Text(
                 'ดูประวัติเช็คชื่อรายคาบ (${records.length} ครั้ง)',
                 style: textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w600,
+                  fontFeatures: AppTheme.tabularFigures,
                 ),
               ),
               children: [
-                for (final rec in records)
+                for (var i = 0; i < records.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: colorScheme.outlineVariant,
+                    ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -134,15 +146,16 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
                             children: [
                               Text(
                                 ThaiDateFormatter.formatShortDate(
-                                  rec.sessionDate,
+                                  records[i].sessionDate,
                                 ),
                                 style: textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.w600,
+                                  fontFeatures: AppTheme.tabularFigures,
                                 ),
                               ),
-                              if (rec.note.trim().isNotEmpty)
+                              if (records[i].note.trim().isNotEmpty)
                                 Text(
-                                  rec.note,
+                                  records[i].note,
                                   style: textTheme.labelSmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -151,10 +164,11 @@ class StudentPortalClassAttendanceSection extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        _statusBadge(context, rec.status, semantic),
+                        _statusBadge(context, records[i].status, semantic),
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -202,6 +216,7 @@ class _AttendancePill extends StatelessWidget {
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: fg,
           fontWeight: FontWeight.w700,
+          fontFeatures: AppTheme.tabularFigures,
         ),
       ),
     );

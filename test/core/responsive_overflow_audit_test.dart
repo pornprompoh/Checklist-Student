@@ -1,13 +1,17 @@
 import 'package:checklist_student/core/constants/app_routes.dart';
 import 'package:checklist_student/core/theme/app_theme.dart';
+import 'package:checklist_student/core/utils/in_app_browser_detector.dart';
 import 'package:checklist_student/core/widgets/app_shell_scaffold.dart';
 import 'package:checklist_student/core/widgets/typed_confirm_dialog.dart';
 import 'package:checklist_student/features/academic_structure/presentation/pages/academic_structure_page.dart';
+import 'package:checklist_student/features/academic_structure/presentation/widgets/academic_year_form_dialog.dart';
 import 'package:checklist_student/features/academic_structure/presentation/widgets/subject_class_form_dialog.dart';
+import 'package:checklist_student/features/academic_structure/presentation/widgets/subject_form_dialog.dart';
 import 'package:checklist_student/features/academic_structure/presentation/widgets/term_form_dialog.dart';
 import 'package:checklist_student/features/attendance/presentation/pages/attendance_check_in_page.dart';
 import 'package:checklist_student/features/attendance/presentation/pages/attendance_rule_settings_page.dart';
 import 'package:checklist_student/features/attendance/presentation/widgets/attendance_history_sheet.dart';
+import 'package:checklist_student/features/attendance/presentation/widgets/attendance_note_dialog.dart';
 import 'package:checklist_student/features/audit_log/presentation/pages/audit_log_page.dart';
 import 'package:checklist_student/features/auth/presentation/pages/teacher_login_page.dart';
 import 'package:checklist_student/features/dashboard/presentation/pages/teacher_dashboard_page.dart';
@@ -15,17 +19,25 @@ import 'package:checklist_student/features/export_reports/presentation/pages/exp
 import 'package:checklist_student/features/grading/presentation/pages/grading_plan_page.dart';
 import 'package:checklist_student/features/grading/presentation/pages/grading_table_page.dart';
 import 'package:checklist_student/features/grading/presentation/providers/grading_table_state.dart';
+import 'package:checklist_student/features/grading/presentation/providers/plan_editor_controller.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/assignment_form_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/copy_plan_dialog.dart';
+import 'package:checklist_student/features/grading/presentation/widgets/over_max_score_warning_dialog.dart';
+import 'package:checklist_student/features/grading/presentation/widgets/score_category_form_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/score_cell_detail_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/special_grade_action_dialog.dart';
 import 'package:checklist_student/features/grading/presentation/widgets/student_profile_drawer.dart';
+import 'package:checklist_student/features/homeroom_roster/domain/services/roster_renumber_service.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/widgets/ai_roster_import_dialog.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/homeroom_form_dialog.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/widgets/link_homeroom_classes_dialog.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/renumber_confirm_dialog.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/widgets/roster_import_dialog.dart';
 import 'package:checklist_student/features/homeroom_roster/presentation/widgets/student_form_dialog.dart';
+import 'package:checklist_student/features/homeroom_roster/presentation/widgets/sync_scope_choice_dialog.dart';
 import 'package:checklist_student/features/settings/presentation/pages/teacher_settings_page.dart';
+import 'package:checklist_student/features/student_portal/presentation/pages/student_portal_entry_page.dart';
 import 'package:checklist_student/features/sync_queue/presentation/pages/sync_queue_page.dart';
 import 'package:checklist_student/features/sync_queue/presentation/widgets/sync_conflict_resolution_dialog.dart';
 import 'package:flutter/material.dart';
@@ -41,6 +53,7 @@ Future<void> pumpAcross6Viewports(
   WidgetTester tester, {
   required ResponsiveTestFixtures fixtures,
   required Widget Function() builder,
+  String? label,
   bool isOnline = true,
   bool wrapInScaffold = true,
   Future<void> Function(WidgetTester tester, StressViewport vp)? afterPump,
@@ -55,7 +68,7 @@ Future<void> pumpAcross6Viewports(
     final body = builder();
     await tester.pumpWidget(
       ProviderScope(
-        key: ValueKey<String>('scope_${vp.label}'),
+        key: ValueKey<String>('scope_${label ?? ''}_${vp.label}'),
         overrides: fixtures.buildOverrides(isOnline: isOnline),
         child: MaterialApp(
           theme: AppTheme.light,
@@ -68,7 +81,8 @@ Future<void> pumpAcross6Viewports(
     expect(
       tester.takeException(),
       isNull,
-      reason: 'Overflow or layout exception at ${vp.label}',
+      reason:
+          'Overflow or layout exception${label != null ? ' in $label' : ''} at ${vp.label}',
     );
 
     if (afterPump != null) {
@@ -310,6 +324,43 @@ void main() {
       );
     });
 
+    testWidgets(
+      'StudentPortalEntryPage (Lookup -> PIN -> Summary + LINE Banner) across 6 viewports',
+      (tester) async {
+        final lineInfo = parseInAppBrowserInfo(
+          userAgent: 'Mozilla/5.0 Line/14.0.0',
+          currentUrl: 'https://example.com/student/t-8492',
+        );
+        await pumpAcross6Viewports(
+          tester,
+          fixtures: fixtures,
+          wrapInScaffold: false,
+          builder: () => StudentPortalEntryPage(
+            initialTeacherCode: 't-8492',
+            browserInfoOverride: lineInfo,
+          ),
+          afterPump: (tester, vp) async {
+            await tester.ensureVisible(find.byType(TextField).first);
+            await tester.enterText(find.byType(TextField).first, '67001');
+            await tester.ensureVisible(find.text('ถัดไป'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('ถัดไป'));
+            await tester.pumpAndSettle();
+            expect(find.text('ยืนยันรหัส PIN 6 หลัก'), findsOneWidget);
+            expect(tester.takeException(), isNull);
+
+            await tester.ensureVisible(find.byType(TextField).first);
+            await tester.enterText(find.byType(TextField).first, '246810');
+            await tester.ensureVisible(find.text('ยืนยันรหัส PIN'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('ยืนยันรหัส PIN'));
+            await tester.pumpAndSettle();
+            expect(find.text('นายกิตติพงศ์วัฒนากูล รัตนประเสริฐศักดิ์'), findsOneWidget);
+          },
+        );
+      },
+    );
+
     testWidgets('Key Dialogs render without overflow across 6 viewports', (
       tester,
     ) async {
@@ -388,12 +439,50 @@ void main() {
           selectedDate: fixtures.sessions.first.sessionDate,
           onSelectDate: (_) {},
         ),
+        'AcademicYearFormDialog': () => const AcademicYearFormDialog(),
+        'SubjectFormDialog': () =>
+            SubjectFormDialog(existingSubject: fixtures.subjects.first),
+        'AttendanceNoteDialog': () => const AttendanceNoteDialog(
+          title: 'หมายเหตุการเข้าเรียน — เลขที่ 1 นายกิตติพงศ์วัฒนากูล',
+          subtitle: '25 พ.ย. 2569',
+          initialNote: 'ลาป่วยมีใบรับรองแพทย์',
+        ),
+        'OverMaxScoreWarningDialog': () => const OverMaxScoreWarningDialog(
+          assignmentTitle: 'ใบงานที่ 1 การวิเคราะห์ขั้นตอนวิธีและอัลกอริทึม',
+          newMaxScore: 15,
+          affectedStudents: <OverMaxScoreDetail>[
+            OverMaxScoreDetail(
+              enrollmentId: 'enr-1',
+              studentLabel: 'เลขที่ 1 นายกิตติพงศ์วัฒนากูล1 รัตนประเสริฐศักดิ์',
+              currentScore: 18.75,
+            ),
+          ],
+        ),
+        'ScoreCategoryFormDialog': () =>
+            ScoreCategoryFormDialog(existing: fixtures.scoreCategories.first),
+        'HomeroomFormDialog': () =>
+            const HomeroomFormDialog(initialName: 'ม.4/1 ห้องเรียนพิเศษวิทย์-คณิต'),
+        'RenumberConfirmDialog': () => const RenumberConfirmDialog(
+          assignments: <RenumberAssignment>[
+            RenumberAssignment(
+              recordId: 'hs-1',
+              displayName: 'นายกิตติพงศ์วัฒนากูล1 รัตนประเสริฐศักดิ์',
+              oldNumber: 2,
+              newNumber: 1,
+            ),
+          ],
+          showSyncLinkedOption: true,
+        ),
+        'SyncScopeChoiceDialog': () => const SyncScopeChoiceDialog(
+          studentName: 'นายกิตติพงศ์วัฒนากูล1 รัตนประเสริฐศักดิ์',
+        ),
       };
 
       for (final entry in dialogs.entries) {
         await pumpAcross6Viewports(
           tester,
           fixtures: fixtures,
+          label: entry.key,
           builder: entry.value,
         );
       }

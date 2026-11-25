@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
@@ -28,8 +34,6 @@ class _HomeroomRosterPageState extends ConsumerState<HomeroomRosterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     final yearsAsync = ref.watch(academicYearsProvider);
     final termsAsync = ref.watch(allTermsProvider);
     final isBusy = ref.watch(homeroomRosterControllerProvider).isLoading;
@@ -53,27 +57,14 @@ class _HomeroomRosterPageState extends ConsumerState<HomeroomRosterPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'คลังรายชื่อนักเรียนประจำเทอม',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'จัดการรายชื่อกลางระดับเทอม ผูกเข้าหลายรายวิชา ย้ายเข้ากลางเทอม ย้ายออก และเรียงเลขที่ใหม่',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              const AppPageHeader(
+                title: 'คลังรายชื่อนักเรียนประจำเทอม',
+                subtitle:
+                    'จัดการรายชื่อกลางระดับเทอม ผูกเข้าหลายรายวิชา ย้ายเข้ากลางเทอม ย้ายออก และเรียงเลขที่ใหม่',
               ),
               const SizedBox(height: 20),
               if (yearsAsync.isLoading || termsAsync.isLoading)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: SkeletonBox(height: 52),
-                  ),
-                )
+                const AppSurfaceCard(child: SkeletonBox(height: 52))
               else if (yearsAsync.hasError || termsAsync.hasError)
                 AppFeedbackBanner(
                   type: AppFeedbackType.error,
@@ -107,16 +98,15 @@ class _HomeroomRosterPageState extends ConsumerState<HomeroomRosterPage> {
   }) {
     final selectedTerm = ref.watch(effectiveSelectedTermProvider);
     if (terms.isEmpty || selectedTerm == null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'ยังไม่มีเทอมในระบบ กรุณาสร้างปีการศึกษาและเทอมที่หน้า "โครงสร้างสอน" ก่อนจัดการคลังรายชื่อ',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
+      return AppEmptyState(
+        icon: Icons.groups_outlined,
+        title: 'ยังไม่มีเทอมในระบบ',
+        description:
+            'กรุณาสร้างปีการศึกษาและเทอมที่หน้า "โครงสร้างสอน" ก่อนจัดการคลังรายชื่อ',
+        actionLabel: 'ไปหน้าโครงสร้างสอน',
+        actionIcon: Icons.account_tree_outlined,
+        onAction: () =>
+            GoRouter.maybeOf(context)?.go(AppRoutes.teacherAcademicStructure),
       );
     }
 
@@ -125,80 +115,81 @@ class _HomeroomRosterPageState extends ConsumerState<HomeroomRosterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DropdownButtonFormField<String>(
-                  key: ValueKey<String>(selectedTerm.id),
-                  initialValue: selectedTerm.id,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'เทอมที่กำลังจัดการคลังรายชื่อ',
-                  ),
-                  items: [
-                    for (final term in terms)
-                      DropdownMenuItem<String>(
-                        value: term.id,
-                        child: Text(
-                          'ปีการศึกษา ${yearById[term.academicYearId]?.yearBe ?? ''} — '
-                          'เทอม ${term.termLabel} '
-                          '(${ThaiDateFormatter.formatDateRange(term.startDate, term.endDate)})',
-                          overflow: TextOverflow.ellipsis,
+        AppSurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<String>(
+                key: ValueKey<String>(selectedTerm.id),
+                initialValue: selectedTerm.id,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'เทอมที่กำลังจัดการคลังรายชื่อ',
+                  prefixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+                ),
+                items: [
+                  for (final term in terms)
+                    DropdownMenuItem<String>(
+                      value: term.id,
+                      child: Text(
+                        'ปีการศึกษา ${yearById[term.academicYearId]?.yearBe ?? ''} — '
+                        'เทอม ${term.termLabel} '
+                        '(${ThaiDateFormatter.formatDateRange(term.startDate, term.endDate)})',
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),
-                  ],
-                  onChanged: isBusy
-                      ? null
-                      : (id) {
-                          if (id != null) {
-                            ref.read(selectedTermIdProvider.notifier).select(id);
-                          }
-                        },
-                ),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final showSegmentIcons = constraints.maxWidth >= 460;
-                    return SegmentedButton<_RosterTabMode>(
-                      showSelectedIcon: false,
-                      segments: [
-                        ButtonSegment<_RosterTabMode>(
-                          value: _RosterTabMode.homeroomMaster,
-                          icon: showSegmentIcons
-                              ? const Icon(Icons.groups_outlined, size: 18)
-                              : null,
-                          label: const Text(
-                            'คลังห้องเรียนกลาง',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        ButtonSegment<_RosterTabMode>(
-                          value: _RosterTabMode.subjectClassRoster,
-                          icon: showSegmentIcons
-                              ? const Icon(Icons.class_outlined, size: 18)
-                              : null,
-                          label: const Text(
-                            'รายชื่อแยกตามวิชา+ห้อง',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                      selected: <_RosterTabMode>{_tabMode},
-                      onSelectionChanged: (selection) {
-                        if (selection.isNotEmpty) {
-                          setState(() => _tabMode = selection.first);
+                    ),
+                ],
+                onChanged: isBusy
+                    ? null
+                    : (id) {
+                        if (id != null) {
+                          ref.read(selectedTermIdProvider.notifier).select(id);
                         }
                       },
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final showSegmentIcons = constraints.maxWidth >= 460;
+                  return SegmentedButton<_RosterTabMode>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment<_RosterTabMode>(
+                        value: _RosterTabMode.homeroomMaster,
+                        icon: showSegmentIcons
+                            ? const Icon(Icons.groups_outlined, size: 18)
+                            : null,
+                        label: const Text(
+                          'คลังห้องเรียนกลาง',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      ButtonSegment<_RosterTabMode>(
+                        value: _RosterTabMode.subjectClassRoster,
+                        icon: showSegmentIcons
+                            ? const Icon(Icons.class_outlined, size: 18)
+                            : null,
+                        label: const Text(
+                          'รายชื่อแยกตามวิชา+ห้อง',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                    selected: <_RosterTabMode>{_tabMode},
+                    onSelectionChanged: (selection) {
+                      if (selection.isNotEmpty) {
+                        setState(() => _tabMode = selection.first);
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),

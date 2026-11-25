@@ -3,21 +3,22 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/constants/submission_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/student_score.dart';
 import '../../domain/services/score_calculator_service.dart';
 import '../providers/grading_table_state.dart';
 
-/// Single score cell inside `FrozenGradeGrid`.
+/// Single score cell inside [FrozenGradeGrid].
 ///
-/// Enforces Preview Mode accidental-edit protection:
-/// - In Preview Mode (`!isEditMode`), single tap does NOTHING; only `onDoubleTap`
+/// Safety Guards preserved 100%:
+/// - Preview Mode (`!isEditMode`): single tap does NOTHING; only `onDoubleTap`
 ///   activates inline editing.
-/// - In Edit Mode (`isEditMode`), single tap activates editing and long-press /
-///   secondary tap / detail button opens [ScoreCellDetailDialog].
-/// - Supports `Enter` (next row), `Tab` / `Shift+Tab` (next/previous column),
-///   `Escape` (cancel), and auto-save on blur.
+/// - Edit Mode (`isEditMode`): single tap enters editing with visible hover
+///   highlight & `SystemMouseCursors.text`; long-press / secondary-tap / tune
+///   icon opens [ScoreCellDetailDialog].
+/// - Keyboard navigation: `Enter` (next row), `Tab` / `Shift+Tab`, `Escape`.
 class EditableScoreCell extends StatefulWidget {
   const EditableScoreCell({
     super.key,
@@ -36,6 +37,7 @@ class EditableScoreCell extends StatefulWidget {
     required this.onMoveNextRow,
     required this.onMoveNextColumn,
     required this.onMovePreviousColumn,
+    this.rowBackgroundColor,
   });
 
   final Assignment assignment;
@@ -54,6 +56,7 @@ class EditableScoreCell extends StatefulWidget {
   final VoidCallback onMoveNextRow;
   final VoidCallback onMoveNextColumn;
   final VoidCallback onMovePreviousColumn;
+  final Color? rowBackgroundColor;
 
   @override
   State<EditableScoreCell> createState() => _EditableScoreCellState();
@@ -65,6 +68,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
   late final TextEditingController _textCtrl;
   late final FocusNode _focusNode;
   bool _handledExit = false;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -85,9 +89,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
       _activateInlineFocus();
     } else if (!widget.isEditing && oldWidget.isEditing) {
       _handledExit = true;
-      if (_focusNode.hasFocus) {
-        _focusNode.unfocus();
-      }
+      if (_focusNode.hasFocus) _focusNode.unfocus();
       _textCtrl.text = _formatCurrentScore();
     } else if (!widget.isEditing &&
         oldWidget.studentScore?.score != widget.studentScore?.score) {
@@ -201,7 +203,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
           color: colorScheme.primaryContainer.withValues(alpha: 0.35),
-          border: Border.all(color: colorScheme.primary, width: 1.8),
+          border: Border.all(color: colorScheme.primary, width: 2),
         ),
         child: Focus(
           onKeyEvent: _handleKeyEvent,
@@ -212,10 +214,14 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              fontFeatures: AppTheme.tabularFigures,
             ),
             decoration: const InputDecoration(
               isDense: true,
+              filled: false,
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(vertical: 8),
             ),
           ),
@@ -223,17 +229,22 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
       );
     }
 
+    final showEditHover = widget.isEditMode && !widget.isReadOnly && _isHovered;
     final borderColor = isOverMax
         ? semantic.danger
+        : showEditHover
+        ? colorScheme.primary.withValues(alpha: 0.65)
         : (widget.saveStatus == CellSaveStatus.conflict ||
                   widget.saveStatus == CellSaveStatus.error
               ? semantic.warning
-              : colorScheme.outlineVariant.withValues(alpha: 0.6));
+              : colorScheme.outlineVariant.withValues(alpha: 0.55));
     final bgColor = isOverMax
-        ? semantic.dangerContainer.withValues(alpha: 0.55)
-        : (widget.isReadOnly
-              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
-              : null);
+        ? semantic.dangerContainer.withValues(alpha: 0.5)
+        : widget.isReadOnly
+        ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
+        : showEditHover
+        ? colorScheme.primaryContainer.withValues(alpha: 0.25)
+        : widget.rowBackgroundColor;
 
     Widget content = Container(
       width: widget.width,
@@ -243,7 +254,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
         color: bgColor,
         border: Border.all(
           color: borderColor,
-          width: isOverMax ? 1.5 : 0.5,
+          width: isOverMax || showEditHover ? 1.4 : 0.5,
         ),
       ),
       child: Stack(
@@ -297,7 +308,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
                   child: Icon(
                     Icons.tune_rounded,
                     size: 13,
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
                   ),
                 ),
               ),
@@ -314,9 +325,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
       );
     }
 
-    if (widget.isReadOnly) {
-      return content;
-    }
+    if (widget.isReadOnly) return content;
 
     // Preview Mode: single tap MUST NOT start editing; double tap enters edit.
     if (!widget.isEditMode) {
@@ -327,11 +336,16 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
       );
     }
 
-    return InkWell(
-      onTap: widget.onStartEditing,
-      onLongPress: widget.onOpenDetailDialog,
-      onSecondaryTap: widget.onOpenDetailDialog,
-      child: content,
+    return MouseRegion(
+      cursor: SystemMouseCursors.text,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: InkWell(
+        onTap: widget.onStartEditing,
+        onLongPress: widget.onOpenDetailDialog,
+        onSecondaryTap: widget.onOpenDetailDialog,
+        child: content,
+      ),
     );
   }
 
@@ -357,15 +371,18 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
             style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: isOverMax ? semantic.danger : colorScheme.onSurface,
+              fontFeatures: AppTheme.tabularFigures,
             ),
           ),
           if (status == SubmissionStatus.late)
             Text(
               'ส่งช้า',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: textTheme.labelSmall?.copyWith(
                 color: semantic.late,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
         ],
@@ -376,7 +393,7 @@ class _EditableScoreCellState extends State<EditableScoreCell> {
       SubmissionStatus.submitted => (semantic.success, 'ส่งแล้ว'),
       SubmissionStatus.late => (semantic.late, 'ส่งช้า'),
       SubmissionStatus.missing => (
-        colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
+        colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
         'ยังไม่ส่ง',
       ),
     };

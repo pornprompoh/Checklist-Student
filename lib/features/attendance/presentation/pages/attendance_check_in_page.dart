@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_surface_card.dart';
+import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/subject.dart';
 import '../../../academic_structure/domain/entities/subject_class.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
@@ -75,24 +78,41 @@ class _AttendanceCheckInPageState extends ConsumerState<AttendanceCheckInPage> {
         ? _selectedClassId
         : (options.isNotEmpty ? options.first.id : null);
 
+    if (activeClassId == null &&
+        (subjectsAsync.isLoading || classesAsync.isLoading)) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: const [
+                AppSurfaceCard(child: SkeletonBox(height: 64)),
+                SizedBox(height: 12),
+                AppSurfaceCard(child: SkeletonBox(height: 180)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (activeClassId == null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('ยังไม่ได้เลือกหรือยังไม่มีห้องเรียนในเทอมนี้'),
-                  const SizedBox(height: 12),
-                  FilledButton.tonal(
-                    onPressed: () => context.go(AppRoutes.teacherDashboard),
-                    child: const Text('กลับหน้าหลัก'),
-                  ),
-                ],
-              ),
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: AppEmptyState(
+              icon: Icons.fact_check_outlined,
+              title: 'ยังไม่ได้เลือกหรือยังไม่มีห้องเรียนในเทอมนี้',
+              description:
+                  'เลือกห้องเรียนจากหน้าหลัก หรือเพิ่มรายวิชาและห้องเรียนก่อนเริ่มเช็คชื่อ',
+              actionLabel: 'กลับหน้าหลัก',
+              actionIcon: Icons.home_outlined,
+              onAction: () => context.go(AppRoutes.teacherDashboard),
             ),
           ),
         ),

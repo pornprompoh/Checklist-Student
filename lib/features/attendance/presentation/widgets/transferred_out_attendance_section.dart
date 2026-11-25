@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
 import '../../domain/entities/attendance_record.dart';
 
 /// Collapsed read-only section displaying `transferred_out` students who still
 /// have a historical `attendance_record` on the selected past session date.
-///
-/// Kept separate from the main active list so renumbered student numbers never
-/// clash visually and historical totals stay strictly scoped to active students.
 class TransferredOutAttendanceSection extends StatelessWidget {
   const TransferredOutAttendanceSection({
     super.key,
@@ -31,37 +30,62 @@ class TransferredOutAttendanceSection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ExpansionTile(
-        initiallyExpanded: false,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        leading: Icon(
-          Icons.person_off_outlined,
-          size: 20,
-          color: semantic.warning,
-        ),
-        title: Text(
-          'นักเรียนที่ย้ายออกแล้ว (${students.length} คน)',
-          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          'แสดงประวัติการเช็คชื่อเดิมแบบอ่านอย่างเดียว (ไม่นับรวมในยอดสรุปปัจจุบัน)',
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Icon(
+            Icons.person_off_outlined,
+            size: 20,
+            color: semantic.warning,
           ),
-        ),
-        children: [
-          for (final student in students) ...[
-            _TransferredHistoryRow(
-              student: student,
-              record: recordsByEnrollment[student.id],
-              semantic: semantic,
+          title: Text(
+            'นักเรียนที่ย้ายออกแล้ว (${students.length} คน)',
+            style: textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontFeatures: AppTheme.tabularFigures,
             ),
-            const SizedBox(height: 8),
+          ),
+          subtitle: Text(
+            'แสดงประวัติการเช็คชื่อเดิมแบบอ่านอย่างเดียว (ไม่นับรวมในยอดสรุปปัจจุบัน)',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < students.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: colorScheme.outlineVariant,
+                      ),
+                    _TransferredHistoryRow(
+                      student: students[i],
+                      record: recordsByEnrollment[students[i].id],
+                      semantic: semantic,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -100,13 +124,8 @@ class _TransferredHistoryRow extends StatelessWidget {
             ),
           };
 
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: semantic.warning.withValues(alpha: 0.35)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -119,6 +138,7 @@ class _TransferredHistoryRow extends StatelessWidget {
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurfaceVariant,
+                    fontFeatures: AppTheme.tabularFigures,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -131,6 +151,7 @@ class _TransferredHistoryRow extends StatelessWidget {
                       'รหัส ${student.studentCode}',
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
+                        fontFeatures: AppTheme.tabularFigures,
                       ),
                     ),
                     Container(
@@ -149,6 +170,7 @@ class _TransferredHistoryRow extends StatelessWidget {
                         style: textTheme.labelSmall?.copyWith(
                           color: semantic.warning,
                           fontWeight: FontWeight.w700,
+                          fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),
                     ),
@@ -172,7 +194,7 @@ class _TransferredHistoryRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: statusColors.$2,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 status.thaiLabel,

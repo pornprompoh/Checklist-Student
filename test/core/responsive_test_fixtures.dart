@@ -46,6 +46,13 @@ import 'package:checklist_student/features/homeroom_roster/presentation/provider
 import 'package:checklist_student/features/settings/domain/entities/import_file_record.dart';
 import 'package:checklist_student/features/settings/domain/entities/teacher_code_history_entry.dart';
 import 'package:checklist_student/features/settings/presentation/providers/settings_providers.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/resolved_teacher_portal.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_pin_access_status.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_pin_verification_result.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_portal_class_detail.dart';
+import 'package:checklist_student/features/student_portal/domain/entities/student_portal_summary.dart';
+import 'package:checklist_student/features/student_portal/domain/repositories/student_portal_repository.dart';
+import 'package:checklist_student/features/student_portal/presentation/providers/student_portal_providers.dart';
 import 'package:checklist_student/features/sync_queue/domain/entities/sync_entity_type.dart';
 import 'package:checklist_student/features/sync_queue/domain/entities/sync_item_status.dart';
 import 'package:checklist_student/features/sync_queue/domain/entities/sync_operation_type.dart';
@@ -133,6 +140,143 @@ class FakeStressAttendanceRepo implements AttendanceRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeStressStudentPortalRepo implements StudentPortalRepository {
+  @override
+  Future<ResolvedTeacherPortal> resolveTeacherCode(String teacherCode) async {
+    return const ResolvedTeacherPortal(
+      found: true,
+      isRedirected: false,
+      requestedCode: 't-8492',
+      currentTeacherCode: 't-8492',
+      teacherDisplayName: 'ครูสมชาย ประเสริฐศรีวิทยา',
+      schoolName: 'โรงเรียนมัธยมสาธิตตัวอย่างเฉลิมพระเกียรติ',
+      department: 'กลุ่มสาระการเรียนรู้วิทยาศาสตร์และเทคโนโลยี',
+    );
+  }
+
+  @override
+  Future<StudentPinAccessStatus> checkStudentAccess({
+    required String teacherCode,
+    required String studentCode,
+  }) async {
+    return const StudentPinAccessStatus(
+      teacherFound: true,
+      studentFound: true,
+      hasPin: true,
+      isLocked: false,
+      remainingAttempts: 5,
+    );
+  }
+
+  @override
+  Future<StudentPinVerificationResult> verifyOrSetPin({
+    required String teacherCode,
+    required String studentCode,
+    required String pin,
+    StudentPinAuthMode mode = StudentPinAuthMode.verify,
+  }) async {
+    return const StudentPinVerificationResult(
+      success: true,
+      remainingAttempts: 5,
+    );
+  }
+
+  @override
+  Future<StudentPortalSummary> fetchPortalSummary({
+    required String teacherCode,
+    required String studentCode,
+    required String pin,
+    String? termId,
+  }) async {
+    return StudentPortalSummary(
+      authorized: true,
+      teacher: const ResolvedTeacherPortal(
+        found: true,
+        isRedirected: false,
+        requestedCode: 't-8492',
+        currentTeacherCode: 't-8492',
+        teacherDisplayName: 'ครูสมชาย ประเสริฐศรีวิทยา',
+        schoolName: 'โรงเรียนมัธยมสาธิตตัวอย่างเฉลิมพระเกียรติ',
+      ),
+      student: const StudentPortalStudentInfo(
+        studentCode: '67001',
+        prefix: 'นาย',
+        firstName: 'กิตติพงศ์วัฒนากูล',
+        lastName: 'รัตนประเสริฐศักดิ์',
+      ),
+      availableTerms: const <StudentPortalTermOption>[
+        StudentPortalTermOption(
+          termId: 'term-1',
+          academicYearBe: 2569,
+          termLabel: '1',
+          isPinnedActive: true,
+        ),
+      ],
+      selectedTermId: 'term-1',
+      classes: <StudentPortalClassDetail>[
+        StudentPortalClassDetail(
+          subjectClassId: 'class-1',
+          subjectCode: 'ว31101',
+          subjectName: 'วิทยาการคำนวณและการออกแบบเทคโนโลยี 1',
+          roomName: 'ม.4/1 ห้องเรียนพิเศษวิทย์-คณิต',
+          studentNumber: 1,
+          enrollmentStatus: 'active',
+          enrolledAt: DateTime(2026, 5, 16),
+          showScoreToStudent: true,
+          showGradeToStudent: true,
+          totalScore: 79.99,
+          totalMaxScore: 100.0,
+          displayedGrade: '3.5',
+          specialGradeOverride: null,
+          attendanceSummary: const StudentPortalAttendanceSummary(
+            totalEligibleSessions: 20,
+            recordedSessions: 20,
+            presentCount: 15,
+            lateCount: 1,
+            leaveCount: 1,
+            absentCount: 3,
+            convertedLateAbsentCount: 0,
+            countedLeaveAbsentCount: 0,
+            effectiveAbsentCount: 3,
+            absentPercentage: 15.0,
+            absentThresholdPct: 20.0,
+          ),
+          attendanceRecords: <StudentPortalAttendanceRecord>[
+            StudentPortalAttendanceRecord(
+              sessionDate: DateTime(2026, 11, 25),
+              status: AttendanceStatus.present,
+              note: 'เข้าเรียนตรงเวลา',
+            ),
+          ],
+          categoryScores: const <StudentPortalCategoryScore>[
+            StudentPortalCategoryScore(
+              categoryId: 'cat-1',
+              categoryName: 'คะแนนเก็บระหว่างภาคเรียน',
+              targetMaxScore: 100,
+              maxScore: 100,
+              earnedScore: 79.99,
+            ),
+          ],
+          assignments: <StudentPortalAssignmentItem>[
+            StudentPortalAssignmentItem(
+              assignmentId: 'asg-1',
+              categoryId: 'cat-1',
+              categoryName: 'คะแนนเก็บระหว่างภาคเรียน',
+              title: 'ใบงานที่ 1 การวิเคราะห์ขั้นตอนวิธีและอัลกอริทึม',
+              maxScore: 50,
+              isMandatory: true,
+              dueDate: DateTime(2026, 7, 15),
+              submissionStatus: SubmissionStatus.submitted,
+              score: 39.99,
+              note: 'ส่งครบเรียบร้อย',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// Realistic long Thai fixtures for stress-testing responsive layouts across
@@ -762,6 +906,9 @@ class ResponsiveTestFixtures {
       ).overrideWith((ref) async => exportRawClassData),
       teacherCodeHistoryProvider.overrideWith((ref) async => codeHistory),
       activeImportFilesProvider.overrideWith((ref) async => importFiles),
+      studentPortalRepositoryProvider.overrideWithValue(
+        FakeStressStudentPortalRepo(),
+      ),
     ];
   }
 }

@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/image_pdf_compressor.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/typed_confirm_dialog.dart';
 import '../../domain/entities/academic_year_storage_summary.dart';
@@ -43,98 +45,95 @@ class StorageCleanupSectionCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.folder_delete_outlined, color: colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'จัดการพื้นที่เก็บไฟล์นำเข้าด้วย AI',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.folder_delete_outlined, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'จัดการพื้นที่เก็บไฟล์นำเข้าด้วย AI',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                IconButton(
-                  tooltip: 'รีเฟรชรายการไฟล์',
-                  onPressed: controllerState.isLoading
-                      ? null
-                      : () => ref.invalidate(activeImportFilesProvider),
-                  icon: const Icon(Icons.refresh_rounded, size: 20),
-                ),
+              ),
+              IconButton(
+                tooltip: 'รีเฟรชรายการไฟล์',
+                onPressed: controllerState.isLoading
+                    ? null
+                    : () => ref.invalidate(activeImportFilesProvider),
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'ไฟล์รูปภาพ/PDF ต้นฉบับที่ใช้นำเข้ารายชื่อจะถูกเก็บไว้ในพื้นที่ส่วนตัวเพื่อตรวจสอบย้อนหลัง '
+            'แนะนำให้เคลียร์ไฟล์ของปีการศึกษาเก่าออกเพื่อประหยัดโควตา Free Tier (1 GB)',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          filesAsync.when(
+            loading: () => const Column(
+              children: [
+                SkeletonBox(height: 56),
+                SizedBox(height: 8),
+                SkeletonBox(height: 56),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              'ไฟล์รูปภาพ/PDF ต้นฉบับที่ใช้นำเข้ารายชื่อจะถูกเก็บไว้ในพื้นที่ส่วนตัวเพื่อตรวจสอบย้อนหลัง '
-              'แนะนำให้เคลียร์ไฟล์ของปีการศึกษาเก่าออกเพื่อประหยัดโควตา Free Tier (1 GB)',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+            error: (error, _) => AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(error),
+              onRetry: () => ref.invalidate(activeImportFilesProvider),
             ),
-            const SizedBox(height: 14),
-            filesAsync.when(
-              loading: () => const Column(
-                children: [
-                  SkeletonBox(height: 56),
-                  SizedBox(height: 8),
-                  SkeletonBox(height: 56),
-                ],
-              ),
-              error: (error, _) => AppFeedbackBanner(
-                type: AppFeedbackType.error,
-                message: ThaiErrorMapper.map(error),
-                onRetry: () => ref.invalidate(activeImportFilesProvider),
-              ),
-              data: (records) {
-                final summaries =
-                    StorageCleanupSummaryService.summarizeByAcademicYear(
-                      records,
-                    );
-                if (summaries.isEmpty) {
-                  return AppFeedbackBanner(
-                    type: AppFeedbackType.info,
-                    message:
-                        'ยังไม่มีไฟล์ต้นฉบับค้างอยู่ในพื้นที่เก็บไฟล์ (0 KB)',
-                  );
-                }
-
-                final totalBytes = summaries.fold<int>(
-                  0,
-                  (sum, item) => sum + item.totalBytes,
+            data: (records) {
+              final summaries =
+                  StorageCleanupSummaryService.summarizeByAcademicYear(records);
+              if (summaries.isEmpty) {
+                return const AppFeedbackBanner(
+                  type: AppFeedbackType.info,
+                  message:
+                      'ยังไม่มีไฟล์ต้นฉบับค้างอยู่ในพื้นที่เก็บไฟล์ (0 KB)',
                 );
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'พื้นที่ใช้งานรวม: ${ImagePdfCompressor.formatBytes(totalBytes)} (${records.length} ไฟล์)',
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+              }
+
+              final totalBytes = summaries.fold<int>(
+                0,
+                (sum, item) => sum + item.totalBytes,
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'พื้นที่ใช้งานรวม: ${ImagePdfCompressor.formatBytes(totalBytes)} (${records.length} ไฟล์)',
+                    style: textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: AppTheme.tabularFigures,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final summary in summaries) ...[
+                    _AcademicYearStorageTile(
+                      summary: summary,
+                      semantic: semantic,
+                      isBusy: controllerState.isLoading,
+                      onOpenFile: (file) => _openFile(context, ref, file),
+                      onCleanupYear: () => _cleanupYear(context, ref, summary),
                     ),
                     const SizedBox(height: 10),
-                    for (final summary in summaries) ...[
-                      _AcademicYearStorageTile(
-                        summary: summary,
-                        semantic: semantic,
-                        isBusy: controllerState.isLoading,
-                        onOpenFile: (file) => _openFile(context, ref, file),
-                        onCleanupYear: () => _cleanupYear(context, ref, summary),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
                   ],
-                );
-              },
-            ),
-          ],
-        ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -220,17 +219,19 @@ class _AcademicYearStorageTile extends StatelessWidget {
         : 'ปีการศึกษาไม่ระบุ';
 
     return Material(
-      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      color: colorScheme.surfaceContainerLow,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(
           color: summary.isRecommendedForCleanup
-              ? semantic.warning.withValues(alpha: 0.7)
+              ? semantic.warning.withValues(alpha: 0.6)
               : colorScheme.outlineVariant,
         ),
       ),
       child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         title: Wrap(
@@ -240,14 +241,17 @@ class _AcademicYearStorageTile extends StatelessWidget {
           children: [
             Text(
               yearLabel,
-              style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
+              ),
             ),
             if (summary.isRecommendedForCleanup)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: semantic.warningContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'แนะนำให้เคลียร์',
@@ -265,17 +269,19 @@ class _AcademicYearStorageTile extends StatelessWidget {
           'อัปโหลดล่าสุด ${ThaiDateFormatter.formatShortDate(summary.latestUploadedAt)}',
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
+            fontFeatures: AppTheme.tabularFigures,
           ),
         ),
         trailing: OutlinedButton.icon(
           onPressed: isBusy ? null : onCleanupYear,
           style: OutlinedButton.styleFrom(
             foregroundColor: semantic.danger,
-            side: BorderSide(color: semantic.danger.withValues(alpha: 0.6)),
+            side: BorderSide(color: semantic.danger.withValues(alpha: 0.5)),
           ),
           icon: const Icon(Icons.delete_outline_rounded, size: 16),
           label: Text(
             summary.yearBe > 0 ? 'ลบปี ${summary.yearBe}' : 'ลบไฟล์',
+            style: const TextStyle(fontFeatures: AppTheme.tabularFigures),
           ),
         ),
         children: [
@@ -296,7 +302,9 @@ class _AcademicYearStorageTile extends StatelessWidget {
               subtitle: Text(
                 '${ImagePdfCompressor.formatBytes(file.fileSizeBytes)} · '
                 '${ThaiDateFormatter.formatDateTime(file.createdAt)}',
-                style: textTheme.bodySmall,
+                style: textTheme.bodySmall?.copyWith(
+                  fontFeatures: AppTheme.tabularFigures,
+                ),
               ),
               trailing: TextButton.icon(
                 onPressed: isBusy ? null : () => onOpenFile(file),

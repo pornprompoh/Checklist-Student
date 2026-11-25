@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
@@ -206,14 +207,20 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
       );
     }
     if (classId == null || options.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: AppFeedbackBanner(
-          type: AppFeedbackType.info,
-          message:
-              'ยังไม่มีห้องเรียนในระบบ กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อน',
-          retryLabel: 'ไปหน้าโครงสร้างสอน',
-          onRetry: () => context.go(AppRoutes.teacherAcademicStructure),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: AppEmptyState(
+              icon: Icons.table_chart_outlined,
+              title: 'ยังไม่มีห้องเรียนในระบบ',
+              description:
+                  'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มใช้งานตารางคะแนน',
+              actionLabel: 'ไปหน้าโครงสร้างสอน',
+              onAction: () => context.go(AppRoutes.teacherAcademicStructure),
+            ),
+          ),
         ),
       );
     }
@@ -360,7 +367,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
               ? const AppFeedbackBanner(
                   type: AppFeedbackType.info,
                   message:
-                      'โหมดพรีวิว: ดับเบิลคลิกที่ช่องคะแนน หรือกดปุ่ม "โหมดพรีวิว · กดเพื่อแก้ไข" เพื่อเริ่มกรอกคะแนน (กด Enter เลื่อนลง / Tab เลื่อนขวา)',
+                      'โหมดพรีวิว: ดับเบิลคลิกช่องคะแนน หรือสลับเป็นโหมด "แก้ไข" เพื่อเริ่มกรอก (Enter เลื่อนลง / Tab เลื่อนขวา)',
                 )
               : null;
           final errorBanner = tableState.lastErrorMessage == null
@@ -372,7 +379,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
                   message: tableState.lastErrorMessage!,
                   retryLabel:
                       tableState.overallSaveStatus == CellSaveStatus.conflict
-                      ? 'โหลดข้อมูลล่าสุด'
+                      ? 'โหลดล่าสุด'
                       : 'ลองใหม่',
                   onRetry:
                       tableState.overallSaveStatus == CellSaveStatus.conflict
@@ -394,7 +401,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
           if (useScrollableLayout) {
             final gridHeight = math.max(320.0, constraints.maxHeight * 0.65);
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -407,7 +414,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
                     const SizedBox(height: 8),
                     errorBanner,
                   ],
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   SizedBox(height: gridHeight, child: gridArea),
                 ],
               ),
@@ -415,7 +422,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
           }
 
           return Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -428,7 +435,7 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
                   const SizedBox(height: 8),
                   errorBanner,
                 ],
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Expanded(child: gridArea),
               ],
             ),
@@ -462,32 +469,50 @@ class _GradingTablePageState extends ConsumerState<GradingTablePage> {
       );
     }
     if (enrollments.isEmpty) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.info,
-        message: 'ยังไม่มีรายชื่อนักเรียนในห้องนี้ กรุณาเพิ่มรายชื่อจากคลังรายชื่อก่อน',
-        retryLabel: 'ไปหน้าคลังรายชื่อ',
-        onRetry: () => context.go(AppRoutes.teacherHomeroomRoster),
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: AppEmptyState(
+            icon: Icons.groups_outlined,
+            title: 'ยังไม่มีรายชื่อนักเรียนในห้องนี้',
+            description: 'เพิ่มรายชื่อนักเรียนจากคลังรายชื่อก่อนเริ่มกรอกคะแนน',
+            actionLabel: 'ไปหน้าคลังรายชื่อ',
+            onAction: () => context.go(AppRoutes.teacherHomeroomRoster),
+          ),
+        ),
       );
     }
     if (assignments.isEmpty) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.info,
-        message:
-            'ยังไม่มีชิ้นงานหรือรายการสอบในห้องนี้ กรุณาออกแบบแผนเก็บงานก่อนเริ่มกรอกคะแนน',
-        retryLabel: 'ไปหน้าออกแบบแผนเก็บงาน',
-        onRetry: () =>
-            context.go(AppRoutes.teacherGradingPlanForClass(classId)),
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: AppEmptyState(
+            icon: Icons.assignment_outlined,
+            title: 'ยังไม่มีชิ้นงานหรือรายการสอบในห้องนี้',
+            description: 'ออกแบบแผนเก็บงานและหมวดคะแนนก่อนเริ่มกรอกคะแนน',
+            actionLabel: 'ไปหน้าออกแบบแผนเก็บงาน',
+            onAction: () =>
+                context.go(AppRoutes.teacherGradingPlanForClass(classId)),
+          ),
+        ),
       );
     }
     if (visibleRows.isEmpty) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.info,
-        message: 'ไม่พบนักเรียนที่ตรงกับคำค้นหาหรือตัวกรองที่เลือก',
-        retryLabel: 'ล้างตัวกรอง',
-        onRetry: () {
-          _searchController.clear();
-          ref.read(gradingFilterProvider.notifier).reset();
-        },
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: AppEmptyState(
+            icon: Icons.filter_list_off_rounded,
+            title: 'ไม่พบนักเรียนที่ตรงกับตัวกรองที่เลือก',
+            description: 'ลองล้างคำค้นหาหรือเลือกตัวกรอง "ทั้งหมด"',
+            actionLabel: 'ล้างตัวกรอง',
+            actionIcon: Icons.refresh_rounded,
+            onAction: () {
+              _searchController.clear();
+              ref.read(gradingFilterProvider.notifier).reset();
+            },
+          ),
+        ),
       );
     }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/submission_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/student_score.dart';
@@ -12,8 +13,9 @@ import 'editable_score_cell.dart';
 import 'frozen_grade_grid_header.dart';
 import 'special_grade_badge.dart';
 
-/// Virtualized 2D grade grid with a frozen left student column and frozen top
-/// assignment header row, synchronized via guarded scroll controllers.
+/// Virtualized 2D grade grid with frozen left student column, frozen top
+/// header, subtle Zebra striping, full-row desktop hover highlight, and exact
+/// unrounded tabular scores.
 class FrozenGradeGrid extends StatefulWidget {
   const FrozenGradeGrid({
     super.key,
@@ -58,7 +60,7 @@ class FrozenGradeGrid extends StatefulWidget {
 class _FrozenGradeGridState extends State<FrozenGradeGrid> {
   static const double _assignmentColWidth = 104;
   static const double _totalColWidth = 96;
-  static const double _gradeColWidth = 98;
+  static const double _gradeColWidth = 102;
   static const double _rowHeight = 56;
   static const double _headerHeight = 68;
   static const _calculator = ScoreCalculatorService();
@@ -69,6 +71,7 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
   late final ScrollController _bodyHorizontalCtrl;
   bool _syncingVertical = false;
   bool _syncingHorizontal = false;
+  int? _hoveredRowIndex;
 
   @override
   void initState() {
@@ -153,13 +156,25 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
     );
   }
 
+  Color _rowBackground(ColorScheme cs, int rowIndex, bool isTransferredOut) {
+    if (isTransferredOut) {
+      return cs.surfaceContainerHighest.withValues(alpha: 0.45);
+    }
+    if (_hoveredRowIndex == rowIndex) {
+      return cs.primaryContainer.withValues(alpha: 0.24);
+    }
+    return rowIndex.isOdd
+        ? cs.surfaceContainerLow.withValues(alpha: 0.65)
+        : cs.surface;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final leftWidth = constraints.maxWidth < 600 ? 158.0 : 236.0;
+        final leftWidth = constraints.maxWidth < 600 ? 158.0 : 240.0;
         final totalRightWidth =
             widget.assignments.length * _assignmentColWidth +
             _totalColWidth +
@@ -168,11 +183,11 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
         return DecoratedBox(
           decoration: BoxDecoration(
             color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             child: Column(
               children: [
                 FrozenGradeGridHeader(
@@ -187,20 +202,43 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
                 Expanded(
                   child: Row(
                     children: [
-                      SizedBox(
+                      Container(
                         width: leftWidth,
+                        decoration: BoxDecoration(
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: colorScheme.shadow.withValues(alpha: 0.06),
+                              blurRadius: 6,
+                              offset: const Offset(2, 0),
+                            ),
+                          ],
+                        ),
                         child: ListView.builder(
                           controller: _leftVerticalCtrl,
                           itemCount: widget.rows.length,
                           itemExtent: _rowHeight,
-                          itemBuilder: (context, index) => _FrozenStudentCell(
-                            row: widget.rows[index],
-                            height: _rowHeight,
-                            onOpenProfile: widget.onOpenStudentProfile == null
-                                ? null
-                                : () => widget.onOpenStudentProfile!(
-                                    widget.rows[index].enrollment,
-                                  ),
+                          itemBuilder: (context, index) => MouseRegion(
+                            onEnter: (_) =>
+                                setState(() => _hoveredRowIndex = index),
+                            onExit: (_) {
+                              if (_hoveredRowIndex == index) {
+                                setState(() => _hoveredRowIndex = null);
+                              }
+                            },
+                            child: _FrozenStudentCell(
+                              row: widget.rows[index],
+                              height: _rowHeight,
+                              backgroundColor: _rowBackground(
+                                colorScheme,
+                                index,
+                                widget.rows[index].enrollment.isTransferredOut,
+                              ),
+                              onOpenProfile: widget.onOpenStudentProfile == null
+                                  ? null
+                                  : () => widget.onOpenStudentProfile!(
+                                      widget.rows[index].enrollment,
+                                    ),
+                            ),
                           ),
                         ),
                       ),
@@ -243,81 +281,102 @@ class _FrozenGradeGridState extends State<FrozenGradeGrid> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final result = row.gradeResult;
+    final rowBg = _rowBackground(colorScheme, rowIndex, isReadOnly);
+    final summaryBg = _hoveredRowIndex == rowIndex
+        ? colorScheme.primaryContainer.withValues(alpha: 0.3)
+        : colorScheme.surfaceContainerLow;
 
-    return Row(
-      children: [
-        for (var colIndex = 0; colIndex < widget.assignments.length; colIndex++)
-          Builder(
-            builder: (context) {
-              final assignment = widget.assignments[colIndex];
-              final cellKey = gradingCellKey(enrollment.id, assignment.id);
-              return EditableScoreCell(
-                key: ValueKey<String>(cellKey),
-                assignment: assignment,
-                studentScore: widget.scoresByCellKey[cellKey],
-                isEditMode: widget.isEditMode,
-                isEditing: widget.activeCellKey == cellKey,
-                isReadOnly: isReadOnly,
-                saveStatus:
-                    widget.cellStatuses[cellKey] ?? CellSaveStatus.idle,
-                width: _assignmentColWidth,
-                height: _rowHeight,
-                onStartEditing: () =>
-                    widget.onStartCellEdit(enrollment.id, assignment.id),
-                onCancelEditing: widget.onCancelCellEdit,
-                onCommitScore: (score, status) => widget.onCommitCellScore(
-                  enrollmentId: enrollment.id,
-                  assignmentId: assignment.id,
-                  score: score,
-                  status: status,
-                ),
-                onOpenDetailDialog: () =>
-                    widget.onOpenCellDetail(row, assignment),
-                onMoveNextRow: () => _moveNextRow(rowIndex, colIndex),
-                onMoveNextColumn: () => _moveColumn(rowIndex, colIndex, 1),
-                onMovePreviousColumn: () => _moveColumn(rowIndex, colIndex, -1),
-              );
-            },
-          ),
-        Container(
-          width: _totalColWidth,
-          height: _rowHeight,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLow,
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-              width: 0.5,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredRowIndex = rowIndex),
+      onExit: (_) {
+        if (_hoveredRowIndex == rowIndex) {
+          setState(() => _hoveredRowIndex = null);
+        }
+      },
+      child: Row(
+        children: [
+          for (
+            var colIndex = 0;
+            colIndex < widget.assignments.length;
+            colIndex++
+          )
+            Builder(
+              builder: (context) {
+                final assignment = widget.assignments[colIndex];
+                final cellKey = gradingCellKey(enrollment.id, assignment.id);
+                return EditableScoreCell(
+                  key: ValueKey<String>(cellKey),
+                  assignment: assignment,
+                  studentScore: widget.scoresByCellKey[cellKey],
+                  isEditMode: widget.isEditMode,
+                  isEditing: widget.activeCellKey == cellKey,
+                  isReadOnly: isReadOnly,
+                  saveStatus:
+                      widget.cellStatuses[cellKey] ?? CellSaveStatus.idle,
+                  width: _assignmentColWidth,
+                  height: _rowHeight,
+                  rowBackgroundColor: rowBg,
+                  onStartEditing: () =>
+                      widget.onStartCellEdit(enrollment.id, assignment.id),
+                  onCancelEditing: widget.onCancelCellEdit,
+                  onCommitScore: (score, status) => widget.onCommitCellScore(
+                    enrollmentId: enrollment.id,
+                    assignmentId: assignment.id,
+                    score: score,
+                    status: status,
+                  ),
+                  onOpenDetailDialog: () =>
+                      widget.onOpenCellDetail(row, assignment),
+                  onMoveNextRow: () => _moveNextRow(rowIndex, colIndex),
+                  onMoveNextColumn: () => _moveColumn(rowIndex, colIndex, 1),
+                  onMovePreviousColumn: () =>
+                      _moveColumn(rowIndex, colIndex, -1),
+                );
+              },
+            ),
+          Container(
+            width: _totalColWidth,
+            height: _rowHeight,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: summaryBg,
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+                width: 0.5,
+              ),
+            ),
+            child: Text(
+              _calculator.formatExactScore(result.totalScore),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
+              ),
             ),
           ),
-          child: Text(
-            _calculator.formatExactScore(result.totalScore),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ),
-        Container(
-          width: _gradeColWidth,
-          height: _rowHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLow,
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-              width: 0.5,
+          Container(
+            width: _gradeColWidth,
+            height: _rowHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: summaryBg,
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+                width: 0.5,
+              ),
+            ),
+            child: SpecialGradeBadge(
+              result: result,
+              compact: true,
+              onTap: isReadOnly || widget.onTapSpecialGrade == null
+                  ? null
+                  : () => widget.onTapSpecialGrade!(enrollment),
             ),
           ),
-          child: SpecialGradeBadge(
-            result: result,
-            compact: true,
-            onTap: isReadOnly || widget.onTapSpecialGrade == null
-                ? null
-                : () => widget.onTapSpecialGrade!(enrollment),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -326,11 +385,13 @@ class _FrozenStudentCell extends StatelessWidget {
   const _FrozenStudentCell({
     required this.row,
     required this.height,
+    required this.backgroundColor,
     this.onOpenProfile,
   });
 
   final GradingTableRowData row;
   final double height;
+  final Color backgroundColor;
   final VoidCallback? onOpenProfile;
 
   @override
@@ -344,15 +405,13 @@ class _FrozenStudentCell extends StatelessWidget {
     // trailing IconButton below triggers onOpenProfile.
     return Container(
       height: height,
-      padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+      padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
       decoration: BoxDecoration(
-        color: enrollment.isTransferredOut
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-            : colorScheme.surface,
+        color: backgroundColor,
         border: Border(
-          right: BorderSide(color: colorScheme.outlineVariant, width: 1.5),
+          right: BorderSide(color: colorScheme.outlineVariant),
           bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.55),
             width: 0.5,
           ),
         ),
@@ -366,6 +425,7 @@ class _FrozenStudentCell extends StatelessWidget {
               style: textTheme.labelMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
           ),
@@ -391,6 +451,7 @@ class _FrozenStudentCell extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                          fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),
                     ),

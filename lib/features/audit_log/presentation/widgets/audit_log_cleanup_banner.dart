@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/audit_log_providers.dart';
 
 /// Non-intrusive warning banner shown on `TeacherDashboardPage` (and
@@ -32,7 +33,7 @@ class AuditLogCleanupBanner extends ConsumerWidget {
     return Material(
       color: semantic.warningContainer,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: semantic.warning.withValues(alpha: 0.35)),
       ),
       child: Padding(
@@ -50,7 +51,7 @@ class AuditLogCleanupBanner extends ConsumerWidget {
                 Icon(
                   Icons.history_toggle_off_rounded,
                   color: semantic.warning,
-                  size: 22,
+                  size: 20,
                 ),
                 const SizedBox(width: 10),
                 Flexible(
@@ -62,6 +63,7 @@ class AuditLogCleanupBanner extends ConsumerWidget {
                         style: textTheme.titleSmall?.copyWith(
                           color: semantic.warning,
                           fontWeight: FontWeight.w700,
+                          fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -70,6 +72,7 @@ class AuditLogCleanupBanner extends ConsumerWidget {
                         'แนะนำให้ Export CSV/JSON สำรองเก็บไว้ก่อนล้าง Log (คะแนนจริงไม่ถูกลบ)',
                         style: textTheme.bodySmall?.copyWith(
                           color: semantic.warning,
+                          fontFeatures: AppTheme.tabularFigures,
                         ),
                       ),
                     ],
@@ -79,7 +82,8 @@ class AuditLogCleanupBanner extends ConsumerWidget {
             ),
             if (showNavigationAction)
               FilledButton.tonalIcon(
-                onPressed: () => context.go(AppRoutes.teacherAuditLog),
+                onPressed: () =>
+                    GoRouter.maybeOf(context)?.go(AppRoutes.teacherAuditLog),
                 icon: const Icon(Icons.download_outlined, size: 18),
                 label: const Text('จัดการ / Export Log'),
               ),

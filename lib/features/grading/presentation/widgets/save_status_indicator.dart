@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/grading_table_state.dart';
 
 /// Compact toolbar pill displaying live auto-save status (`กำลังบันทึก...`,
-/// `บันทึกแล้ว`, `ข้อมูลชนกัน`, or `บันทึกไม่สำเร็จ`) with contextual recovery actions.
+/// `บันทึกแล้ว`, `ข้อมูลชนกัน`, or `บันทึกไม่สำเร็จ`) with tabular timestamps.
 class SaveStatusIndicator extends StatelessWidget {
   const SaveStatusIndicator({
     super.key,
@@ -55,7 +56,7 @@ class SaveStatusIndicator extends StatelessWidget {
       CellSaveStatus.saved => (
         semantic.successContainer,
         semantic.success,
-        Icon(Icons.check_circle_outline_rounded, size: 16, color: semantic.success),
+        Icon(Icons.check_circle_rounded, size: 15, color: semantic.success),
         _savedLabel(),
         null,
         null,
@@ -63,7 +64,7 @@ class SaveStatusIndicator extends StatelessWidget {
       CellSaveStatus.conflict => (
         semantic.warningContainer,
         semantic.warning,
-        Icon(Icons.sync_problem_rounded, size: 16, color: semantic.warning),
+        Icon(Icons.sync_problem_rounded, size: 15, color: semantic.warning),
         'ข้อมูลชนกัน',
         'โหลดล่าสุด',
         onReloadLatest,
@@ -71,13 +72,13 @@ class SaveStatusIndicator extends StatelessWidget {
       CellSaveStatus.error => (
         semantic.dangerContainer,
         semantic.danger,
-        Icon(Icons.error_outline_rounded, size: 16, color: semantic.danger),
+        Icon(Icons.error_outline_rounded, size: 15, color: semantic.danger),
         'บันทึกไม่สำเร็จ',
         'ลองใหม่',
         onRetry,
       ),
       CellSaveStatus.idle => (
-        colorScheme.surfaceContainerHighest,
+        colorScheme.surfaceContainer,
         colorScheme.onSurfaceVariant,
         const SizedBox.shrink(),
         '',
@@ -91,7 +92,6 @@ class SaveStatusIndicator extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fg.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -103,13 +103,15 @@ class SaveStatusIndicator extends StatelessWidget {
             style: textTheme.labelMedium?.copyWith(
               color: fg,
               fontWeight: FontWeight.w600,
+              fontFeatures: AppTheme.tabularFigures,
             ),
           ),
           if (actionLabel != null && actionCallback != null) ...[
             const SizedBox(width: 6),
             InkWell(
               onTap: actionCallback,
-              borderRadius: BorderRadius.circular(12),
+              mouseCursor: SystemMouseCursors.click,
+              borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 child: Text(
@@ -130,9 +132,7 @@ class SaveStatusIndicator extends StatelessWidget {
 
   String _savedLabel() {
     final savedAt = lastSavedAt;
-    if (savedAt == null) {
-      return 'บันทึกแล้ว';
-    }
+    if (savedAt == null) return 'บันทึกแล้ว';
     final local = savedAt.toLocal();
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');

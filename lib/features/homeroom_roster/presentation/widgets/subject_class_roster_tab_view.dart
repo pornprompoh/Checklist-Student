@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/typed_confirm_dialog.dart';
 import '../../../academic_structure/domain/entities/subject.dart';
@@ -39,12 +42,7 @@ class SubjectClassRosterTabView extends ConsumerWidget {
     final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
 
     if (subjectsAsync.isLoading || classesAsync.isLoading) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: SkeletonBox(height: 52),
-        ),
-      );
+      return const AppSurfaceCard(child: SkeletonBox(height: 52));
     }
 
     if (subjectsAsync.hasError || classesAsync.hasError) {
@@ -63,16 +61,10 @@ class SubjectClassRosterTabView extends ConsumerWidget {
     final homerooms = homeroomsAsync.asData?.value ?? const <Homeroom>[];
 
     if (classes.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'ยังไม่มีห้องเรียนรายวิชาในเทอมนี้ กรุณาสร้างที่หน้า "โครงสร้างสอน" ก่อน',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
+      return const AppEmptyState(
+        icon: Icons.class_outlined,
+        title: 'ยังไม่มีห้องเรียนรายวิชาในเทอมนี้',
+        description: 'กรุณาสร้างรายวิชาและห้องเรียนที่หน้า "โครงสร้างสอน" ก่อน',
       );
     }
 
@@ -97,156 +89,196 @@ class SubjectClassRosterTabView extends ConsumerWidget {
       classEnrollmentsProvider(selectedClass.id),
     );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DropdownButtonFormField<String>(
-              key: ValueKey<String>(selectedClass.id),
-              initialValue: selectedClass.id,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'เลือกรายวิชาและห้องเรียน',
-              ),
-              items: [
-                for (final sc in classes)
-                  DropdownMenuItem<String>(
-                    value: sc.id,
-                    child: Text(
-                      '${subjectById[sc.subjectId]?.subjectCode ?? ''} '
-                      '${subjectById[sc.subjectId]?.subjectName ?? ''} — ${sc.roomName}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: isBusy
-                  ? null
-                  : (id) {
-                      if (id != null) {
-                        ref
-                            .read(selectedSubjectClassIdProvider.notifier)
-                            .select(id);
-                      }
-                    },
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final semantic = AppSemanticColors.of(context);
+
+    return AppSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<String>(
+            key: ValueKey<String>(selectedClass.id),
+            initialValue: selectedClass.id,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'เลือกรายวิชาและห้องเรียน',
+              prefixIcon: Icon(Icons.class_outlined, size: 18),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(
-                  avatar: Icon(
-                    linkedHomeroom != null
-                        ? Icons.link_rounded
-                        : Icons.link_off_rounded,
-                    size: 16,
-                  ),
-                  label: Text(
-                    linkedHomeroom != null
-                        ? 'ผูกกับคลังกลาง: ${linkedHomeroom.name}'
-                        : 'ยังไม่ได้ผูกกับคลังกลาง',
+            items: [
+              for (final sc in classes)
+                DropdownMenuItem<String>(
+                  value: sc.id,
+                  child: Text(
+                    '${subjectById[sc.subjectId]?.subjectCode ?? ''} '
+                    '${subjectById[sc.subjectId]?.subjectName ?? ''} — ${sc.roomName}',
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (linkedHomeroom != null)
+            ],
+            onChanged: isBusy
+                ? null
+                : (id) {
+                    if (id != null) {
+                      ref
+                          .read(selectedSubjectClassIdProvider.notifier)
+                          .select(id);
+                    }
+                  },
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: linkedHomeroom != null
+                      ? semantic.successContainer
+                      : colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      linkedHomeroom != null
+                          ? Icons.link_rounded
+                          : Icons.link_off_rounded,
+                      size: 15,
+                      color: linkedHomeroom != null
+                          ? semantic.success
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        linkedHomeroom != null
+                            ? 'ผูกกับคลังกลาง: ${linkedHomeroom.name}'
+                            : 'ยังไม่ได้ผูกกับคลังกลาง',
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: linkedHomeroom != null
+                              ? semantic.success
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (linkedHomeroom != null)
+                    OutlinedButton.icon(
+                      onPressed: isBusy
+                          ? null
+                          : () => _syncMissingFromHomeroom(
+                              context,
+                              ref,
+                              linkedHomeroom,
+                              selectedClass,
+                            ),
+                      icon: const Icon(Icons.sync_rounded, size: 18),
+                      label: const Text('ดึงนักเรียนใหม่จากคลัง'),
+                    ),
                   OutlinedButton.icon(
-                    onPressed: isBusy
+                    onPressed: isBusy || enrollmentsAsync.asData == null
                         ? null
-                        : () => _syncMissingFromHomeroom(
+                        : () => _renumber(
                             context,
                             ref,
-                            linkedHomeroom,
                             selectedClass,
+                            enrollmentsAsync.asData!.value,
                           ),
-                    icon: const Icon(Icons.sync_rounded, size: 18),
-                    label: const Text('ดึงนักเรียนใหม่จากคลัง'),
+                    icon: const Icon(
+                      Icons.format_list_numbered_rounded,
+                      size: 18,
+                    ),
+                    label: const Text('เรียงเลขที่ใหม่'),
                   ),
-                OutlinedButton.icon(
-                  onPressed: isBusy || enrollmentsAsync.asData == null
-                      ? null
-                      : () => _renumber(
-                          context,
-                          ref,
-                          selectedClass,
-                          enrollmentsAsync.asData!.value,
-                        ),
-                  icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
-                  label: const Text('เรียงเลขที่ใหม่'),
-                ),
-                FilledButton.icon(
-                  onPressed: isBusy
-                      ? null
-                      : () => _addMidTerm(
-                          context,
-                          ref,
-                          selectedClass,
-                          linkedHomeroom,
-                          enrollmentsAsync.asData?.value ?? const [],
-                        ),
-                  icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-                  label: const Text('ย้ายเข้ากลางเทอม'),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            enrollmentsAsync.when(
-              loading: () => const Column(
-                children: [
-                  SkeletonBox(height: 52),
-                  SizedBox(height: 8),
-                  SkeletonBox(height: 52),
+                  FilledButton.icon(
+                    onPressed: isBusy
+                        ? null
+                        : () => _addMidTerm(
+                            context,
+                            ref,
+                            selectedClass,
+                            linkedHomeroom,
+                            enrollmentsAsync.asData?.value ?? const [],
+                          ),
+                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                    label: const Text('ย้ายเข้ากลางเทอม'),
+                  ),
                 ],
               ),
-              error: (error, _) => AppFeedbackBanner(
-                type: AppFeedbackType.error,
-                message: ThaiErrorMapper.map(error),
-                onRetry: () =>
-                    ref.invalidate(classEnrollmentsProvider(selectedClass.id)),
-              ),
-              data: (enrollments) {
-                final byId = {for (final e in enrollments) e.id: e};
-                return RosterStudentListView(
-                  isBusy: isBusy,
-                  students: [
-                    for (final e in enrollments)
-                      RosterStudentRowData(
-                        id: e.id,
-                        studentNumber: e.studentNumber,
-                        studentCode: e.studentCode,
-                        fullName: e.fullName,
-                        status: e.status,
-                        enrolledAt: e.enrolledAt,
-                        transferredOutAt: e.transferredOutAt,
-                      ),
-                  ],
-                  onEdit: (row) => _editEnrollment(
-                    context,
-                    ref,
-                    byId[row.id]!,
-                    linkedHomeroom?.id,
-                    siblingClassIds,
-                  ),
-                  onToggleTransferStatus: (row) => _toggleStatus(
-                    context,
-                    ref,
-                    byId[row.id]!,
-                    linkedHomeroom?.id,
-                    siblingClassIds,
-                  ),
-                  onPermanentDelete: (row) => _permanentDeleteEnrollment(
-                    context,
-                    ref,
-                    byId[row.id]!,
-                    linkedHomeroom?.id,
-                    siblingClassIds,
-                  ),
-                );
-              },
+            ],
+          ),
+          const Divider(height: 24),
+          enrollmentsAsync.when(
+            loading: () => const Column(
+              children: [
+                SkeletonBox(height: 52),
+                SizedBox(height: 8),
+                SkeletonBox(height: 52),
+              ],
             ),
-          ],
-        ),
+            error: (error, _) => AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(error),
+              onRetry: () =>
+                  ref.invalidate(classEnrollmentsProvider(selectedClass.id)),
+            ),
+            data: (enrollments) {
+              final byId = {for (final e in enrollments) e.id: e};
+              return RosterStudentListView(
+                isBusy: isBusy,
+                students: [
+                  for (final e in enrollments)
+                    RosterStudentRowData(
+                      id: e.id,
+                      studentNumber: e.studentNumber,
+                      studentCode: e.studentCode,
+                      fullName: e.fullName,
+                      status: e.status,
+                      enrolledAt: e.enrolledAt,
+                      transferredOutAt: e.transferredOutAt,
+                    ),
+                ],
+                onEdit: (row) => _editEnrollment(
+                  context,
+                  ref,
+                  byId[row.id]!,
+                  linkedHomeroom?.id,
+                  siblingClassIds,
+                ),
+                onToggleTransferStatus: (row) => _toggleStatus(
+                  context,
+                  ref,
+                  byId[row.id]!,
+                  linkedHomeroom?.id,
+                  siblingClassIds,
+                ),
+                onPermanentDelete: (row) => _permanentDeleteEnrollment(
+                  context,
+                  ref,
+                  byId[row.id]!,
+                  linkedHomeroom?.id,
+                  siblingClassIds,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../homeroom_roster/domain/entities/homeroom.dart';
 import '../../../homeroom_roster/presentation/providers/homeroom_roster_providers.dart';
@@ -13,7 +18,6 @@ import '../../domain/entities/term.dart';
 import '../providers/academic_structure_controller.dart';
 import '../providers/academic_structure_providers.dart';
 import 'structural_delete_helper.dart';
-import 'structure_empty_state_card.dart';
 import 'subject_card.dart';
 import 'subject_class_form_dialog.dart';
 import 'subject_form_dialog.dart';
@@ -36,17 +40,14 @@ class TermSubjectsSection extends ConsumerWidget {
     final homeroomsAsync = ref.watch(homeroomsByTermProvider(term.id));
 
     if (subjectsAsync.isLoading || classesAsync.isLoading) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SkeletonBox.line(width: 140, height: 16),
-              SizedBox(height: 10),
-              SkeletonBox(height: 52),
-            ],
-          ),
+      return const AppSurfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonBox.line(width: 140, height: 16),
+            SizedBox(height: 12),
+            SkeletonBox(height: 52),
+          ],
         ),
       );
     }
@@ -90,6 +91,7 @@ class TermSubjectsSection extends ConsumerWidget {
               'รายวิชาและห้องเรียน (${subjects.length} วิชา)',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
             FilledButton.icon(
@@ -101,11 +103,13 @@ class TermSubjectsSection extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         if (subjects.isEmpty)
-          StructureEmptyStateCard(
+          AppEmptyState(
             icon: Icons.menu_book_outlined,
             title: 'ยังไม่มีรายวิชาในเทอม ${term.termLabel}',
-            subtitle: 'เพิ่มรายวิชาแรกแล้วสร้างห้องเรียนพร้อมกำหนดวันสอนได้ทันที',
+            description:
+                'เพิ่มรายวิชาแรกแล้วสร้างห้องเรียนพร้อมกำหนดวันสอนได้ทันที',
             actionLabel: 'เพิ่มรายวิชาแรก',
+            actionIcon: Icons.add_rounded,
             onAction: () => _addSubject(context, ref),
           )
         else
@@ -123,6 +127,12 @@ class TermSubjectsSection extends ConsumerWidget {
                   .togglePinSubjectClass(termId: term.id, subjectClass: sc),
               onEditClass: (sc) => _editClass(context, ref, subject, sc),
               onDeleteClass: (sc) => _deleteClass(context, ref, sc),
+              onOpenAttendance: (sc) => GoRouter.maybeOf(
+                context,
+              )?.go(AppRoutes.teacherAttendanceForClass(sc.id)),
+              onOpenGrading: (sc) => GoRouter.maybeOf(
+                context,
+              )?.go(AppRoutes.teacherGradingForClass(sc.id)),
             ),
             const SizedBox(height: 12),
           ],

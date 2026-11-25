@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/submission_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/student_score.dart';
 import '../../domain/services/score_calculator_service.dart';
 import '../providers/grading_table_state.dart';
 
-/// Assignment breakdown list shown inside `StudentProfileDrawer`.
+/// Assignment breakdown list shown inside [StudentProfileDrawer] with hairline
+/// separators, tabular exact scores, and clear submission status badges.
 class StudentDrawerAssignmentsSection extends StatelessWidget {
   const StudentDrawerAssignmentsSection({
     super.key,
@@ -29,42 +32,31 @@ class StudentDrawerAssignmentsSection extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'รายการงานและคะแนน (${assignments.length} ชิ้น)',
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+    return AppSurfaceCard(
+      title: 'รายการงานและคะแนน (${assignments.length} ชิ้น)',
+      child: assignments.isEmpty
+          ? Text(
+              'ยังไม่มีชิ้นงานในห้องเรียนนี้',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
-            ),
-            const SizedBox(height: 10),
-            if (assignments.isEmpty)
-              Text(
-                'ยังไม่มีชิ้นงานในห้องเรียนนี้',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
-              for (var i = 0; i < assignments.length; i++) ...[
-                if (i > 0) const Divider(height: 14),
-                _buildAssignmentItem(
-                  context,
-                  assignment: assignments[i],
-                  scoreRecord: scoresByCellKey[
-                    gradingCellKey(enrollmentId, assignments[i].id)
-                  ],
-                  semantic: semantic,
-                ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < assignments.length; i++) ...[
+                  if (i > 0) const Divider(height: 16),
+                  _buildAssignmentItem(
+                    context,
+                    assignment: assignments[i],
+                    scoreRecord: scoresByCellKey[
+                      gradingCellKey(enrollmentId, assignments[i].id)
+                    ],
+                    semantic: semantic,
+                  ),
+                ],
               ],
-          ],
-        ),
-      ),
+            ),
     );
   }
 
@@ -84,10 +76,13 @@ class StudentDrawerAssignmentsSection extends StatelessWidget {
         (score * 100).round() > (assignment.maxScore * 100).round();
 
     final (Color statusBg, Color statusFg) = switch (status) {
-      SubmissionStatus.submitted => (semantic.successContainer, semantic.success),
+      SubmissionStatus.submitted => (
+        semantic.successContainer,
+        semantic.success,
+      ),
       SubmissionStatus.late => (semantic.lateContainer, semantic.late),
       SubmissionStatus.missing => (
-        colorScheme.surfaceContainerHighest,
+        colorScheme.surfaceContainer,
         colorScheme.onSurfaceVariant,
       ),
     };
@@ -117,64 +112,36 @@ class StudentDrawerAssignmentsSection extends StatelessWidget {
               style: textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: isOverMax ? semantic.danger : colorScheme.onSurface,
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Wrap(
           spacing: 6,
           runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusBg,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                status.thaiLabel,
-                style: textTheme.labelSmall?.copyWith(
-                  color: statusFg,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            _DrawerTag(label: status.thaiLabel, bg: statusBg, fg: statusFg),
             if (assignment.isMandatory)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: semantic.warningContainer,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'บังคับส่ง',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: semantic.warning,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              _DrawerTag(
+                label: 'บังคับส่ง',
+                bg: semantic.warningContainer,
+                fg: semantic.warning,
               ),
             if (isOverMax)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: semantic.dangerContainer,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'คะแนนเกินเต็ม',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: semantic.danger,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              _DrawerTag(
+                label: 'คะแนนเกินเต็ม',
+                bg: semantic.dangerContainer,
+                fg: semantic.danger,
               ),
             if (assignment.dueDate != null)
               Text(
                 'ส่ง ${ThaiDateFormatter.formatShortDate(assignment.dueDate!)}',
                 style: textTheme.labelSmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
           ],
@@ -189,6 +156,32 @@ class StudentDrawerAssignmentsSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _DrawerTag extends StatelessWidget {
+  const _DrawerTag({required this.label, required this.bg, required this.fg});
+
+  final String label;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

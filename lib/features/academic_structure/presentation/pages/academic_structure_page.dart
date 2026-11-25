@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../domain/entities/academic_year.dart';
 import '../../domain/entities/delete_impact_summary.dart';
 import '../../domain/entities/term.dart';
@@ -21,8 +23,6 @@ class AcademicStructurePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     final yearsAsync = ref.watch(academicYearsProvider);
     final termsAsync = ref.watch(allTermsProvider);
     final isBusy = ref.watch(academicStructureControllerProvider).isLoading;
@@ -45,18 +45,10 @@ class AcademicStructurePage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'โครงสร้างปีการศึกษาและรายวิชา',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'จัดการปีการศึกษา (พ.ศ.) → เทอม → รายวิชา → ห้องเรียนที่สอน และปักหมุดเทอมปัจจุบัน',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              const AppPageHeader(
+                title: 'โครงสร้างปีการศึกษาและรายวิชา',
+                subtitle:
+                    'จัดการปีการศึกษา (พ.ศ.) → เทอม → รายวิชา → ห้องเรียนที่สอน และปักหมุดเทอมปัจจุบัน',
               ),
               const SizedBox(height: 20),
               if (yearsAsync.isLoading || termsAsync.isLoading)
@@ -95,11 +87,13 @@ class AcademicStructurePage extends ConsumerWidget {
     required bool isBusy,
   }) {
     if (academicYears.isEmpty) {
-      return StructureEmptyStateCard(
+      return AppEmptyState(
         icon: Icons.calendar_month_outlined,
         title: 'เริ่มต้นสร้างปีการศึกษาแรก',
-        subtitle: 'สร้างปีการศึกษา (พ.ศ.) เพื่อเริ่มต้นจัดการเทอม รายวิชา และห้องเรียน',
+        description:
+            'สร้างปีการศึกษา (พ.ศ.) เพื่อเริ่มต้นจัดการเทอม รายวิชา และห้องเรียน',
         actionLabel: 'เพิ่มปีการศึกษา',
+        actionIcon: Icons.add_rounded,
         onAction: () => _addYear(context, ref),
       );
     }
@@ -108,12 +102,15 @@ class AcademicStructurePage extends ConsumerWidget {
     final activeTerm = ref.watch(activeTermProvider);
 
     if (terms.isEmpty || selectedTerm == null) {
-      return StructureEmptyStateCard(
+      return AppEmptyState(
         icon: Icons.date_range_outlined,
         title: 'ยังไม่มีเทอมในปีการศึกษา ${academicYears.first.yearBe}',
-        subtitle: 'เพิ่มเทอมพร้อมระบุวันเปิด-ปิดภาคเรียน เพื่อให้ระบบคำนวณเทอมปัจจุบันอัตโนมัติ',
+        description:
+            'เพิ่มเทอมพร้อมระบุวันเปิด-ปิดภาคเรียน เพื่อให้ระบบคำนวณเทอมปัจจุบันอัตโนมัติ',
         actionLabel: 'เพิ่มเทอมแรก',
-        onAction: () => _addTerm(context, ref, academicYears, academicYears.first.id),
+        actionIcon: Icons.add_rounded,
+        onAction: () =>
+            _addTerm(context, ref, academicYears, academicYears.first.id),
       );
     }
 
@@ -134,9 +131,11 @@ class AcademicStructurePage extends ConsumerWidget {
           onSelectTerm: (id) =>
               ref.read(selectedTermIdProvider.notifier).select(id),
           onAddYear: () => _addYear(context, ref),
-          onAddTerm: () => _addTerm(context, ref, academicYears, selectedYear.id),
+          onAddTerm: () =>
+              _addTerm(context, ref, academicYears, selectedYear.id),
           onTogglePinTerm: () => _togglePinTerm(context, ref, selectedTerm),
-          onEditTerm: () => _editTerm(context, ref, academicYears, selectedTerm),
+          onEditTerm: () =>
+              _editTerm(context, ref, academicYears, selectedTerm),
           onDeleteTerm: () =>
               _deleteTerm(context, ref, selectedTerm, selectedYear),
           onDeleteYear: () => _deleteYear(context, ref, selectedYear),
@@ -253,7 +252,8 @@ class AcademicStructurePage extends ConsumerWidget {
       entityType: StructuralEntityType.term,
       entityId: term.id,
       title: 'ยืนยันการลบ$expected',
-      description: 'การลบเทอมจะลบรายวิชา ห้องเรียน คะแนน และคาบเช็คชื่อในเทอมนี้ทั้งหมดอย่างถาวร',
+      description:
+          'การลบเทอมจะลบรายวิชา ห้องเรียน คะแนน และคาบเช็คชื่อในเทอมนี้ทั้งหมดอย่างถาวร',
       expectedText: expected,
       onConfirmedDelete: () => ref
           .read(academicStructureControllerProvider.notifier)
@@ -272,7 +272,8 @@ class AcademicStructurePage extends ConsumerWidget {
       entityType: StructuralEntityType.academicYear,
       entityId: year.id,
       title: 'ยืนยันการลบปีการศึกษา ${year.yearBe}',
-      description: 'การลบปีการศึกษาจะลบทุกเทอม รายวิชา ห้องเรียน และข้อมูลคะแนนทั้งหมดในปีนี้',
+      description:
+          'การลบปีการศึกษาจะลบทุกเทอม รายวิชา ห้องเรียน และข้อมูลคะแนนทั้งหมดในปีนี้',
       expectedText: '${year.yearBe}',
       onConfirmedDelete: () => ref
           .read(academicStructureControllerProvider.notifier)

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/entities/score_category.dart';
 import '../../domain/services/score_calculator_service.dart';
 
-/// Card displaying one [ScoreCategory] (or uncategorized group when [category]
-/// is `null`) and its assignments, highlighting any assignment with over-max
-/// student scores.
+/// Card displaying one [ScoreCategory] (or uncategorized group) and its
+/// assignments as clean hairline-separated rows (zero card-in-card borders).
 class ScoreCategorySectionCard extends StatelessWidget {
   const ScoreCategorySectionCard({
     super.key,
@@ -54,18 +55,14 @@ class ScoreCategorySectionCard extends StatelessWidget {
     final exceedsTarget =
         targetMax != null && totalMaxCents > (targetMax * 100).round();
 
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
+    return AppSurfaceCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+            child: Wrap(
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.spaceBetween,
@@ -89,6 +86,7 @@ class ScoreCategorySectionCard extends StatelessWidget {
                             ? semantic.warning
                             : colorScheme.onSurfaceVariant,
                         fontWeight: exceedsTarget ? FontWeight.w600 : null,
+                        fontFeatures: AppTheme.tabularFigures,
                       ),
                     ),
                   ],
@@ -106,16 +104,18 @@ class ScoreCategorySectionCard extends StatelessWidget {
                     if (category != null && onEditCategory != null)
                       IconButton(
                         tooltip: 'แก้ไขหมวดคะแนน',
+                        visualDensity: VisualDensity.compact,
                         onPressed: isBusy ? null : onEditCategory,
-                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        icon: const Icon(Icons.edit_outlined, size: 19),
                       ),
                     if (category != null && onDeleteCategory != null)
                       IconButton(
                         tooltip: 'ลบหมวดคะแนน',
+                        visualDensity: VisualDensity.compact,
                         onPressed: isBusy ? null : onDeleteCategory,
                         icon: Icon(
                           Icons.delete_outline_rounded,
-                          size: 20,
+                          size: 19,
                           color: semantic.danger,
                         ),
                       ),
@@ -123,41 +123,41 @@ class ScoreCategorySectionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Divider(height: 20),
-            if (assignments.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'ยังไม่มีชิ้นงานในหมวดนี้ กด "+ เพิ่มงาน" เพื่อเริ่มต้น',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+          ),
+          const Divider(height: 1),
+          if (assignments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'ยังไม่มีชิ้นงานในหมวดนี้ กด "เพิ่มงาน" เพื่อเริ่มต้น',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
-              )
-            else
-              Column(
-                children: [
-                  for (var i = 0; i < assignments.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 8),
-                    _AssignmentTile(
-                      assignment: assignments[i],
-                      overMaxCount: overMaxCounts[assignments[i].id] ?? 0,
-                      isBusy: isBusy,
-                      onEdit: () => onEditAssignment(assignments[i]),
-                      onDelete: () => onDeleteAssignment(assignments[i]),
-                    ),
-                  ],
-                ],
               ),
-          ],
-        ),
+            )
+          else
+            Column(
+              children: [
+                for (var i = 0; i < assignments.length; i++) ...[
+                  if (i > 0) const Divider(height: 1),
+                  _AssignmentRow(
+                    assignment: assignments[i],
+                    overMaxCount: overMaxCounts[assignments[i].id] ?? 0,
+                    isBusy: isBusy,
+                    onEdit: () => onEditAssignment(assignments[i]),
+                    onDelete: () => onDeleteAssignment(assignments[i]),
+                  ),
+                ],
+              ],
+            ),
+        ],
       ),
     );
   }
 }
 
-class _AssignmentTile extends StatelessWidget {
-  const _AssignmentTile({
+class _AssignmentRow extends StatelessWidget {
+  const _AssignmentRow({
     required this.assignment,
     required this.overMaxCount,
     required this.isBusy,
@@ -181,17 +181,10 @@ class _AssignmentTile extends StatelessWidget {
     final hasOverMax = overMaxCount > 0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: hasOverMax
-            ? semantic.warningContainer.withValues(alpha: 0.45)
-            : colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: hasOverMax ? semantic.danger : colorScheme.outlineVariant,
-          width: hasOverMax ? 1.5 : 1,
-        ),
-      ),
+      color: hasOverMax
+          ? semantic.dangerContainer.withValues(alpha: 0.32)
+          : Colors.transparent,
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -216,32 +209,32 @@ class _AssignmentTile extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _PillBadge(
+                    _RowTag(
                       label:
                           'เต็ม ${_calculator.formatExactScore(assignment.maxScore)} คะแนน',
                       background: colorScheme.primaryContainer,
                       foreground: colorScheme.onPrimaryContainer,
                     ),
                     if (assignment.isMandatory)
-                      _PillBadge(
+                      _RowTag(
                         label: 'บังคับส่ง',
                         background: semantic.warningContainer,
                         foreground: semantic.warning,
                       ),
                     if (assignment.dueDate != null)
-                      _PillBadge(
+                      _RowTag(
                         label:
                             'ส่ง ${ThaiDateFormatter.formatShortDate(assignment.dueDate!)}',
-                        background: colorScheme.surfaceContainerHighest,
+                        background: colorScheme.surfaceContainer,
                         foreground: colorScheme.onSurfaceVariant,
                       ),
                     if (hasOverMax)
-                      _PillBadge(
+                      _RowTag(
                         label: 'คะแนนเกินเต็ม $overMaxCount คน',
                         background: semantic.dangerContainer,
                         foreground: semantic.danger,
@@ -278,8 +271,8 @@ class _AssignmentTile extends StatelessWidget {
   }
 }
 
-class _PillBadge extends StatelessWidget {
-  const _PillBadge({
+class _RowTag extends StatelessWidget {
+  const _RowTag({
     required this.label,
     required this.background,
     required this.foreground,
@@ -301,7 +294,8 @@ class _PillBadge extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: foreground,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w600,
+          fontFeatures: AppTheme.tabularFigures,
         ),
       ),
     );

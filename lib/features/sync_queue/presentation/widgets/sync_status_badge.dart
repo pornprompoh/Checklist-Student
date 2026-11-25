@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/sync_queue_providers.dart';
 
 /// Semantic numeric badge showing pending/failed/conflict sync queue counts.
@@ -24,13 +25,14 @@ class SyncStatusBadge extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
     final semantic = AppSemanticColors.of(context);
     final isDanger = counts.hasConflicts;
     final bgColor = isDanger ? semantic.danger : semantic.warning;
-    final fgColor = ThemeData.estimateBrightnessForColor(bgColor) ==
-            Brightness.dark
-        ? Colors.white
-        : Colors.black;
+    final fgColor =
+        ThemeData.estimateBrightnessForColor(bgColor) == Brightness.dark
+        ? colorScheme.onPrimary
+        : colorScheme.onSurface;
     final label = total > 99 ? '99+' : '$total';
 
     return Semantics(
@@ -55,8 +57,8 @@ class SyncStatusBadge extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: fgColor,
-            fontSize: compact ? 10 : 11,
             fontWeight: FontWeight.w700,
+            fontFeatures: AppTheme.tabularFigures,
             height: 1.1,
           ),
         ),

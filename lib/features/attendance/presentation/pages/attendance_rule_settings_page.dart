@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
@@ -18,7 +20,8 @@ import '../widgets/attendance_rule_preview_card.dart';
 
 /// Per-subject-class attendance rule settings page (`/teacher/attendance/rules?classId=...`).
 ///
-/// Protected by [UnsavedChangesGuard] and includes a Pure Dart Live Preview.
+/// Desktop (`>= 860px`) shows a 2-column layout (settings form on the left,
+/// Live Preview on the right); Mobile stacks cleanly. Guarded by [UnsavedChangesGuard].
 class AttendanceRuleSettingsPage extends ConsumerStatefulWidget {
   const AttendanceRuleSettingsPage({super.key, required this.subjectClassId});
 
@@ -70,7 +73,6 @@ class _AttendanceRuleSettingsPageState
       absentThresholdPct: parsedThreshold,
       lateToAbsentRatio: parsedRatio,
       countLeaveAsAbsent: _countLeaveAsAbsent,
-      // Preserve future-use attendance_score_weight without mutating it.
       attendanceScoreWeight: base?.attendanceScoreWeight,
     );
   }
@@ -147,21 +149,15 @@ class _AttendanceRuleSettingsPageState
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: const BoxConstraints(maxWidth: 1060),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'ตั้งค่าเกณฑ์เวลาเรียน (มส) รายวิชา',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
+                AppPageHeader(
+                  title: 'ตั้งค่าเกณฑ์เวลาเรียน (มส) รายวิชา',
+                  subtitle:
+                      'กำหนดเกณฑ์ % ขาดเรียน และการนับสายหรือลาแยกเฉพาะห้องนี้',
+                  actions: [
                     OutlinedButton.icon(
                       onPressed: () => _handleBackToCheckIn(context),
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
@@ -171,16 +167,13 @@ class _AttendanceRuleSettingsPageState
                 ),
                 const SizedBox(height: 16),
                 if (ruleAsync.isLoading && !_initialized)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          SkeletonBox(height: 48),
-                          SizedBox(height: 12),
-                          SkeletonBox(height: 48),
-                        ],
-                      ),
+                  const AppSurfaceCard(
+                    child: Column(
+                      children: [
+                        SkeletonBox(height: 48),
+                        SizedBox(height: 12),
+                        SkeletonBox(height: 48),
+                      ],
                     ),
                   )
                 else if (ruleAsync.hasError && !_initialized)
@@ -191,139 +184,147 @@ class _AttendanceRuleSettingsPageState
                       attendanceRuleConfigProvider(widget.subjectClassId),
                     ),
                   )
-                else ...[
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                else
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final formCard = _buildFormCard(saveState.isLoading);
+                      final previewCard = draftConfig.isValid
+                          ? AttendanceRulePreviewCard(
+                              summaries: Map.from(previewSummaries),
+                            )
+                          : const SizedBox.shrink();
+
+                      if (constraints.maxWidth >= 860) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextFormField(
-                              controller: _thresholdCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              onChanged: (_) => setState(() {}),
-                              decoration: const InputDecoration(
-                                labelText: 'เกณฑ์ขาดเรียนเสี่ยง มส (%)',
-                                helperText:
-                                    'มาตรฐานสถานศึกษาทั่วไปคือ 20% (เกิน 20% แนะนำติด มส)',
-                                suffixText: '%',
-                              ),
-                              validator: (v) {
-                                final parsed = double.tryParse(v?.trim() ?? '');
-                                if (parsed == null ||
-                                    parsed < 1 ||
-                                    parsed > 100) {
-                                  return 'กรุณากรอกตัวเลขระหว่าง 1 ถึง 100';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                'นับการมาสายสะสมเป็นการขาดเรียน',
-                              ),
-                              subtitle: const Text(
-                                'เช่น มาสายครบ 3 ครั้ง ให้นับเป็นขาดเรียน 1 ครั้ง (หารปัดลง)',
-                              ),
-                              value: _enableLateConversion,
-                              onChanged: (value) => setState(() {
-                                _enableLateConversion = value;
-                                if (value && _lateRatioCtrl.text.trim().isEmpty) {
-                                  _lateRatioCtrl.text = '3';
-                                }
-                              }),
-                            ),
-                            if (_enableLateConversion) ...[
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _lateRatioCtrl,
-                                keyboardType: TextInputType.number,
-                                onChanged: (_) => setState(() {}),
-                                decoration: const InputDecoration(
-                                  labelText: 'จำนวนครั้งสายต่อการขาด 1 ครั้ง',
-                                  hintText: 'เช่น 3',
-                                  suffixText: 'ครั้ง = ขาด 1 ครั้ง',
-                                ),
-                                validator: (v) {
-                                  final parsed = int.tryParse(v?.trim() ?? '');
-                                  if (parsed == null || parsed < 1) {
-                                    return 'กรุณากรอกจำนวนเต็มตั้งแต่ 1 ขึ้นไป';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                'นับการลา (ลาป่วย/ลากิจ) รวมเป็นการขาดเรียน',
-                              ),
-                              subtitle: const Text(
-                                'ค่าเริ่มต้นปิดไว้ หากเปิดจะนำยอดลาไปบวกรวมในการคำนวณ % ขาดเรียน',
-                              ),
-                              value: _countLeaveAsAbsent,
-                              onChanged: (value) =>
-                                  setState(() => _countLeaveAsAbsent = value),
-                            ),
-                            const Divider(height: 28),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.spaceBetween,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: saveState.isLoading
-                                      ? null
-                                      : _resetToDefaults,
-                                  icon: const Icon(
-                                    Icons.restart_alt_rounded,
-                                    size: 18,
-                                  ),
-                                  label: const Text('คืนค่าเริ่มต้น'),
-                                ),
-                                FilledButton.icon(
-                                  onPressed: saveState.isLoading || !_isDirty
-                                      ? null
-                                      : _save,
-                                  icon: saveState.isLoading
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.save_outlined,
-                                          size: 18,
-                                        ),
-                                  label: const Text('บันทึกเกณฑ์เวลาเรียน'),
-                                ),
-                              ],
-                            ),
+                            Expanded(flex: 3, child: formCard),
+                            const SizedBox(width: 16),
+                            Expanded(flex: 2, child: previewCard),
                           ],
-                        ),
-                      ),
-                    ),
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          formCard,
+                          if (draftConfig.isValid) ...[
+                            const SizedBox(height: 16),
+                            previewCard,
+                          ],
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  if (draftConfig.isValid)
-                    AttendanceRulePreviewCard(
-                      summaries: Map.from(previewSummaries),
-                    ),
-                ],
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormCard(bool isSaving) {
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(20),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _thresholdCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'เกณฑ์ขาดเรียนเสี่ยง มส (%)',
+                helperText:
+                    'มาตรฐานสถานศึกษาทั่วไปคือ 20% (เกิน 20% แนะนำติด มส)',
+                suffixText: '%',
+              ),
+              validator: (v) {
+                final parsed = double.tryParse(v?.trim() ?? '');
+                if (parsed == null || parsed < 1 || parsed > 100) {
+                  return 'กรุณากรอกตัวเลขระหว่าง 1 ถึง 100';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('นับการมาสายสะสมเป็นการขาดเรียน'),
+              subtitle: const Text(
+                'เช่น มาสายครบ 3 ครั้ง ให้นับเป็นขาดเรียน 1 ครั้ง (หารปัดลง)',
+              ),
+              value: _enableLateConversion,
+              onChanged: (value) => setState(() {
+                _enableLateConversion = value;
+                if (value && _lateRatioCtrl.text.trim().isEmpty) {
+                  _lateRatioCtrl.text = '3';
+                }
+              }),
+            ),
+            if (_enableLateConversion) ...[
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _lateRatioCtrl,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'จำนวนครั้งสายต่อการขาด 1 ครั้ง',
+                  hintText: 'เช่น 3',
+                  suffixText: 'ครั้ง = ขาด 1 ครั้ง',
+                ),
+                validator: (v) {
+                  final parsed = int.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed < 1) {
+                    return 'กรุณากรอกจำนวนเต็มตั้งแต่ 1 ขึ้นไป';
+                  }
+                  return null;
+                },
+              ),
+            ],
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'นับการลา (ลาป่วย/ลากิจ) รวมเป็นการขาดเรียน',
+              ),
+              subtitle: const Text(
+                'ค่าเริ่มต้นปิดไว้ หากเปิดจะนำยอดลาไปบวกรวมในการคำนวณ % ขาดเรียน',
+              ),
+              value: _countLeaveAsAbsent,
+              onChanged: (value) =>
+                  setState(() => _countLeaveAsAbsent = value),
+            ),
+            const Divider(height: 24),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: isSaving ? null : _resetToDefaults,
+                  icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                  label: const Text('คืนค่าเริ่มต้น'),
+                ),
+                FilledButton.icon(
+                  onPressed: isSaving || !_isDirty ? null : _save,
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('บันทึกเกณฑ์เวลาเรียน'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

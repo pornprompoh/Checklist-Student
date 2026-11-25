@@ -29,6 +29,7 @@ class LineBrowserRedirectBanner extends StatelessWidget {
 
     final semantic = AppSemanticColors.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final appName = detected.appLabel ?? 'แอปแชท';
     final externalUrl = detected.externalBrowserUrl.isNotEmpty
         ? detected.externalBrowserUrl
@@ -38,105 +39,114 @@ class LineBrowserRedirectBanner extends StatelessWidget {
                 : 'https://checklist-student.app/student',
           );
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: semantic.warningContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: semantic.warning.withValues(alpha: 0.45)),
+    return Material(
+      color: semantic.warningContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: semantic.warning.withValues(alpha: 0.35)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.open_in_browser_rounded,
-                size: 20,
-                color: semantic.warning,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'กำลังเปิดผ่านเบราว์เซอร์ภายใน $appName',
-                      style: textTheme.titleSmall?.copyWith(
-                        color: semantic.warning,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'แนะนำให้เปิดใน Chrome หรือ Safari เพื่อให้แสดงผลและใช้งานได้เสถียรที่สุด',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: semantic.warning.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.open_in_browser_rounded,
+                    size: 18,
+                    color: semantic.warning,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton(
-                onPressed: () {
-                  if (onOpenExternal != null) {
-                    onOpenExternal!(externalUrl);
-                  } else {
-                    openExternalBrowserUrl(externalUrl);
-                  }
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.launch_rounded, size: 17),
-                    SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'เปิดในเบราว์เซอร์หลัก',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'เปิดผ่านเบราว์เซอร์ในแอป $appName',
+                        style: textTheme.titleSmall?.copyWith(
+                          color: semantic.warning,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              OutlinedButton(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: externalUrl));
-                  if (!context.mounted) return;
-                  AppFeedbackBanner.showSnackBar(
-                    context,
-                    type: AppFeedbackType.success,
-                    message: 'คัดลอกลิงก์สำหรับเปิดในเบราว์เซอร์เรียบร้อยแล้ว',
-                  );
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.copy_rounded, size: 16),
-                    SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'คัดลอกลิงก์',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                      const SizedBox(height: 2),
+                      Text(
+                        'เปิดใน Chrome หรือ Safari เพื่อให้หน้าจอและแป้นพิมพ์ทำงานได้เต็มประสิทธิภาพ',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    if (onOpenExternal != null) {
+                      onOpenExternal!(externalUrl);
+                    } else {
+                      openExternalBrowserUrl(externalUrl);
+                    }
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.launch_rounded, size: 17),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'เปิดในเบราว์เซอร์หลัก',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: externalUrl));
+                    if (!context.mounted) return;
+                    AppFeedbackBanner.showSnackBar(
+                      context,
+                      type: AppFeedbackType.success,
+                      message: 'คัดลอกลิงก์สำหรับเปิดในเบราว์เซอร์เรียบร้อยแล้ว',
+                    );
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.copy_rounded, size: 16),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'คัดลอกลิงก์',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

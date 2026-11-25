@@ -5,16 +5,16 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/constants/attendance_status.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../../homeroom_roster/domain/entities/class_enrollment.dart';
 import '../../../homeroom_roster/presentation/providers/homeroom_roster_providers.dart';
 import '../providers/attendance_check_in_controller.dart';
-import '../providers/attendance_check_in_state.dart';
 import '../providers/attendance_providers.dart';
-import 'attendance_history_sheet.dart';
-import 'attendance_note_dialog.dart';
+import 'attendance_check_in_dialogs.dart';
 import 'attendance_save_bar.dart';
 import 'attendance_session_header.dart';
 import 'attendance_status_summary_bar.dart';
@@ -52,7 +52,6 @@ class AttendanceCheckInBody extends ConsumerWidget {
     final summaries = ref.watch(
       classAttendanceSummariesProvider(subjectClassId),
     );
-
     final enrollments =
         enrollmentsAsync.asData?.value ?? const <ClassEnrollment>[];
     final statsService = ref.watch(attendanceStatisticsServiceProvider);
@@ -90,9 +89,9 @@ class AttendanceCheckInBody extends ConsumerWidget {
             child: Align(
               alignment: Alignment.topCenter,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 960),
+                  constraints: const BoxConstraints(maxWidth: 1020),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -104,18 +103,27 @@ class AttendanceCheckInBody extends ConsumerWidget {
                         isLocked: state.isLocked,
                         isBusy: state.isLoading || state.isSaving,
                         onSelectClass: (id) =>
-                            _guardAndRun(context, state, () => onSwitchClass(id)),
-                        onPreviousDay: () => _guardAndRun(
+                            AttendanceCheckInDialogs.guardAndRun(
+                              context,
+                              state,
+                              () => onSwitchClass(id),
+                            ),
+                        onPreviousDay: () =>
+                            AttendanceCheckInDialogs.guardAndRun(
+                              context,
+                              state,
+                              () => controller.loadDate(
+                                state.selectedDate.subtract(
+                                  const Duration(days: 1),
+                                ),
+                              ),
+                            ),
+                        onPickDate: () => AttendanceCheckInDialogs.pickDate(
                           context,
                           state,
-                          () => controller.loadDate(
-                            state.selectedDate.subtract(
-                              const Duration(days: 1),
-                            ),
-                          ),
+                          controller,
                         ),
-                        onPickDate: () => _pickDate(context, state, controller),
-                        onNextDay: () => _guardAndRun(
+                        onNextDay: () => AttendanceCheckInDialogs.guardAndRun(
                           context,
                           state,
                           () => controller.loadDate(
@@ -123,8 +131,14 @@ class AttendanceCheckInBody extends ConsumerWidget {
                           ),
                         ),
                         onOpenHistory: () =>
-                            _openHistory(context, ref, state, controller),
-                        onOpenRules: () => _guardAndRun(
+                            AttendanceCheckInDialogs.openHistory(
+                              context,
+                              ref,
+                              subjectClassId: subjectClassId,
+                              state: state,
+                              controller: controller,
+                            ),
+                        onOpenRules: () => AttendanceCheckInDialogs.guardAndRun(
                           context,
                           state,
                           () => context.go(
@@ -134,16 +148,21 @@ class AttendanceCheckInBody extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
                       if (state.isLocked) ...[
-                        const AppFeedbackBanner(
+                        const SizedBox(height: 12),
+                        AppFeedbackBanner(
                           type: AppFeedbackType.warning,
                           message:
-                              'คาบเช็คชื่อนี้ถูกล็อกเพื่อป้องกันมือลั่นแก้ทับ หากต้องการแก้ไขกรุณากด "ปลดล็อกเพื่อแก้ไข"',
+                              'คาบเช็คชื่อนี้ถูกล็อกเพื่อป้องกันมือลั่นแก้ทับ หากต้องการแก้ไขกรุณากดปลดล็อก',
+                          retryLabel: 'ปลดล็อก',
+                          onRetry: () => AttendanceCheckInDialogs.confirmUnlock(
+                            context,
+                            controller,
+                          ),
                         ),
-                        const SizedBox(height: 12),
                       ],
                       if (state.errorMessage != null) ...[
+                        const SizedBox(height: 12),
                         AppFeedbackBanner(
                           type: AppFeedbackType.error,
                           message: state.errorMessage!,
@@ -152,16 +171,16 @@ class AttendanceCheckInBody extends ConsumerWidget {
                               : 'ลองใหม่',
                           onRetry: controller.reloadCurrentDate,
                         ),
-                        const SizedBox(height: 12),
                       ],
+                      const SizedBox(height: 12),
                       if (enrollmentsAsync.isLoading || state.isLoading)
                         const Column(
                           children: [
-                            SkeletonBox(height: 76),
-                            SizedBox(height: 10),
-                            SkeletonBox(height: 88),
-                            SizedBox(height: 10),
-                            SkeletonBox(height: 88),
+                            SkeletonBox(height: 68),
+                            SizedBox(height: 12),
+                            SkeletonBox(height: 80),
+                            SizedBox(height: 12),
+                            SkeletonBox(height: 80),
                           ],
                         )
                       else if (enrollmentsAsync.hasError)
@@ -173,22 +192,14 @@ class AttendanceCheckInBody extends ConsumerWidget {
                           ),
                         )
                       else if (enrollments.isEmpty)
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              children: [
-                                const Text('ยังไม่มีรายชื่อนักเรียนในห้องเรียนนี้'),
-                                const SizedBox(height: 12),
-                                FilledButton.tonal(
-                                  onPressed: () => context.go(
-                                    AppRoutes.teacherHomeroomRoster,
-                                  ),
-                                  child: const Text('ไปเพิ่มรายชื่อที่คลังรายชื่อ'),
-                                ),
-                              ],
-                            ),
-                          ),
+                        AppEmptyState(
+                          icon: Icons.groups_outlined,
+                          title: 'ยังไม่มีรายชื่อนักเรียนในห้องเรียนนี้',
+                          description:
+                              'เพิ่มรายชื่อนักเรียนในคลังรายชื่อก่อนเริ่มเช็คชื่อประจำคาบ',
+                          actionLabel: 'ไปเพิ่มรายชื่อที่คลังรายชื่อ',
+                          onAction: () =>
+                              context.go(AppRoutes.teacherHomeroomRoster),
                         )
                       else ...[
                         AttendanceStatusSummaryBar(
@@ -204,32 +215,62 @@ class AttendanceCheckInBody extends ConsumerWidget {
                           onMarkAllPresent: () =>
                               controller.markAllPresent(eligibleIds),
                           onEditSessionNote: () =>
-                              _editSessionNote(context, state, controller),
+                              AttendanceCheckInDialogs.editSessionNote(
+                                context,
+                                state,
+                                controller,
+                              ),
                           onUnlockSession: () =>
-                              _confirmUnlock(context, controller),
+                              AttendanceCheckInDialogs.confirmUnlock(
+                                context,
+                                controller,
+                              ),
                         ),
                         const SizedBox(height: 12),
-                        for (final student in activeStudents) ...[
-                          AttendanceStudentRow(
-                            enrollment: student,
-                            selectedDate: state.selectedDate,
-                            selectedStatus: state.draftStatuses[student.id],
-                            note: state.draftNotes[student.id] ?? '',
-                            summary: summaries[student.id],
-                            isLocked: state.isLocked,
-                            onStatusSelected: (status) =>
-                                controller.setStudentStatus(student.id, status),
-                            onEditNote: () => _editStudentNote(
-                              context,
-                              student,
-                              state,
-                              controller,
+                        if (activeStudents.isNotEmpty)
+                          AppSurfaceCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: [
+                                for (
+                                  var i = 0;
+                                  i < activeStudents.length;
+                                  i++
+                                ) ...[
+                                  if (i > 0) const Divider(height: 1),
+                                  AttendanceStudentRow(
+                                    embedded: true,
+                                    enrollment: activeStudents[i],
+                                    selectedDate: state.selectedDate,
+                                    selectedStatus:
+                                        state.draftStatuses[activeStudents[i]
+                                            .id],
+                                    note:
+                                        state.draftNotes[activeStudents[i]
+                                            .id] ??
+                                        '',
+                                    summary: summaries[activeStudents[i].id],
+                                    isLocked: state.isLocked,
+                                    onStatusSelected: (status) => controller
+                                        .setStudentStatus(
+                                          activeStudents[i].id,
+                                          status,
+                                        ),
+                                    onEditNote: () =>
+                                        AttendanceCheckInDialogs
+                                            .editStudentNote(
+                                          context,
+                                          activeStudents[i],
+                                          state,
+                                          controller,
+                                        ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                        ],
                         if (transferredWithHistory.isNotEmpty) ...[
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 12),
                           TransferredOutAttendanceSection(
                             students: transferredWithHistory,
                             recordsByEnrollment:
@@ -269,135 +310,6 @@ class AttendanceCheckInBody extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _guardAndRun(
-    BuildContext context,
-    AttendanceCheckInState state,
-    VoidCallback action,
-  ) async {
-    if (state.isDirty) {
-      final discard = await UnsavedChangesGuard.confirmDiscard(context);
-      if (!discard || !context.mounted) return;
-    }
-    action();
-  }
-
-  Future<void> _pickDate(
-    BuildContext context,
-    AttendanceCheckInState state,
-    AttendanceCheckInController controller,
-  ) async {
-    if (state.isDirty) {
-      final discard = await UnsavedChangesGuard.confirmDiscard(context);
-      if (!discard || !context.mounted) return;
-    }
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: state.selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2150),
-    );
-    if (picked != null) {
-      await controller.loadDate(picked);
-    }
-  }
-
-  Future<void> _openHistory(
-    BuildContext context,
-    WidgetRef ref,
-    AttendanceCheckInState state,
-    AttendanceCheckInController controller,
-  ) async {
-    final enrollments =
-        ref.read(classEnrollmentsProvider(subjectClassId)).asData?.value ??
-        const <ClassEnrollment>[];
-    final activeIds = enrollments
-        .where((e) => !e.isTransferredOut)
-        .map((e) => e.id)
-        .toSet();
-    final sessions =
-        ref.read(attendanceSessionsProvider(subjectClassId)).asData?.value ??
-        const [];
-    final records =
-        (ref
-                    .read(attendanceClassRecordsProvider(subjectClassId))
-                    .asData
-                    ?.value ??
-                const [])
-            .where((r) => activeIds.contains(r.enrollmentId))
-            .toList(growable: false);
-    await AttendanceHistorySheet.show(
-      context,
-      sessions: sessions,
-      allRecords: records,
-      selectedDate: state.selectedDate,
-      onSelectDate: (date) =>
-          _guardAndRun(context, state, () => controller.loadDate(date)),
-    );
-  }
-
-  Future<void> _editSessionNote(
-    BuildContext context,
-    AttendanceCheckInState state,
-    AttendanceCheckInController controller,
-  ) async {
-    final note = await AttendanceNoteDialog.show(
-      context,
-      title: 'หมายเหตุประจำคาบเรียน',
-      initialNote: state.sessionNote,
-      quickSuggestions: const <String>['สอนชดเชย', 'สอบย่อย', 'กิจกรรมโรงเรียน'],
-    );
-    if (note != null) controller.setSessionNote(note);
-  }
-
-  Future<void> _editStudentNote(
-    BuildContext context,
-    ClassEnrollment student,
-    AttendanceCheckInState state,
-    AttendanceCheckInController controller,
-  ) async {
-    final note = await AttendanceNoteDialog.show(
-      context,
-      title: 'หมายเหตุการเข้าเรียน',
-      subtitle: 'เลขที่ ${student.studentNumber} · ${student.fullName}',
-      initialNote: state.draftNotes[student.id] ?? '',
-    );
-    if (note != null) controller.setStudentNote(student.id, note);
-  }
-
-  Future<void> _confirmUnlock(
-    BuildContext context,
-    AttendanceCheckInController controller,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('ปลดล็อกคาบเช็คชื่อเพื่อแก้ไข'),
-        content: const Text(
-          'คาบนี้ถูกล็อกไว้เพื่อป้องกันการแก้ทับโดยไม่ตั้งใจ ต้องการปลดล็อกเพื่อแก้ไขข้อมูลใช่หรือไม่?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('ปลดล็อก'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-    final ok = await controller.unlockSession();
-    if (ok && context.mounted) {
-      AppFeedbackBanner.showSnackBar(
-        context,
-        type: AppFeedbackType.info,
-        message: 'ปลดล็อกคาบแล้ว สามารถแก้ไขและบันทึกใหม่ได้',
-      );
-    }
   }
 
   static ({int present, int late, int leave, int absent, int unmarked})

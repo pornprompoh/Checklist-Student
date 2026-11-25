@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/submission_status.dart';
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../grading/domain/services/score_calculator_service.dart';
 import '../../domain/entities/student_portal_class_detail.dart';
 
-/// Assignment status summary and per-assignment list inside
-/// `StudentPortalClassCard`, showing exact scores only when allowed by server.
+/// Zone 3 of `StudentPortalClassCard`: submission summary pills and a unified
+/// hairline-divided assignment list showing exact scores only when allowed.
 class StudentPortalClassAssignmentsSection extends StatelessWidget {
   const StudentPortalClassAssignmentsSection({
     super.key,
@@ -49,6 +50,7 @@ class StudentPortalClassAssignmentsSection extends StatelessWidget {
               'รายการงานทั้งหมด (${assignments.length} ชิ้น)',
               style: textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
+                fontFeatures: AppTheme.tabularFigures,
               ),
             ),
             Wrap(
@@ -70,7 +72,7 @@ class StudentPortalClassAssignmentsSection extends StatelessWidget {
                   label: 'ค้างส่ง $missingCount',
                   bg: missingCount > 0
                       ? semantic.dangerContainer
-                      : colorScheme.surfaceContainerHighest,
+                      : colorScheme.surfaceContainer,
                   fg: missingCount > 0
                       ? semantic.danger
                       : colorScheme.onSurfaceVariant,
@@ -79,7 +81,7 @@ class StudentPortalClassAssignmentsSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         if (assignments.isEmpty)
           Text(
             'ยังไม่มีรายการงานหรือการสอบในรายวิชานี้',
@@ -88,21 +90,38 @@ class StudentPortalClassAssignmentsSection extends StatelessWidget {
             ),
           )
         else
-          for (var i = 0; i < assignments.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            _AssignmentCardRow(
-              item: assignments[i],
-              showScoreToStudent: showScoreToStudent,
-              calculator: _calculator,
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colorScheme.outlineVariant),
             ),
-          ],
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < assignments.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: colorScheme.outlineVariant,
+                    ),
+                  _AssignmentRow(
+                    item: assignments[i],
+                    showScoreToStudent: showScoreToStudent,
+                    calculator: _calculator,
+                  ),
+                ],
+              ],
+            ),
+          ),
       ],
     );
   }
 }
 
-class _AssignmentCardRow extends StatelessWidget {
-  const _AssignmentCardRow({
+class _AssignmentRow extends StatelessWidget {
+  const _AssignmentRow({
     required this.item,
     required this.showScoreToStudent,
     required this.calculator,
@@ -127,13 +146,8 @@ class _AssignmentCardRow extends StatelessWidget {
       SubmissionStatus.missing => (semantic.dangerContainer, semantic.danger),
     };
 
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -164,7 +178,7 @@ class _AssignmentCardRow extends StatelessWidget {
             children: [
               _MiniTag(
                 label: item.categoryName,
-                bg: colorScheme.surfaceContainerHighest,
+                bg: colorScheme.surfaceContainer,
                 fg: colorScheme.onSurfaceVariant,
               ),
               if (item.isMandatory)
@@ -178,6 +192,7 @@ class _AssignmentCardRow extends StatelessWidget {
                   'กำหนดส่ง ${ThaiDateFormatter.formatShortDate(item.dueDate!)}',
                   style: textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
+                    fontFeatures: AppTheme.tabularFigures,
                   ),
                 ),
               if (showScoreToStudent)
@@ -225,6 +240,7 @@ class _MiniTag extends StatelessWidget {
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: fg,
           fontWeight: FontWeight.w700,
+          fontFeatures: AppTheme.tabularFigures,
         ),
       ),
     );

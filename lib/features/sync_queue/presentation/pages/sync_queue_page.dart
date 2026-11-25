@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/network/connectivity_provider.dart';
-import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../domain/entities/sync_item_status.dart';
 import '../../domain/entities/sync_queue_item.dart';
@@ -46,20 +48,12 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'สถานะการซิงค์ข้อมูลออฟไลน์',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              const AppPageHeader(
+                title: 'สถานะการซิงค์ข้อมูลออฟไลน์',
+                subtitle:
+                    'ตรวจสอบรายการเช็คชื่อและคะแนนที่รอส่งขึ้นระบบ พร้อมเปรียบเทียบและแก้ไขกรณีข้อมูลชนกัน',
               ),
-              const SizedBox(height: 2),
-              Text(
-                'ตรวจสอบรายการเช็คชื่อและคะแนนที่รอส่งขึ้นระบบ พร้อมเปรียบเทียบและแก้ไขกรณีข้อมูลชนกัน',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               SyncStatusSummaryHeader(
                 isOnline: isOnline,
                 counts: counts,
@@ -82,7 +76,7 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                   }
                 },
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -105,12 +99,12 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               itemsAsync.when(
                 loading: () => const Column(
                   children: [
                     SkeletonBox(height: 96),
-                    SizedBox(height: 10),
+                    SizedBox(height: 12),
                     SkeletonBox(height: 96),
                   ],
                 ),
@@ -121,20 +115,21 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                 ),
                 data: (items) {
                   if (items.isEmpty) {
-                    return _buildEmptyState(context);
+                    return const AppEmptyState(
+                      icon: Icons.cloud_done_rounded,
+                      title:
+                          'ข้อมูลทั้งหมดซิงค์ขึ้นระบบเรียบร้อยแล้ว — ไม่มีรายการค้าง',
+                      description:
+                          'ข้อมูลเช็คชื่อและคะแนนล่าสุดของคุณถูกส่งขึ้นระบบครบถ้วนแล้ว',
+                    );
                   }
                   final sorted = _sortAndFilter(items);
                   if (sorted.isEmpty) {
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          'ไม่พบรายการในตัวกรองที่เลือก',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
+                    return const AppEmptyState(
+                      icon: Icons.filter_list_off_rounded,
+                      title: 'ไม่พบรายการในตัวกรองที่เลือก',
+                      description:
+                          'ลองสลับตัวกรองด้านบนเพื่อตรวจสอบรายการซิงค์ในสถานะอื่น',
                     );
                   }
                   return Column(
@@ -149,7 +144,7 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                           onRetry: () => _handleRetry(context, item.id),
                           onDiscard: () => _confirmDiscard(context, item),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                       ],
                     ],
                   );
@@ -165,36 +160,11 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
   Widget _buildFilterChip(_SyncQueueFilter filter, String label) {
     return FilterChip(
       selected: _filter == filter,
-      label: Text(label),
-      onSelected: (_) => setState(() => _filter = filter),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    final semantic = AppSemanticColors.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-        child: Column(
-          children: [
-            Icon(
-              Icons.cloud_done_rounded,
-              size: 44,
-              color: semantic.success,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ข้อมูลทั้งหมดซิงค์ขึ้นระบบเรียบร้อยแล้ว — ไม่มีรายการค้าง',
-              textAlign: TextAlign.center,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+      label: Text(
+        label,
+        style: const TextStyle(fontFeatures: AppTheme.tabularFigures),
       ),
+      onSelected: (_) => setState(() => _filter = filter),
     );
   }
 
@@ -246,7 +216,8 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                 : AppFeedbackType.warning,
             message: result.isSynced
                 ? 'บันทึกทับด้วยค่าของคุณเรียบร้อยแล้ว'
-                : (result.errorMessage ?? 'ข้อมูลบนเซิร์ฟเวอร์เปลี่ยนแปลงอีกครั้ง'),
+                : (result.errorMessage ??
+                      'ข้อมูลบนเซิร์ฟเวอร์เปลี่ยนแปลงอีกครั้ง'),
           );
           return result.isSynced;
         },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/services/score_calculator_service.dart';
 import '../providers/plan_editor_controller.dart';
 
@@ -47,6 +48,7 @@ class OverMaxScoreWarningDialog extends StatelessWidget {
     final remainingCount = affectedStudents.length - previewItems.length;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       scrollable: true,
       icon: Icon(
         Icons.warning_amber_rounded,
@@ -90,23 +92,26 @@ class OverMaxScoreWarningDialog extends StatelessWidget {
                   for (final item in previewItems)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 2,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(
-                            child: Text(
-                              item.studentLabel,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: semantic.warning,
-                              ),
+                          Text(
+                            item.studentLabel,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: semantic.warning,
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Text(
                             'ได้ ${_calculator.formatExactScore(item.currentScore)} คะแนน',
                             style: textTheme.bodySmall?.copyWith(
                               color: semantic.danger,
                               fontWeight: FontWeight.w700,
+                              fontFeatures: AppTheme.tabularFigures,
                             ),
                           ),
                         ],
@@ -118,7 +123,8 @@ class OverMaxScoreWarningDialog extends StatelessWidget {
                       'และอีก $remainingCount คน',
                       style: textTheme.bodySmall?.copyWith(
                         color: semantic.warning,
-                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: AppTheme.tabularFigures,
                       ),
                     ),
                   ],

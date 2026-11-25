@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/sync_queue_item.dart';
 import '../../domain/services/sync_conflict_field_formatter.dart';
 
@@ -65,11 +66,15 @@ class _SyncConflictResolutionDialogState
     final isWide = MediaQuery.sizeOf(context).width >= 640;
 
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isWide ? 20 : 16),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -77,8 +82,19 @@ class _SyncConflictResolutionDialogState
               children: [
                 Row(
                   children: [
-                    Icon(Icons.compare_arrows_rounded, color: semantic.danger),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: semantic.dangerContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.compare_arrows_rounded,
+                        size: 18,
+                        color: semantic.danger,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'เปรียบเทียบและแก้ปัญหาข้อมูลชนกัน',
@@ -89,7 +105,7 @@ class _SyncConflictResolutionDialogState
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   widget.item.displayLabel,
                   style: textTheme.titleSmall?.copyWith(
@@ -104,12 +120,12 @@ class _SyncConflictResolutionDialogState
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 if (isWide)
                   _SideBySideComparison(diffs: diffs)
                 else
                   _StackedComparison(diffs: diffs),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -169,21 +185,17 @@ class _SideBySideComparison extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
 
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
         border: Border.all(color: colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(10),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(9),
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            color: colorScheme.surfaceContainer,
             child: Row(
               children: [
                 Expanded(
@@ -214,9 +226,11 @@ class _SideBySideComparison extends StatelessWidget {
           ),
           for (final diff in diffs)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: diff.isDifferent ? semantic.warningContainer : null,
+                color: diff.isDifferent
+                    ? semantic.warningContainer.withValues(alpha: 0.65)
+                    : null,
                 border: Border(
                   top: BorderSide(color: colorScheme.outlineVariant),
                 ),
@@ -238,9 +252,11 @@ class _SideBySideComparison extends StatelessWidget {
                     child: Text(
                       diff.localValue,
                       style: textTheme.bodySmall?.copyWith(
+                        color: diff.isDifferent ? colorScheme.primary : null,
                         fontWeight: diff.isDifferent
                             ? FontWeight.w700
                             : FontWeight.w400,
+                        fontFeatures: AppTheme.tabularFigures,
                       ),
                     ),
                   ),
@@ -252,6 +268,7 @@ class _SideBySideComparison extends StatelessWidget {
                         fontWeight: diff.isDifferent
                             ? FontWeight.w700
                             : FontWeight.w400,
+                        fontFeatures: AppTheme.tabularFigures,
                       ),
                     ),
                   ),
@@ -280,16 +297,16 @@ class _StackedComparison extends StatelessWidget {
       children: [
         for (final diff in diffs)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: diff.isDifferent
-                  ? semantic.warningContainer
+                  ? semantic.warningContainer.withValues(alpha: 0.65)
                   : colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: diff.isDifferent
-                    ? semantic.warning
+                    ? semantic.warning.withValues(alpha: 0.5)
                     : colorScheme.outlineVariant,
               ),
             ),
@@ -308,12 +325,14 @@ class _StackedComparison extends StatelessWidget {
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: diff.isDifferent ? FontWeight.w700 : null,
+                    fontFeatures: AppTheme.tabularFigures,
                   ),
                 ),
                 Text(
                   'เซิร์ฟเวอร์: ${diff.serverValue}',
                   style: textTheme.bodySmall?.copyWith(
                     fontWeight: diff.isDifferent ? FontWeight.w700 : null,
+                    fontFeatures: AppTheme.tabularFigures,
                   ),
                 ),
               ],

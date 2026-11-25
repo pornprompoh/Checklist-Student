@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/grading_scale_config.dart';
 import '../../domain/services/grade_evaluator_service.dart';
 import '../../domain/services/score_calculator_service.dart';
@@ -210,152 +211,145 @@ class _GradingScaleEditorCardState extends State<GradingScaleEditorCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final validationError = _computeValidationError();
     final dirty = _isDirty;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'เกณฑ์ตัดเกรดและเกณฑ์งานค้าง (ร)',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+    return AppSurfaceCard(
+      title: 'เกณฑ์ตัดเกรดและเกณฑ์งานค้าง (ร)',
+      subtitle: 'ปรับระบบเกรดและจำนวนงานค้างสำหรับแนะนำสถานะ ร',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<GradingScaleType>(
+            showSelectedIcon: false,
+            segments: const <ButtonSegment<GradingScaleType>>[
+              ButtonSegment(
+                value: GradingScaleType.scale0To4,
+                label: Text(
+                  '0-4',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<GradingScaleType>(
-              showSelectedIcon: false,
-              segments: const <ButtonSegment<GradingScaleType>>[
-                ButtonSegment(
-                  value: GradingScaleType.scale0To4,
-                  label: Text('0-4', overflow: TextOverflow.ellipsis, maxLines: 1),
+              ButtonSegment(
+                value: GradingScaleType.scaleAToF,
+                label: Text(
+                  'A-F',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                ButtonSegment(
-                  value: GradingScaleType.scaleAToF,
-                  label: Text('A-F', overflow: TextOverflow.ellipsis, maxLines: 1),
-                ),
-                ButtonSegment(
-                  value: GradingScaleType.custom,
-                  label: Text(
-                    'กำหนดเอง',
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-              selected: <GradingScaleType>{_scaleType},
-              onSelectionChanged: (selection) =>
-                  _applyScaleType(selection.first),
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _thresholdCtrl,
-              keyboardType: TextInputType.number,
-              onChanged: (_) {
-                setState(() {});
-                _notifyDirtyIfChanged();
-              },
-              decoration: const InputDecoration(
-                labelText: 'เกณฑ์งานค้างสำหรับแนะนำเกรด ร (ชิ้น)',
-                helperText: 'เช่น ค้างส่งตั้งแต่ 3 ชิ้นขึ้นไป ให้แนะนำสถานะ ร',
-                suffixText: 'ชิ้น',
               ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  'ช่วงคะแนนตัดเกรด',
-                  style: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              ButtonSegment(
+                value: GradingScaleType.custom,
+                label: Text(
+                  'กำหนดเอง',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _rows.add(_EditableTierRow(grade: '', minScore: '0'));
-                    });
-                    _notifyDirtyIfChanged();
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('เพิ่มช่วงเกรด'),
-                ),
-              ],
+              ),
+            ],
+            selected: <GradingScaleType>{_scaleType},
+            onSelectionChanged: (selection) => _applyScaleType(selection.first),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _thresholdCtrl,
+            keyboardType: TextInputType.number,
+            onChanged: (_) {
+              setState(() {});
+              _notifyDirtyIfChanged();
+            },
+            decoration: const InputDecoration(
+              labelText: 'เกณฑ์งานค้างสำหรับแนะนำเกรด ร (ชิ้น)',
+              helperText: 'เช่น ค้างส่งตั้งแต่ 3 ชิ้นขึ้นไป ให้แนะนำสถานะ ร',
+              suffixText: 'ชิ้น',
             ),
-            const SizedBox(height: 6),
-            for (var i = 0; i < _rows.length; i++)
-              GradingScaleTierRow(
-                gradeController: _rows[i].gradeCtrl,
-                minScoreController: _rows[i].minScoreCtrl,
-                canRemove: _rows.length > 1,
-                onChanged: () {
-                  setState(() {});
-                  _notifyDirtyIfChanged();
-                },
-                onRemove: () {
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'ช่วงคะแนนตัดเกรด',
+                style: textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
                   setState(() {
-                    _rows.removeAt(i).dispose();
+                    _rows.add(_EditableTierRow(grade: '', minScore: '0'));
                   });
                   _notifyDirtyIfChanged();
                 },
-              ),
-            if (validationError != null) ...[
-              const SizedBox(height: 6),
-              AppFeedbackBanner(
-                type: AppFeedbackType.error,
-                message: validationError,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('เพิ่มช่วงเกรด'),
               ),
             ],
-            const Divider(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: widget.isSaving || !dirty
-                      ? null
-                      : () => setState(
-                          () => _hydrateFrom(
-                            widget.initialConfig,
-                            notifyParent: true,
-                          ),
-                        ),
-                  icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                  label: const Text('คืนค่าเดิม'),
-                ),
-                FilledButton.icon(
-                  onPressed:
-                      widget.isSaving || !dirty || validationError != null
-                      ? null
-                      : _handleSave,
-                  icon: widget.isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined, size: 18),
-                  label: const Text('บันทึกเกณฑ์ตัดเกรด'),
-                ),
-              ],
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < _rows.length; i++)
+            GradingScaleTierRow(
+              gradeController: _rows[i].gradeCtrl,
+              minScoreController: _rows[i].minScoreCtrl,
+              canRemove: _rows.length > 1,
+              onChanged: () {
+                setState(() {});
+                _notifyDirtyIfChanged();
+              },
+              onRemove: () {
+                setState(() {
+                  _rows.removeAt(i).dispose();
+                });
+                _notifyDirtyIfChanged();
+              },
+            ),
+          if (validationError != null) ...[
+            const SizedBox(height: 8),
+            AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: validationError,
             ),
           ],
-        ),
+          const Divider(height: 24),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            children: [
+              OutlinedButton.icon(
+                onPressed: widget.isSaving || !dirty
+                    ? null
+                    : () => setState(
+                        () => _hydrateFrom(
+                          widget.initialConfig,
+                          notifyParent: true,
+                        ),
+                      ),
+                icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                label: const Text('คืนค่าเดิม'),
+              ),
+              FilledButton.icon(
+                onPressed:
+                    widget.isSaving || !dirty || validationError != null
+                    ? null
+                    : _handleSave,
+                icon: widget.isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined, size: 18),
+                label: const Text('บันทึกเกณฑ์ตัดเกรด'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

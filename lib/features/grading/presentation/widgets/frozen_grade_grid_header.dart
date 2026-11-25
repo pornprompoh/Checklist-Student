@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../domain/entities/assignment.dart';
 import '../../domain/services/score_calculator_service.dart';
 
 /// Frozen top header row for [FrozenGradeGrid] keeping the left student header
-/// locked while syncing horizontal scroll with assignment and summary columns.
+/// locked with subtle tonal separation and tabular max-score subtitles.
 class FrozenGradeGridHeader extends StatelessWidget {
   const FrozenGradeGridHeader({
     super.key,
@@ -40,8 +41,12 @@ class FrozenGradeGridHeader extends StatelessWidget {
     );
     final totalMaxLabel = _calculator.formatExactScore(totalMaxCents / 100.0);
 
-    return SizedBox(
+    return Container(
       height: headerHeight,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+      ),
       child: Row(
         children: [
           Container(
@@ -50,16 +55,18 @@ class FrozenGradeGridHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
+              color: colorScheme.surfaceContainerLow,
               border: Border(
-                right: BorderSide(color: colorScheme.outlineVariant, width: 1.5),
-                bottom: BorderSide(color: colorScheme.outlineVariant, width: 1.2),
+                right: BorderSide(color: colorScheme.outlineVariant),
               ),
             ),
             child: Text(
               'เลขที่ / ชื่อ-นามสกุล',
               overflow: TextOverflow.ellipsis,
-              style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              style: textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           Expanded(
@@ -79,16 +86,11 @@ class FrozenGradeGridHeader extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
                           border: Border(
                             right: BorderSide(
                               color: colorScheme.outlineVariant.withValues(
                                 alpha: 0.7,
                               ),
-                            ),
-                            bottom: BorderSide(
-                              color: colorScheme.outlineVariant,
-                              width: 1.2,
                             ),
                           ),
                         ),
@@ -116,6 +118,7 @@ class FrozenGradeGridHeader extends StatelessWidget {
                                     style: textTheme.labelSmall?.copyWith(
                                       color: colorScheme.primary,
                                       fontWeight: FontWeight.w600,
+                                      fontFeatures: AppTheme.tabularFigures,
                                     ),
                                   ),
                                 ),
@@ -132,10 +135,12 @@ class FrozenGradeGridHeader extends StatelessWidget {
                                     ),
                                     child: Text(
                                       'บังคับ',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: textTheme.labelSmall?.copyWith(
                                         color: semantic.warning,
-                                        fontSize: 9,
                                         fontWeight: FontWeight.w700,
+                                        height: 1.2,
                                       ),
                                     ),
                                   ),
@@ -151,7 +156,8 @@ class FrozenGradeGridHeader extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: textTheme.labelSmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
-                                  fontSize: 10,
+                                  fontFeatures: AppTheme.tabularFigures,
+                                  height: 1.25,
                                 ),
                               ),
                           ],
@@ -214,10 +220,9 @@ class _SummaryHeaderCell extends StatelessWidget {
       height: height,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.45),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.42),
         border: Border(
           right: BorderSide(color: colorScheme.outlineVariant),
-          bottom: BorderSide(color: colorScheme.outlineVariant, width: 1.2),
         ),
       ),
       child: Column(
@@ -233,6 +238,7 @@ class _SummaryHeaderCell extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
+              fontFeatures: AppTheme.tabularFigures,
             ),
           ),
         ],

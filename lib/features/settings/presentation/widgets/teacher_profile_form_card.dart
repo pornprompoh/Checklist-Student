@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../auth/domain/entities/teacher_profile.dart';
 import '../../domain/entities/teacher_profile_update.dart';
 
@@ -156,139 +158,140 @@ class _TeacherProfileFormCardState extends State<TeacherProfileFormCard> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'โปรไฟล์ครูและหัวเอกสารรายงาน',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+    return AppSurfaceCard(
+      title: 'โปรไฟล์ครูและหัวเอกสารรายงาน',
+      subtitle:
+          'ข้อมูลนี้จะนำไปแสดงบนหัวรายงาน PDF/Excel และเป็นค่าเริ่มต้นของห้องสอนใหม่',
+      padding: const EdgeInsets.all(20),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _displayNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'ชื่อ-สกุลครูผู้สอน',
+                hintText: 'เช่น ครูสมชาย ใจดี',
               ),
-              const SizedBox(height: 4),
-              Text(
-                'ข้อมูลนี้จะนำไปแสดงบนหัวรายงาน PDF/Excel และเป็นค่าเริ่มต้นของห้องสอนใหม่',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? 'กรุณากรอกชื่อ-สกุลครูผู้สอน'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _schoolNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'ชื่อโรงเรียน / สถานศึกษา',
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _displayNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ชื่อ-สกุลครูผู้สอน',
-                  hintText: 'เช่น ครูสมชาย ใจดี',
-                ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'กรุณากรอกชื่อ-สกุลครูผู้สอน'
-                    : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _departmentCtrl,
+              decoration: const InputDecoration(
+                labelText: 'กลุ่มสาระการเรียนรู้ / แผนกวิชา',
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _schoolNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ชื่อโรงเรียน / สถานศึกษา',
-                ),
+            ),
+            const Divider(height: 28),
+            Text(
+              'เกณฑ์แจ้งเตือนความเสี่ยงเริ่มต้นของห้องสอนใหม่',
+              style: textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _departmentCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'กลุ่มสาระการเรียนรู้ / แผนกวิชา',
-                ),
-              ),
-              const SizedBox(height: 16),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final absentField = TextFormField(
-                    controller: _absentPctCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'เกณฑ์เสี่ยง มส เริ่มต้น (%)',
-                      suffixText: '%',
-                    ),
-                    validator: (value) {
-                      final parsed = double.tryParse(value?.trim() ?? '');
-                      if (parsed == null || parsed < 0 || parsed > 100) {
-                        return 'กรุณากรอกค่าระหว่าง 0 ถึง 100';
-                      }
-                      return null;
-                    },
-                  );
-                  final missingField = TextFormField(
-                    controller: _missingWorkCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'เกณฑ์งานค้างเสี่ยง ร เริ่มต้น',
-                      suffixText: 'ชิ้น',
-                    ),
-                    validator: (value) {
-                      final parsed = int.tryParse(value?.trim() ?? '');
-                      if (parsed == null || parsed < 1) {
-                        return 'กรุณากรอกจำนวนตั้งแต่ 1 ขึ้นไป';
-                      }
-                      return null;
-                    },
-                  );
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final absentField = TextFormField(
+                  controller: _absentPctCtrl,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'เกณฑ์เสี่ยง มส เริ่มต้น (%)',
+                    suffixText: '%',
+                  ),
+                  validator: (value) {
+                    final parsed = double.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed < 0 || parsed > 100) {
+                      return 'กรุณากรอกค่าระหว่าง 0 ถึง 100';
+                    }
+                    return null;
+                  },
+                );
+                final missingField = TextFormField(
+                  controller: _missingWorkCtrl,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontFeatures: AppTheme.tabularFigures,
+                  ),
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'เกณฑ์งานค้างเสี่ยง ร เริ่มต้น',
+                    suffixText: 'ชิ้น',
+                  ),
+                  validator: (value) {
+                    final parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null || parsed < 1) {
+                      return 'กรุณากรอกจำนวนตั้งแต่ 1 ขึ้นไป';
+                    }
+                    return null;
+                  },
+                );
 
-                  if (constraints.maxWidth >= 520) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: absentField),
-                        const SizedBox(width: 12),
-                        Expanded(child: missingField),
-                      ],
-                    );
-                  }
-                  return Column(
+                if (constraints.maxWidth >= 520) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      absentField,
-                      const SizedBox(height: 12),
-                      missingField,
+                      Expanded(child: absentField),
+                      const SizedBox(width: 12),
+                      Expanded(child: missingField),
                     ],
                   );
-                },
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                alignment: WrapAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: (!_isDirty || widget.isSaving)
-                        ? null
-                        : () => _syncFromProfile(
-                            widget.profile,
-                            fromDidUpdateWidget: false,
-                          ),
-                    child: const Text('คืนค่าเดิม'),
+                }
+                return Column(
+                  children: [
+                    absentField,
+                    const SizedBox(height: 12),
+                    missingField,
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              children: [
+                OutlinedButton(
+                  onPressed: (!_isDirty || widget.isSaving)
+                      ? null
+                      : () => _syncFromProfile(
+                          widget.profile,
+                          fromDidUpdateWidget: false,
+                        ),
+                  child: const Text('คืนค่าเดิม'),
+                ),
+                FilledButton.icon(
+                  onPressed: (!_isDirty || widget.isSaving) ? null : _submit,
+                  icon: widget.isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined, size: 18),
+                  label: Text(
+                    widget.isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล',
                   ),
-                  FilledButton.icon(
-                    onPressed: (!_isDirty || widget.isSaving) ? null : _submit,
-                    icon: widget.isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined, size: 18),
-                    label: Text(
-                      widget.isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

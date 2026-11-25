@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_color_scheme.dart';
+import '../theme/app_theme.dart';
 
 /// Single row in a structural deletion impact summary (e.g., student count,
 /// attendance sessions, or graded assignments affected).
@@ -125,7 +126,10 @@ class _TypedConfirmDialogState extends State<TypedConfirmDialog> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: semanticColors.dangerContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: semanticColors.danger.withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,6 +161,7 @@ class _TypedConfirmDialogState extends State<TypedConfirmDialog> {
                               style: textTheme.bodySmall?.copyWith(
                                 color: semanticColors.danger,
                                 fontWeight: FontWeight.w700,
+                                fontFeatures: AppTheme.tabularFigures,
                               ),
                             ),
                           ],
@@ -176,15 +181,17 @@ class _TypedConfirmDialogState extends State<TypedConfirmDialog> {
             const SizedBox(height: 6),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
+                color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: SelectableText(
                 widget.expectedText,
                 style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
+                  fontFeatures: AppTheme.tabularFigures,
                 ),
               ),
             ),

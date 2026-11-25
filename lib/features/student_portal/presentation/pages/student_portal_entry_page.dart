@@ -6,6 +6,7 @@ import '../../../../core/constants/app_routes.dart';
 import '../../../../core/theme/theme_mode_provider.dart';
 import '../../../../core/utils/in_app_browser_detector.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../providers/student_portal_controller.dart';
 import '../providers/student_portal_providers.dart';
@@ -54,7 +55,6 @@ class _StudentPortalEntryPageState
           .read(studentPortalControllerProvider)
           .resolvedTeacher
           ?.currentTeacherCode;
-      // Avoid resetting the redirect banner when GoRouter completes our own redirect.
       if (currentResolved != null && currentResolved == nextCode) {
         return;
       }
@@ -86,8 +86,9 @@ class _StudentPortalEntryPageState
     _hasRedirectedUrl = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final router = GoRouter.maybeOf(context);
-      router?.go(AppRoutes.studentPortalForTeacher(currentCode));
+      GoRouter.maybeOf(
+        context,
+      )?.go(AppRoutes.studentPortalForTeacher(currentCode));
     });
   }
 
@@ -98,35 +99,71 @@ class _StudentPortalEntryPageState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final browserInfo = widget.browserInfoOverride ?? detectInAppBrowser();
+    final isWide = MediaQuery.sizeOf(context).width >= 640;
 
     _maybeRedirectToCurrentTeacherCode(portalState);
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 16,
         title: Row(
           children: [
-            Icon(Icons.fact_check_rounded, color: colorScheme.primary, size: 22),
-            const SizedBox(width: 8),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.fact_check_rounded,
+                color: colorScheme.primary,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Student Portal',
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Student Portal',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                  Text(
+                    'ระบบตรวจสอบผลการเรียนและเวลาเรียน',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด',
-            onPressed: () => ref
-                .read(themeModeProvider.notifier)
-                .toggleTheme(platformBrightness: Theme.of(context).brightness),
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: isDark ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด',
+              onPressed: () => ref
+                  .read(themeModeProvider.notifier)
+                  .toggleTheme(platformBrightness: Theme.of(context).brightness),
+              icon: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -135,18 +172,21 @@ class _StudentPortalEntryPageState
         child: Align(
           alignment: Alignment.topCenter,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.symmetric(
+              horizontal: isWide ? 24 : 16,
+              vertical: isWide ? 24 : 16,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  LineBrowserRedirectBanner(
-                    browserInfoOverride: widget.browserInfoOverride,
-                  ),
-                  if ((widget.browserInfoOverride ?? detectInAppBrowser())
-                      .isInAppBrowser)
-                    const SizedBox(height: 14),
+                  if (browserInfo.isInAppBrowser) ...[
+                    LineBrowserRedirectBanner(
+                      browserInfoOverride: widget.browserInfoOverride,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _buildStepBody(context, portalState, controller),
                 ],
               ),
@@ -164,20 +204,17 @@ class _StudentPortalEntryPageState
   ) {
     switch (state.step) {
       case StudentPortalStep.resolvingTeacher:
-        return const Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SkeletonBox(height: 28),
-                SizedBox(height: 12),
-                SkeletonBox(height: 52),
-                SizedBox(height: 12),
-                SkeletonBox(height: 44),
-              ],
-            ),
+        return const AppSurfaceCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SkeletonBox(height: 28),
+              SizedBox(height: 12),
+              SkeletonBox(height: 52),
+              SizedBox(height: 12),
+              SkeletonBox(height: 44),
+            ],
           ),
         );
 
@@ -227,7 +264,7 @@ class _StudentPortalEntryPageState
       case StudentPortalStep.authenticated:
         final summary = state.summary;
         if (summary == null) {
-          return const SkeletonBox(height: 240);
+          return const AppSurfaceCard(child: SkeletonBox(height: 240));
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

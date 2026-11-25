@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/class_workspace_bar.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
@@ -20,7 +23,7 @@ import '../widgets/export_preview_canvas.dart';
 
 enum _MobileExportTab { config, preview }
 
-/// Report configuration & live A4 Export Preview page (`/teacher/export-reports`).
+/// Report configuration & live A4 Document Studio page (`/teacher/export-reports`).
 class ExportReportsPage extends ConsumerStatefulWidget {
   const ExportReportsPage({super.key, this.initialClassId});
 
@@ -107,21 +110,24 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
       configState.selectedClassId,
     );
 
-    if ((yearsAsync.isLoading || termsAsync.isLoading || allClassesAsync.isLoading) &&
+    if ((yearsAsync.isLoading ||
+            termsAsync.isLoading ||
+            allClassesAsync.isLoading) &&
         allClasses.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
             SkeletonBox(height: 80),
-            SizedBox(height: 14),
+            SizedBox(height: 16),
             SkeletonBox(height: 260),
           ],
         ),
       );
     }
 
-    final loadError = yearsAsync.error ?? termsAsync.error ?? allClassesAsync.error;
+    final loadError =
+        yearsAsync.error ?? termsAsync.error ?? allClassesAsync.error;
     if (loadError != null && allClasses.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(20),
@@ -139,14 +145,35 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     }
 
     if (terms.isEmpty || allClasses.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(20),
-        child: AppFeedbackBanner(
-          type: AppFeedbackType.info,
-          message:
-              'ยังไม่มีห้องเรียนในระบบ กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนส่งออกรายงาน',
-          retryLabel: 'ไปหน้าโครงสร้างสอน',
-          onRetry: () => context.go(AppRoutes.teacherAcademicStructure),
+      return Align(
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const AppPageHeader(
+                  title: 'ส่งออกรายงานและเอกสาร ปพ.5',
+                  subtitle:
+                      'เลือกหัวข้อรายงาน ปรับหัวเอกสารเฉพาะใบ สลับแนวกระดาษ A4 และตรวจสอบตัวอย่างก่อนส่งออก',
+                ),
+                const SizedBox(height: 20),
+                AppEmptyState(
+                  icon: Icons.description_outlined,
+                  title: 'ยังไม่มีห้องเรียนสำหรับส่งออกรายงาน',
+                  description:
+                      'กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนเริ่มสร้างเอกสาร ปพ.5',
+                  actionLabel: 'ไปหน้าโครงสร้างสอน',
+                  actionIcon: Icons.account_tree_outlined,
+                  onAction: () => GoRouter.maybeOf(
+                    context,
+                  )?.go(AppRoutes.teacherAcademicStructure),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -164,7 +191,8 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
             classOption: effectiveClassOption,
           );
     final rawData = rawAsync?.asData?.value;
-    final ExportReportBundle? bundle = (rawData != null && effectiveHeader != null)
+    final ExportReportBundle? bundle =
+        (rawData != null && effectiveHeader != null)
         ? ref
               .read(exportReportBuilderServiceProvider)
               .buildBundle(
@@ -183,20 +211,18 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'ส่งออกรายงานและเอกสาร ปพ.5',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              AppPageHeader(
+                title: 'ส่งออกรายงานและเอกสาร ปพ.5',
+                subtitle:
+                    'เลือกหัวข้อรายงาน ปรับหัวเอกสารเฉพาะใบ สลับแนวกระดาษ A4 และตรวจสอบตัวอย่างก่อนส่งออก',
+                bottom: effectiveClassOption == null
+                    ? null
+                    : ClassWorkspaceBar(
+                        subjectClassId: effectiveClassOption.subjectClassId,
+                        activeTab: ClassWorkspaceTab.export,
+                      ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'เลือกหัวข้อรายงาน ปรับหัวเอกสารเฉพาะใบ สลับแนวกระดาษ A4 และตรวจสอบตัวอย่างก่อนส่งออก',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final configColumn = Column(
@@ -235,7 +261,7 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
                             controller.setIncludeSignatureLines,
                       ),
                       if (effectiveHeader != null) ...[
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 16),
                         ExportDocumentHeaderCard(
                           header: effectiveHeader,
                           hasCustomOverride: configState.headerOverride != null,
@@ -271,7 +297,7 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(width: 390, child: configColumn),
-                        const SizedBox(width: 18),
+                        const SizedBox(width: 20),
                         Expanded(child: previewSection),
                       ],
                     );
@@ -304,7 +330,7 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
                         onSelectionChanged: (sel) =>
                             setState(() => _mobileTab = sel.first),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       if (_mobileTab == _MobileExportTab.config)
                         configColumn
                       else
@@ -341,9 +367,10 @@ class _ExportReportsPageState extends ConsumerState<ExportReportsPage> {
     required ExportReportBundle? bundle,
   }) {
     if (effectiveClassOption == null) {
-      return const AppFeedbackBanner(
-        type: AppFeedbackType.info,
-        message: 'ไม่พบห้องเรียนในภาคเรียนที่เลือก กรุณาเลือกภาคเรียนอื่น',
+      return const AppEmptyState(
+        icon: Icons.class_outlined,
+        title: 'ไม่พบห้องเรียนในภาคเรียนที่เลือก',
+        description: 'กรุณาเลือกภาคเรียนอื่นจากแผงตั้งค่าด้านซ้าย',
       );
     }
     if (rawAsync == null || (rawAsync.isLoading && bundle == null)) {

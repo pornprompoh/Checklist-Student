@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../grading/presentation/providers/grading_providers.dart';
 import '../../domain/entities/audit_log_filter.dart';
@@ -40,163 +42,165 @@ class AuditLogFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final validYearId = academicYears.any((y) => y.id == filter.academicYearId)
         ? filter.academicYearId
         : null;
-    final validClassId = classOptions.any(
-      (c) => c.subjectClassId == filter.subjectClassId,
-    )
+    final validClassId =
+        classOptions.any((c) => c.subjectClassId == filter.subjectClassId)
         ? filter.subjectClassId
         : null;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 190, minWidth: 0),
-                  child: DropdownButtonFormField<String?>(
-                    key: ValueKey<String?>('year_$validYearId'),
-                    initialValue: validYearId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'ปีการศึกษา (พ.ศ.)',
-                      isDense: true,
-                    ),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('ทุกปีการศึกษา'),
-                      ),
-                      for (final year in academicYears)
-                        DropdownMenuItem<String?>(
-                          value: year.id,
-                          child: Text('พ.ศ. ${year.yearBe}'),
-                        ),
-                    ],
-                    onChanged: onYearChanged,
+    return AppSurfaceCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 190, minWidth: 0),
+                child: DropdownButtonFormField<String?>(
+                  key: ValueKey<String?>('year_$validYearId'),
+                  initialValue: validYearId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'ปีการศึกษา (พ.ศ.)',
+                    isDense: true,
                   ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 280, minWidth: 0),
-                  child: DropdownButtonFormField<String?>(
-                    key: ValueKey<String?>('class_$validClassId'),
-                    initialValue: validClassId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'ห้องเรียน',
-                      isDense: true,
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('ทุกปีการศึกษา'),
                     ),
-                    items: <DropdownMenuItem<String?>>[
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('ทุกห้องเรียน'),
-                      ),
-                      for (final opt in classOptions)
-                        DropdownMenuItem<String?>(
-                          value: opt.subjectClassId,
-                          child: Text(
-                            '${opt.displayLabel} (${opt.termLabel}/${opt.academicYearBe})',
-                            overflow: TextOverflow.ellipsis,
+                    for (final year in academicYears)
+                      DropdownMenuItem<String?>(
+                        value: year.id,
+                        child: Text(
+                          'พ.ศ. ${year.yearBe}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontFeatures: AppTheme.tabularFigures,
                           ),
                         ),
-                    ],
-                    onChanged: onClassChanged,
-                  ),
+                      ),
+                  ],
+                  onChanged: onYearChanged,
                 ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 260, minWidth: 0),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'ค้นหาชื่อ, รหัส, เลขที่ หรือชื่องาน...',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                      suffixIcon: filter.searchQuery.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'ล้างคำค้นหา',
-                              onPressed: () {
-                                searchController.clear();
-                                onSearchChanged('');
-                              },
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                            ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280, minWidth: 0),
+                child: DropdownButtonFormField<String?>(
+                  key: ValueKey<String?>('class_$validClassId'),
+                  initialValue: validClassId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'ห้องเรียน',
+                    isDense: true,
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('ทุกห้องเรียน'),
                     ),
+                    for (final opt in classOptions)
+                      DropdownMenuItem<String?>(
+                        value: opt.subjectClassId,
+                        child: Text(
+                          '${opt.displayLabel} (${opt.termLabel}/${opt.academicYearBe})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: onClassChanged,
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260, minWidth: 0),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: onSearchChanged,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'ค้นหาชื่อ, รหัส, เลขที่ หรือชื่องาน...',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                    suffixIcon: filter.searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'ล้างคำค้นหา',
+                            onPressed: () {
+                              searchController.clear();
+                              onSearchChanged('');
+                            },
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                          ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              alignment: WrapAlignment.spaceBetween,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  FilterChip(
+                    selected: filter.targetType == null,
+                    label: const Text('ทั้งหมด'),
+                    onSelected: (_) => onTargetTypeChanged(null),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  for (final type in AuditLogTargetType.values)
                     FilterChip(
-                      selected: filter.targetType == null,
-                      label: const Text('ทั้งหมด'),
-                      onSelected: (_) => onTargetTypeChanged(null),
+                      selected: filter.targetType == type,
+                      label: Text(type.thaiLabel),
+                      onSelected: (_) => onTargetTypeChanged(type),
                       visualDensity: VisualDensity.compact,
                     ),
-                    for (final type in AuditLogTargetType.values)
-                      FilterChip(
-                        selected: filter.targetType == type,
-                        label: Text(type.thaiLabel),
-                        onSelected: (_) => onTargetTypeChanged(type),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    if (filter.enrollmentId != null)
-                      InputChip(
-                        label: const Text('กรองเฉพาะนักเรียนที่เลือก'),
-                        onDeleted: onClearEnrollmentFilter,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: isBusy || filteredCount == 0
-                          ? null
-                          : onExportCsv,
-                      icon: const Icon(Icons.table_view_outlined, size: 17),
-                      label: Text('Export CSV ($filteredCount)'),
+                  if (filter.enrollmentId != null)
+                    InputChip(
+                      label: const Text('กรองเฉพาะนักเรียนที่เลือก'),
+                      onDeleted: onClearEnrollmentFilter,
+                      visualDensity: VisualDensity.compact,
                     ),
-                    OutlinedButton.icon(
-                      onPressed: isBusy || filteredCount == 0
-                          ? null
-                          : onExportJson,
-                      icon: const Icon(Icons.data_object_rounded, size: 17),
-                      label: const Text('Export JSON'),
+                ],
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: isBusy || filteredCount == 0
+                        ? null
+                        : onExportCsv,
+                    icon: const Icon(Icons.table_view_outlined, size: 17),
+                    label: Text(
+                      'Export CSV ($filteredCount)',
+                      style: const TextStyle(
+                        fontFeatures: AppTheme.tabularFigures,
+                      ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: isBusy || filteredCount == 0
+                        ? null
+                        : onExportJson,
+                    icon: const Icon(Icons.data_object_rounded, size: 17),
+                    label: const Text('Export JSON'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

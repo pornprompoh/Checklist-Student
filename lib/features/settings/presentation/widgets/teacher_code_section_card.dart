@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../domain/services/teacher_code_validator_service.dart';
 import '../providers/settings_providers.dart';
@@ -184,153 +186,148 @@ class _TeacherCodeSectionCardState
         normalizedInput != widget.currentCode &&
         normalizedInput.isNotEmpty;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'รหัสครูและลิงก์ Student Portal',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+    return AppSurfaceCard(
+      title: 'รหัสครูและลิงก์ Student Portal',
+      subtitle:
+          'แชร์ลิงก์นี้ให้นักเรียนตรวจสอบเวลาเรียน คะแนน และเกรด (รองรับเปิดนอกเบราว์เซอร์ LINE)',
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colorScheme.outlineVariant),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'แชร์ลิงก์นี้ให้นักเรียนตรวจสอบเวลาเรียน คะแนน และเกรด (รองรับเปิดนอกเบราว์เซอร์ LINE)',
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SelectableText(
-                    _portalUrl(
-                      widget.currentCode,
-                      openExternalBrowser: false,
-                    ),
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SelectableText(
+                  _portalUrl(widget.currentCode, openExternalBrowser: false),
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => _copyLink(forLineGroup: false),
-                        icon: const Icon(Icons.copy_rounded, size: 18),
-                        label: const Text('คัดลอกลิงก์'),
-                      ),
-                      FilledButton.tonal(
-                        onPressed: () => _copyLink(forLineGroup: true),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.open_in_browser_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'คัดลอกลิงก์สำหรับกลุ่ม LINE',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: 'รหัสครูสั้น (Teacher Code)',
-                helperText: 'ใช้ตัวอักษร a-z, ตัวเลข 0-9 และ - ความยาว 3–30 ตัว',
-                errorText: _validationError,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                onPressed: canSubmit ? _confirmAndChangeCode : null,
-                icon: widget.isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.link_rounded, size: 18),
-                label: Text(
-                  widget.isSaving ? 'กำลังเปลี่ยนรหัส...' : 'เปลี่ยนรหัสครู',
                 ),
-              ),
-            ),
-            const Divider(height: 28),
-            Text(
-              'ประวัติรหัสครูเก่า (Redirect อัตโนมัติ)',
-              style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            historyAsync.when(
-              loading: () => const Column(
-                children: [
-                  SkeletonBox.line(height: 16),
-                  SizedBox(height: 8),
-                  SkeletonBox.line(width: 220, height: 14),
-                ],
-              ),
-              error: (error, stackTrace) => AppFeedbackBanner(
-                type: AppFeedbackType.error,
-                message: ThaiErrorMapper.map(error),
-                onRetry: () => ref.invalidate(teacherCodeHistoryProvider),
-              ),
-              data: (entries) {
-                if (entries.isEmpty) {
-                  return Text(
-                    'ยังไม่มีประวัติการเปลี่ยนรหัสครู',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  );
-                }
-                return Column(
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    for (final entry in entries)
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          Icons.history_rounded,
-                          size: 18,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        title: Text(entry.oldCode),
-                        subtitle: Text(
-                          'เปลี่ยนเมื่อ ${ThaiDateFormatter.formatShortDate(entry.changedAt.toLocal())}',
+                    FilledButton.tonal(
+                      onPressed: () => _copyLink(forLineGroup: true),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.open_in_browser_rounded, size: 18),
+                          SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'คัดลอกลิงก์สำหรับกลุ่ม LINE',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _copyLink(forLineGroup: false),
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                      label: const Text('คัดลอกลิงก์'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _codeController,
+            decoration: InputDecoration(
+              labelText: 'รหัสครูสั้น (Teacher Code)',
+              helperText: 'ใช้ตัวอักษร a-z, ตัวเลข 0-9 และ - ความยาว 3–30 ตัว',
+              errorText: _validationError,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: canSubmit ? _confirmAndChangeCode : null,
+              icon: widget.isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.link_rounded, size: 18),
+              label: Text(
+                widget.isSaving ? 'กำลังเปลี่ยนรหัส...' : 'เปลี่ยนรหัสครู',
+              ),
+            ),
+          ),
+          const Divider(height: 28),
+          Text(
+            'ประวัติรหัสครูเก่า (Redirect อัตโนมัติ)',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          historyAsync.when(
+            loading: () => const Column(
+              children: [
+                SkeletonBox.line(height: 16),
+                SizedBox(height: 8),
+                SkeletonBox.line(width: 220, height: 14),
+              ],
+            ),
+            error: (error, stackTrace) => AppFeedbackBanner(
+              type: AppFeedbackType.error,
+              message: ThaiErrorMapper.map(error),
+              onRetry: () => ref.invalidate(teacherCodeHistoryProvider),
+            ),
+            data: (entries) {
+              if (entries.isEmpty) {
+                return Text(
+                  'ยังไม่มีประวัติการเปลี่ยนรหัสครู',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  for (final entry in entries)
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.history_rounded,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(
+                        entry.oldCode,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+                      subtitle: Text(
+                        'เปลี่ยนเมื่อ ${ThaiDateFormatter.formatShortDate(entry.changedAt.toLocal())}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontFeatures: AppTheme.tabularFigures,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/thai_error_mapper.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
@@ -32,8 +34,6 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     final authState = ref.watch(authStateProvider);
     final controllerState = ref.watch(teacherSettingsControllerProvider);
     final profile = authState.profile;
@@ -58,18 +58,10 @@ class _TeacherSettingsPageState extends ConsumerState<TeacherSettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'โปรไฟล์และการตั้งค่าครู',
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'จัดการข้อมูลหัวเอกสาร เกณฑ์ความเสี่ยงเริ่มต้น รหัสครูสำหรับนักเรียน และโหมดสีของแอพ',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                const AppPageHeader(
+                  title: 'โปรไฟล์และการตั้งค่าครู',
+                  subtitle:
+                      'จัดการข้อมูลหัวเอกสาร เกณฑ์ความเสี่ยงเริ่มต้น รหัสครูสำหรับนักเรียน และโหมดสีของแอพ',
                 ),
                 const SizedBox(height: 20),
                 if (authState.errorMessage != null) ...[
@@ -166,35 +158,31 @@ class _SettingsSkeletonView extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       children: [
-        Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonBox.line(width: 200, height: 18),
-                SizedBox(height: 16),
-                SkeletonBox(height: 48),
-                SizedBox(height: 12),
-                SkeletonBox(height: 48),
-                SizedBox(height: 12),
-                SkeletonBox(height: 48),
-              ],
-            ),
+        AppSurfaceCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox.line(width: 200, height: 18),
+              SizedBox(height: 16),
+              SkeletonBox(height: 48),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+            ],
           ),
         ),
         SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonBox.line(width: 220, height: 18),
-                SizedBox(height: 12),
-                SkeletonBox(height: 48),
-              ],
-            ),
+        AppSurfaceCard(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox.line(width: 220, height: 18),
+              SizedBox(height: 12),
+              SkeletonBox(height: 48),
+            ],
           ),
         ),
       ],

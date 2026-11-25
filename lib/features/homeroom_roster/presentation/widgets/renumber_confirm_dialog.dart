@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/services/roster_renumber_service.dart';
 
 /// Confirmation result from [RenumberConfirmDialog].
@@ -66,10 +67,11 @@ class _RenumberConfirmDialogState extends State<RenumberConfirmDialog> {
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
+                color: colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,6 +94,7 @@ class _RenumberConfirmDialogState extends State<RenumberConfirmDialog> {
                             style: textTheme.labelMedium?.copyWith(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w700,
+                              fontFeatures: AppTheme.tabularFigures,
                             ),
                           ),
                         ],

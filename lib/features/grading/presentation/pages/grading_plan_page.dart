@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/errors/thai_error_mapper.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_feedback_banner.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../../../core/widgets/skeleton_box.dart';
 import '../../../../core/widgets/unsaved_changes_guard.dart';
 import '../../domain/entities/assignment.dart';
@@ -156,12 +158,13 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
       );
     }
     if (classId == null || options.isEmpty) {
-      return AppFeedbackBanner(
-        type: AppFeedbackType.info,
-        message:
-            'ยังไม่มีห้องเรียนในระบบ กรุณาสร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนออกแบบแผนเก็บงาน',
-        retryLabel: 'ไปหน้าโครงสร้างสอน',
-        onRetry: () => context.go(AppRoutes.teacherAcademicStructure),
+      return AppEmptyState(
+        icon: Icons.assignment_outlined,
+        title: 'ยังไม่มีห้องเรียนในระบบ',
+        description:
+            'สร้างปีการศึกษา เทอม รายวิชา และห้องเรียนก่อนออกแบบแผนเก็บงาน',
+        actionLabel: 'ไปหน้าโครงสร้างสอน',
+        onAction: () => context.go(AppRoutes.teacherAcademicStructure),
       );
     }
 
@@ -212,7 +215,7 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
           AppFeedbackBanner(
             type: AppFeedbackType.error,
             message: _conflictMessage!,
-            retryLabel: 'โหลดข้อมูลล่าสุด',
+            retryLabel: 'โหลดล่าสุด',
             onRetry: () {
               setState(() => _conflictMessage = null);
               ref
@@ -280,17 +283,13 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     required bool isBusy,
   }) {
     return scaleAsync.when(
-      loading: () => const Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              SkeletonBox(height: 40),
-              SizedBox(height: 12),
-              SkeletonBox(height: 180),
-            ],
-          ),
+      loading: () => const AppSurfaceCard(
+        child: Column(
+          children: [
+            SkeletonBox(height: 40),
+            SizedBox(height: 12),
+            SkeletonBox(height: 180),
+          ],
         ),
       ),
       error: (error, _) => AppFeedbackBanner(
@@ -331,13 +330,7 @@ class _GradingPlanPageState extends ConsumerState<GradingPlanPage> {
     required bool isBusy,
   }) {
     return visibilityAsync.when(
-      loading: () => const Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: SkeletonBox(height: 110),
-        ),
-      ),
+      loading: () => const AppSurfaceCard(child: SkeletonBox(height: 110)),
       error: (error, _) => AppFeedbackBanner(
         type: AppFeedbackType.error,
         message: ThaiErrorMapper.map(error),
