@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/dashboard_overview.dart';
 
-/// Responsive 4-metric summary strip displaying today's schedule progress and
-/// term totals cleanly from 390px mobile to desktop.
+/// Compact 4-KPI summary strip (4 columns on desktop, 2×2 on mobile using
+/// `LayoutBuilder` + intrinsic height — never fixed `childAspectRatio`).
 class DashboardSummaryMetrics extends StatelessWidget {
   const DashboardSummaryMetrics({super.key, required this.overview});
 
@@ -16,43 +18,47 @@ class DashboardSummaryMetrics extends StatelessWidget {
     final semantic = AppSemanticColors.of(context);
 
     final checkedValue = overview.todayClassesCount > 0
-        ? '${overview.checkedScheduledTodayCount} / ${overview.todayClassesCount} ห้อง'
-        : '${overview.checkedTodayCount} ห้อง';
+        ? '${overview.checkedScheduledTodayCount}/${overview.todayClassesCount}'
+        : '${overview.checkedTodayCount}';
 
-    final cards = <_MetricData>[
-      _MetricData(
-        icon: Icons.today_rounded,
-        label: 'มีสอนวันนี้',
-        value: '${overview.todayClassesCount} ห้อง',
+    final cards = <_KpiItem>[
+      _KpiItem(
+        icon: Icons.class_outlined,
+        label: 'ห้องที่สอน',
+        value: '${overview.totalClassesCount}',
+        unit: 'ห้อง',
         accent: colorScheme.primary,
         container: colorScheme.primaryContainer,
       ),
-      _MetricData(
+      _KpiItem(
+        icon: Icons.today_rounded,
+        label: 'สอนวันนี้',
+        value: '${overview.todayClassesCount}',
+        unit: 'ห้อง',
+        accent: semantic.leave,
+        container: semantic.leaveContainer,
+      ),
+      _KpiItem(
         icon: Icons.fact_check_outlined,
-        label: 'เช็คชื่อแล้ววันนี้',
+        label: 'เช็คชื่อวันนี้แล้ว',
         value: checkedValue,
+        unit: 'ห้อง',
         accent: semantic.success,
         container: semantic.successContainer,
       ),
-      _MetricData(
-        icon: Icons.class_outlined,
-        label: 'ห้องทั้งหมดในเทอม',
-        value: '${overview.totalClassesCount} ห้อง',
+      _KpiItem(
+        icon: Icons.groups_outlined,
+        label: 'นักเรียนทั้งหมด',
+        value: '${overview.totalActiveStudentsCount}',
+        unit: 'คน',
         accent: colorScheme.secondary,
         container: colorScheme.secondaryContainer,
-      ),
-      _MetricData(
-        icon: Icons.groups_outlined,
-        label: 'นักเรียนกำลังเรียน',
-        value: '${overview.totalActiveStudentsCount} คน',
-        accent: semantic.leave,
-        container: semantic.leaveContainer,
       ),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 760 ? 4 : 2;
+        final columns = constraints.maxWidth >= 720 ? 4 : 2;
         const spacing = 10.0;
         final itemWidth =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
@@ -64,7 +70,7 @@ class DashboardSummaryMetrics extends StatelessWidget {
             for (final item in cards)
               SizedBox(
                 width: itemWidth,
-                child: _MetricCard(data: item),
+                child: _KpiTile(item: item),
               ),
           ],
         );
@@ -73,11 +79,12 @@ class DashboardSummaryMetrics extends StatelessWidget {
   }
 }
 
-class _MetricData {
-  const _MetricData({
+class _KpiItem {
+  const _KpiItem({
     required this.icon,
     required this.label,
     required this.value,
+    required this.unit,
     required this.accent,
     required this.container,
   });
@@ -85,55 +92,77 @@ class _MetricData {
   final IconData icon;
   final String label;
   final String value;
+  final String unit;
   final Color accent;
   final Color container;
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.data});
+class _KpiTile extends StatelessWidget {
+  const _KpiTile({required this.item});
 
-  final _MetricData data;
+  final _KpiItem item;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: data.container,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(data.icon, size: 18, color: data.accent),
+    return AppSurfaceCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: item.container,
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 10),
-            Text(
-              data.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            child: Icon(item.icon, size: 19, color: item.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        item.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: AppTheme.tabularFigures,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.unit,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              data.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

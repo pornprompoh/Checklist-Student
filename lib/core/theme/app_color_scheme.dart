@@ -3,18 +3,66 @@ import 'package:flutter/material.dart';
 /// Primary Indigo Slate seed color defined in `docs/ARCHITECTURE.md`.
 const Color seedColor = Color(0xFF3B5BDB);
 
-final ColorScheme lightColorScheme = ColorScheme.fromSeed(
-  seedColor: seedColor,
-  brightness: Brightness.light,
-);
+/// Soft neutral canvas behind cards (Light Mode).
+const Color lightCanvasColor = Color(0xFFF6F8FB);
 
-final ColorScheme darkColorScheme = ColorScheme.fromSeed(
-  seedColor: seedColor,
-  brightness: Brightness.dark,
-);
+/// Soft neutral canvas behind cards (Dark Mode).
+const Color darkCanvasColor = Color(0xFF0F141E);
+
+/// Light Mode: crisp white surfaces on a cool neutral canvas with hairline
+/// `#E2E8F0` borders and slate text for comfortable long reading sessions.
+final ColorScheme lightColorScheme =
+    ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.light,
+    ).copyWith(
+      primary: seedColor,
+      onPrimary: Colors.white,
+      primaryContainer: const Color(0xFFE3E9FF),
+      onPrimaryContainer: const Color(0xFF1C2E7A),
+      secondaryContainer: const Color(0xFFE8EDF8),
+      onSecondaryContainer: const Color(0xFF243256),
+      surface: Colors.white,
+      onSurface: const Color(0xFF0F172A),
+      onSurfaceVariant: const Color(0xFF526077),
+      surfaceContainerLowest: Colors.white,
+      surfaceContainerLow: const Color(0xFFF8FAFC),
+      surfaceContainer: const Color(0xFFF1F5F9),
+      surfaceContainerHigh: const Color(0xFFEBF0F6),
+      surfaceContainerHighest: const Color(0xFFE4EAF2),
+      outline: const Color(0xFF94A3B8),
+      outlineVariant: const Color(0xFFE2E8F0),
+      surfaceTint: Colors.transparent,
+    );
+
+/// Dark Mode: deep blue-slate canvas (not pure black) with lifted `#171F2E`
+/// surfaces and `#273247` hairlines to keep depth without harsh contrast.
+final ColorScheme darkColorScheme =
+    ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.dark,
+    ).copyWith(
+      primary: const Color(0xFF9DB0FF),
+      onPrimary: const Color(0xFF0D1B5E),
+      primaryContainer: const Color(0xFF26346E),
+      onPrimaryContainer: const Color(0xFFDDE4FF),
+      secondaryContainer: const Color(0xFF242F45),
+      onSecondaryContainer: const Color(0xFFD7DEEE),
+      surface: const Color(0xFF171F2E),
+      onSurface: const Color(0xFFE2E8F0),
+      onSurfaceVariant: const Color(0xFF9AA8BE),
+      surfaceContainerLowest: const Color(0xFF121926),
+      surfaceContainerLow: const Color(0xFF1A2333),
+      surfaceContainer: const Color(0xFF1E2839),
+      surfaceContainerHigh: const Color(0xFF232E41),
+      surfaceContainerHighest: const Color(0xFF2A3549),
+      outline: const Color(0xFF52627C),
+      outlineVariant: const Color(0xFF273247),
+      surfaceTint: Colors.transparent,
+    );
 
 /// Semantic color tokens for classroom attendance statuses and academic risk
-/// indicators, supporting both Light Mode and Dark Mode cleanly.
+/// indicators. Every foreground/container pair meets WCAG AA (>= 4.5:1).
 @immutable
 class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   const AppSemanticColors({
@@ -50,37 +98,37 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   final Color dangerContainer;
 
   static const AppSemanticColors light = AppSemanticColors(
-    present: Color(0xFF1B7A43),
-    presentContainer: Color(0xFFE7F7EE),
-    late: Color(0xFFB45309),
-    lateContainer: Color(0xFFFEF3C7),
+    present: Color(0xFF15703B),
+    presentContainer: Color(0xFFE3F6EA),
+    late: Color(0xFF9A4A07),
+    lateContainer: Color(0xFFFDF1D8),
     leave: Color(0xFF1D4ED8),
-    leaveContainer: Color(0xFFDBEAFE),
-    absent: Color(0xFFB91C1C),
-    absentContainer: Color(0xFFFEE2E2),
-    success: Color(0xFF15803D),
-    successContainer: Color(0xFFDCFCE7),
-    warning: Color(0xFFA16207),
-    warningContainer: Color(0xFFFEF9C3),
-    danger: Color(0xFFDC2626),
-    dangerContainer: Color(0xFFFEE2E2),
+    leaveContainer: Color(0xFFE2ECFE),
+    absent: Color(0xFFB42318),
+    absentContainer: Color(0xFFFDE8E6),
+    success: Color(0xFF15703B),
+    successContainer: Color(0xFFE3F6EA),
+    warning: Color(0xFF8A5A00),
+    warningContainer: Color(0xFFFDF3D3),
+    danger: Color(0xFFB42318),
+    dangerContainer: Color(0xFFFDE8E6),
   );
 
   static const AppSemanticColors dark = AppSemanticColors(
-    present: Color(0xFF6EE7B7),
-    presentContainer: Color(0xFF0F3526),
-    late: Color(0xFFFCD34D),
-    lateContainer: Color(0xFF3F2B0D),
-    leave: Color(0xFF93C5FD),
-    leaveContainer: Color(0xFF172B4D),
-    absent: Color(0xFFFCA5A5),
-    absentContainer: Color(0xFF45161B),
-    success: Color(0xFF86EFAC),
-    successContainer: Color(0xFF0F3526),
-    warning: Color(0xFFFDE047),
-    warningContainer: Color(0xFF3E300E),
-    danger: Color(0xFFFCA5A5),
-    dangerContainer: Color(0xFF45161B),
+    present: Color(0xFF7EE2B0),
+    presentContainer: Color(0xFF143628),
+    late: Color(0xFFF8CF6B),
+    lateContainer: Color(0xFF3A2C10),
+    leave: Color(0xFF9CC3FF),
+    leaveContainer: Color(0xFF182B4A),
+    absent: Color(0xFFFFA8A0),
+    absentContainer: Color(0xFF43191C),
+    success: Color(0xFF7EE2B0),
+    successContainer: Color(0xFF143628),
+    warning: Color(0xFFF5D46A),
+    warningContainer: Color(0xFF3A3110),
+    danger: Color(0xFFFFA8A0),
+    dangerContainer: Color(0xFF43191C),
   );
 
   /// Retrieves [AppSemanticColors] from the active [ThemeData], falling back
@@ -131,21 +179,22 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     if (other is! AppSemanticColors) {
       return this;
     }
+    Color mix(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppSemanticColors(
-      present: Color.lerp(present, other.present, t)!,
-      presentContainer: Color.lerp(presentContainer, other.presentContainer, t)!,
-      late: Color.lerp(late, other.late, t)!,
-      lateContainer: Color.lerp(lateContainer, other.lateContainer, t)!,
-      leave: Color.lerp(leave, other.leave, t)!,
-      leaveContainer: Color.lerp(leaveContainer, other.leaveContainer, t)!,
-      absent: Color.lerp(absent, other.absent, t)!,
-      absentContainer: Color.lerp(absentContainer, other.absentContainer, t)!,
-      success: Color.lerp(success, other.success, t)!,
-      successContainer: Color.lerp(successContainer, other.successContainer, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      warningContainer: Color.lerp(warningContainer, other.warningContainer, t)!,
-      danger: Color.lerp(danger, other.danger, t)!,
-      dangerContainer: Color.lerp(dangerContainer, other.dangerContainer, t)!,
+      present: mix(present, other.present),
+      presentContainer: mix(presentContainer, other.presentContainer),
+      late: mix(late, other.late),
+      lateContainer: mix(lateContainer, other.lateContainer),
+      leave: mix(leave, other.leave),
+      leaveContainer: mix(leaveContainer, other.leaveContainer),
+      absent: mix(absent, other.absent),
+      absentContainer: mix(absentContainer, other.absentContainer),
+      success: mix(success, other.success),
+      successContainer: mix(successContainer, other.successContainer),
+      warning: mix(warning, other.warning),
+      warningContainer: mix(warningContainer, other.warningContainer),
+      danger: mix(danger, other.danger),
+      dangerContainer: mix(dangerContainer, other.dangerContainer),
     );
   }
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../providers/dashboard_providers.dart';
 
-/// Quick filter chips (`ทั้งหมด`, `มีสอนวันนี้`, `ปักหมุด`) and compact search
-/// input rendered above the Teacher Dashboard classroom grid.
+/// Quick filter chips (`ทั้งหมด`, `สอนวันนี้`, `ปักหมุด`) and compact search
+/// box rendered above the Teacher Dashboard classroom sections.
 class DashboardFilterBar extends StatelessWidget {
   const DashboardFilterBar({
     super.key,
@@ -27,7 +27,7 @@ class DashboardFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
+      spacing: 10,
       runSpacing: 10,
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -42,7 +42,7 @@ class DashboardFilterBar extends StatelessWidget {
               onSelected: (_) => onModeChanged(DashboardFilterMode.all),
             ),
             ChoiceChip(
-              label: Text('มีสอนวันนี้ ($todayClassesCount)'),
+              label: Text('สอนวันนี้ ($todayClassesCount)'),
               selected: filterState.mode == DashboardFilterMode.today,
               onSelected: (_) => onModeChanged(DashboardFilterMode.today),
             ),
@@ -73,60 +73,6 @@ class DashboardFilterBar extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Friendly Thai empty-state card used when no terms, no classes, or no
-/// filtered results exist on the Teacher Dashboard.
-class DashboardEmptyStateCard extends StatelessWidget {
-  const DashboardEmptyStateCard({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          children: [
-            Icon(icon, size: 42, color: colorScheme.primary),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.tonal(onPressed: onAction, child: Text(actionLabel)),
-          ],
-        ),
-      ),
     );
   }
 }

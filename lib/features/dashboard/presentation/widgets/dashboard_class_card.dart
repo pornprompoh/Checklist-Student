@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/utils/thai_date_formatter.dart';
+import '../../../../core/widgets/app_surface_card.dart';
 import '../../domain/entities/dashboard_class_item.dart';
 import 'dashboard_attendance_badge.dart';
+import 'dashboard_class_card_menu.dart';
 
-/// Classroom card rendered on the Teacher Dashboard with quick pin toggle,
-/// today-schedule badges, 4-state attendance summary, and 1-tap attendance CTA.
+/// Scannable classroom card for [TeacherDashboardPage]:
+/// - Top row: subject code pill + bold room name + "สอนวันนี้" pill + pin + `⋯`
+/// - Middle: subject name + student/schedule meta + today's attendance status
+/// - Bottom: clear 2-button hierarchy (`เช็คชื่อวันนี้`/`ดูเช็คชื่อ` + `ตารางคะแนน`)
 class DashboardClassCard extends StatelessWidget {
   const DashboardClassCard({
     super.key,
@@ -15,8 +19,11 @@ class DashboardClassCard extends StatelessWidget {
     required this.isBusy,
     required this.onTogglePin,
     required this.onOpenAttendance,
-    this.onOpenGradingTable,
-    this.onOpenGradingPlan,
+    required this.onOpenGradingTable,
+    required this.onOpenGradingPlan,
+    required this.onOpenAttendanceRules,
+    required this.onOpenExportReports,
+    required this.onOpenAuditLog,
     required this.onOpenRoster,
   });
 
@@ -25,8 +32,11 @@ class DashboardClassCard extends StatelessWidget {
   final bool isBusy;
   final VoidCallback onTogglePin;
   final VoidCallback onOpenAttendance;
-  final VoidCallback? onOpenGradingTable;
-  final VoidCallback? onOpenGradingPlan;
+  final VoidCallback onOpenGradingTable;
+  final VoidCallback onOpenGradingPlan;
+  final VoidCallback onOpenAttendanceRules;
+  final VoidCallback onOpenExportReports;
+  final VoidCallback onOpenAuditLog;
   final VoidCallback onOpenRoster;
 
   @override
@@ -35,216 +45,181 @@ class DashboardClassCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final semantic = AppSemanticColors.of(context);
     final teachesToday = item.teachesOnWeekday(todayIsoWeekday);
-    final summary = item.todayAttendance;
+    final isChecked = item.todayAttendance != null;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: teachesToday
-              ? colorScheme.primary.withValues(alpha: 0.45)
-              : colorScheme.outlineVariant,
-          width: teachesToday ? 1.5 : 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            item.subjectCode,
-                            style: textTheme.labelLarge?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (teachesToday)
-                            DashboardTagPill(
-                              label: 'มีสอนวันนี้',
-                              background: colorScheme.primaryContainer,
-                              foreground: colorScheme.onPrimaryContainer,
-                            ),
-                          if (item.isPinned)
-                            DashboardTagPill(
-                              label: 'ปักหมุด',
-                              background: colorScheme.secondaryContainer,
-                              foreground: colorScheme.onSecondaryContainer,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'ห้อง ${item.roomName}',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.subjectName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: item.isPinned ? 'ยกเลิกปักหมุด' : 'ปักหมุดห้องนี้',
-                  onPressed: isBusy ? null : onTogglePin,
-                  icon: Icon(
-                    item.isPinned
-                        ? Icons.push_pin_rounded
-                        : Icons.push_pin_outlined,
-                    size: 20,
-                    color: item.isPinned
-                        ? colorScheme.primary
-                        : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              children: [
-                _MetaText(
-                  icon: Icons.people_outline_rounded,
-                  label: '${item.activeStudentCount} คน',
-                ),
-                _MetaText(
-                  icon: Icons.event_repeat_rounded,
-                  label: _formatTeachingDays(item.teachingDays),
-                ),
-              ],
-            ),
-            const Divider(height: 22),
-            if (summary != null)
-              DashboardCheckedAttendanceSection(
-                summary: summary,
-                onOpenAttendance: onOpenAttendance,
-              )
-            else
-              FilledButton.icon(
-                onPressed: onOpenAttendance,
-                icon: const Icon(Icons.fact_check_outlined, size: 18),
-                label: const Text('เช็คชื่อวันนี้'),
-              ),
-            if (onOpenGradingTable != null || onOpenGradingPlan != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (onOpenGradingTable != null)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                        ),
-                        onPressed: onOpenGradingTable,
-                        icon: const Icon(Icons.table_chart_outlined, size: 17),
-                        label: const Text(
-                          'ตารางคะแนน',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ),
-                  if (onOpenGradingTable != null && onOpenGradingPlan != null)
-                    const SizedBox(width: 8),
-                  if (onOpenGradingPlan != null)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                        ),
-                        onPressed: onOpenGradingPlan,
-                        icon: const Icon(Icons.assignment_outlined, size: 17),
-                        label: const Text(
-                          'แผนงาน',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-            if (item.activeStudentCount == 0) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: semantic.warningContainer.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
+    return AppSurfaceCard(
+      borderColor: teachesToday
+          ? colorScheme.primary.withValues(alpha: 0.45)
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      size: 16,
-                      color: semantic.warning,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'ยังไม่มีนักเรียนในห้องนี้',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: semantic.warning,
-                          fontWeight: FontWeight.w600,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        DashboardTagPill(
+                          label: item.subjectCode,
+                          background: colorScheme.primaryContainer,
+                          foreground: colorScheme.onPrimaryContainer,
                         ),
+                        if (teachesToday)
+                          DashboardTagPill(
+                            label: 'สอนวันนี้',
+                            icon: Icons.circle,
+                            background: semantic.successContainer,
+                            foreground: semantic.success,
+                          ),
+                        if (item.isPinned)
+                          DashboardTagPill(
+                            label: 'ปักหมุด',
+                            background: colorScheme.secondaryContainer,
+                            foreground: colorScheme.onSecondaryContainer,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'ห้อง ${item.roomName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    const SizedBox(height: 2),
+                    Text(
+                      item.subjectName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: onOpenRoster,
-                      child: const Text('คลังรายชื่อ'),
                     ),
                   ],
                 ),
               ),
+              IconButton(
+                tooltip: item.isPinned ? 'ยกเลิกปักหมุด' : 'ปักหมุดห้องนี้',
+                visualDensity: VisualDensity.compact,
+                onPressed: isBusy ? null : onTogglePin,
+                icon: Icon(
+                  item.isPinned
+                      ? Icons.push_pin_rounded
+                      : Icons.push_pin_outlined,
+                  size: 19,
+                  color: item.isPinned
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+              DashboardClassCardMenu(
+                isPinned: item.isPinned,
+                isBusy: isBusy,
+                onTogglePin: onTogglePin,
+                onOpenGradingPlan: onOpenGradingPlan,
+                onOpenAttendanceRules: onOpenAttendanceRules,
+                onOpenExportReports: onOpenExportReports,
+                onOpenAuditLog: onOpenAuditLog,
+                onOpenRoster: onOpenRoster,
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              _MetaChip(
+                icon: Icons.people_outline_rounded,
+                label: '${item.activeStudentCount} คน',
+              ),
+              _MetaChip(
+                icon: Icons.event_repeat_rounded,
+                label: _formatTeachingDays(item.teachingDays),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          DashboardTodayStatusStrip(
+            summary: item.todayAttendance,
+            teachesToday: teachesToday,
+          ),
+          if (item.activeStudentCount == 0) ...[
+            const SizedBox(height: 8),
+            _EmptyRosterHint(onOpenRoster: onOpenRoster),
           ],
-        ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: isChecked
+                    ? FilledButton.tonalIcon(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: onOpenAttendance,
+                        icon: const Icon(Icons.fact_check_outlined, size: 17),
+                        label: const Text(
+                          'ดูเช็คชื่อ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )
+                    : FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: onOpenAttendance,
+                        icon: const Icon(Icons.fact_check_outlined, size: 17),
+                        label: const Text(
+                          'เช็คชื่อวันนี้',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  onPressed: onOpenGradingTable,
+                  icon: const Icon(Icons.table_chart_outlined, size: 17),
+                  label: const Text(
+                    'ตารางคะแนน',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   String _formatTeachingDays(List<int> days) {
-    if (days.isEmpty) {
-      return 'ยังไม่ระบุวันสอน';
-    }
+    if (days.isEmpty) return 'ยังไม่ระบุวันสอน';
     return days
         .map((day) => ThaiDateFormatter.weekdayThaiName(day, short: true))
         .join(' ');
   }
 }
 
-class _MetaText extends StatelessWidget {
-  const _MetaText({required this.icon, required this.label});
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -260,11 +235,49 @@ class _MetaText extends StatelessWidget {
         Flexible(
           child: Text(
             label,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyRosterHint extends StatelessWidget {
+  const _EmptyRosterHint({required this.onOpenRoster});
+
+  final VoidCallback onOpenRoster;
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = AppSemanticColors.of(context);
+    return Row(
+      children: [
+        Icon(Icons.info_outline_rounded, size: 15, color: semantic.warning),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'ยังไม่มีรายชื่อนักเรียน',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: semantic.warning,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: onOpenRoster,
+          child: const Text('เพิ่มรายชื่อ'),
         ),
       ],
     );
