@@ -8,6 +8,7 @@ import '../../../../core/widgets/app_feedback_banner.dart';
 import '../../../academic_structure/domain/entities/academic_year.dart';
 import '../../../academic_structure/domain/entities/term.dart';
 import '../../../academic_structure/presentation/providers/academic_structure_providers.dart';
+import '../../../audit_log/presentation/widgets/audit_log_cleanup_banner.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/dashboard_overview.dart';
 import '../providers/dashboard_controller.dart';
@@ -85,6 +86,8 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                 onRefresh: () =>
                     ref.read(dashboardControllerProvider.notifier).refresh(),
               ),
+              const SizedBox(height: 12),
+              const AuditLogCleanupBanner(),
               const SizedBox(height: 16),
               if (yearsAsync.isLoading || termsAsync.isLoading)
                 const DashboardSkeletonView()
@@ -218,6 +221,16 @@ class _TeacherDashboardPageState extends ConsumerState<TeacherDashboardPage> {
                             ),
                         onOpenAttendance: () => context.go(
                           AppRoutes.teacherAttendanceForClass(
+                            item.subjectClassId,
+                          ),
+                        ),
+                        onOpenGradingTable: () => context.go(
+                          AppRoutes.teacherGradingForClass(
+                            item.subjectClassId,
+                          ),
+                        ),
+                        onOpenGradingPlan: () => context.go(
+                          AppRoutes.teacherGradingPlanForClass(
                             item.subjectClassId,
                           ),
                         ),

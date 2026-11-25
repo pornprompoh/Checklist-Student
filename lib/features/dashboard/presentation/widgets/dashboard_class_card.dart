@@ -15,6 +15,8 @@ class DashboardClassCard extends StatelessWidget {
     required this.isBusy,
     required this.onTogglePin,
     required this.onOpenAttendance,
+    this.onOpenGradingTable,
+    this.onOpenGradingPlan,
     required this.onOpenRoster,
   });
 
@@ -23,6 +25,8 @@ class DashboardClassCard extends StatelessWidget {
   final bool isBusy;
   final VoidCallback onTogglePin;
   final VoidCallback onOpenAttendance;
+  final VoidCallback? onOpenGradingTable;
+  final VoidCallback? onOpenGradingPlan;
   final VoidCallback onOpenRoster;
 
   @override
@@ -143,6 +147,45 @@ class DashboardClassCard extends StatelessWidget {
                 icon: const Icon(Icons.fact_check_outlined, size: 18),
                 label: const Text('เช็คชื่อวันนี้'),
               ),
+            if (onOpenGradingTable != null || onOpenGradingPlan != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (onOpenGradingTable != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: onOpenGradingTable,
+                        icon: const Icon(Icons.table_chart_outlined, size: 17),
+                        label: const Text(
+                          'ตารางคะแนน',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                  if (onOpenGradingTable != null && onOpenGradingPlan != null)
+                    const SizedBox(width: 8),
+                  if (onOpenGradingPlan != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        onPressed: onOpenGradingPlan,
+                        icon: const Icon(Icons.assignment_outlined, size: 17),
+                        label: const Text(
+                          'แผนงาน',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
             if (item.activeStudentCount == 0) ...[
               const SizedBox(height: 10),
               Container(

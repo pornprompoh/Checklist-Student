@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../features/academic_structure/presentation/pages/academic_structure_page.dart';
 import '../../features/attendance/presentation/pages/attendance_check_in_page.dart';
 import '../../features/attendance/presentation/pages/attendance_rule_settings_page.dart';
+import '../../features/audit_log/presentation/pages/audit_log_page.dart';
 import '../../features/auth/domain/entities/auth_state.dart';
 import '../../features/auth/presentation/pages/teacher_login_page.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/dashboard/presentation/pages/teacher_dashboard_page.dart';
+import '../../features/grading/presentation/pages/grading_plan_page.dart';
+import '../../features/grading/presentation/pages/grading_table_page.dart';
 import '../../features/homeroom_roster/presentation/pages/homeroom_roster_page.dart';
 import '../../features/settings/presentation/pages/teacher_settings_page.dart';
 import '../constants/app_routes.dart';
@@ -79,6 +82,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.teacherAttendanceRules,
             builder: (context, state) => AttendanceRuleSettingsPage(
               subjectClassId: state.uri.queryParameters['classId'] ?? '',
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.teacherGradingPlan,
+            builder: (context, state) => GradingPlanPage(
+              initialClassId: state.uri.queryParameters['classId'],
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.teacherGrading,
+            builder: (context, state) => GradingTablePage(
+              initialClassId: state.uri.queryParameters['classId'],
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.teacherAuditLog,
+            builder: (context, state) => AuditLogPage(
+              initialClassId: state.uri.queryParameters['classId'],
+              initialEnrollmentId: state.uri.queryParameters['enrollmentId'],
             ),
           ),
           GoRoute(

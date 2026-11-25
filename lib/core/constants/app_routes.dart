@@ -10,6 +10,7 @@ abstract final class AppRoutes {
   static const String teacherAttendance = '/teacher/attendance';
   static const String teacherAttendanceRules = '/teacher/attendance/rules';
   static const String teacherGrading = '/teacher/grading';
+  static const String teacherGradingPlan = '/teacher/grading/plan';
   static const String teacherAuditLog = '/teacher/audit-log';
   static const String teacherExportReports = '/teacher/export-reports';
   static const String teacherSyncQueue = '/teacher/sync-queue';
@@ -28,6 +29,33 @@ abstract final class AppRoutes {
   static String teacherAttendanceRulesForClass(String subjectClassId) {
     final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
     return '$teacherAttendanceRules?classId=$encodedId';
+  }
+
+  /// Builds the Teacher Grading Table route for [subjectClassId].
+  static String teacherGradingForClass(String subjectClassId) {
+    final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
+    return '$teacherGrading?classId=$encodedId';
+  }
+
+  /// Builds the Teacher Grading Plan route for [subjectClassId].
+  static String teacherGradingPlanForClass(String subjectClassId) {
+    final encodedId = Uri.encodeQueryComponent(subjectClassId.trim());
+    return '$teacherGradingPlan?classId=$encodedId';
+  }
+
+  /// Builds the Teacher Audit Log route filtered by [subjectClassId] and
+  /// optionally by [enrollmentId].
+  static String teacherAuditLogForClass(
+    String subjectClassId, {
+    String? enrollmentId,
+  }) {
+    final encodedClass = Uri.encodeQueryComponent(subjectClassId.trim());
+    final trimmedEnrollment = enrollmentId?.trim();
+    if (trimmedEnrollment == null || trimmedEnrollment.isEmpty) {
+      return '$teacherAuditLog?classId=$encodedClass';
+    }
+    final encodedEnrollment = Uri.encodeQueryComponent(trimmedEnrollment);
+    return '$teacherAuditLog?classId=$encodedClass&enrollmentId=$encodedEnrollment';
   }
 
   /// Builds a concrete Student Portal route path for [teacherCode].
